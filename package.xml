@@ -3,7 +3,7 @@
   <name>temoto_robot_manager</name>
   <version>0.0.0</version>
   <description>The temoto_robot_manager package</description>
-  <maintainer email="robert.valner@ut.ee">robert</maintainer>
+  <maintainer email="robert.valner@ut.ee">Robert Valner</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>catkin</buildtool_depend>
