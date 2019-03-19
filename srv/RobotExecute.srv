@@ -1,0 +1,6 @@
+
+---
+
+int64 code
+string message
+temoto_core/Error[] error_stack

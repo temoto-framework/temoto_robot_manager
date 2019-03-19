@@ -1,0 +1,10 @@
+# Remote Management Request
+temoto_core/RMPRequest rmp
+
+# The name of the robot to load 
+string robot_name
+
+---
+
+# Remote Management Response
+temoto_core/RMPResponse rmp
