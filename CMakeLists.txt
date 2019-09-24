@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   std_msgs
   temoto_core
-  temoto_nlp
+  temoto_action_engine
   temoto_context_manager
   temoto_er_manager
 )
@@ -46,7 +46,7 @@ catkin_package(
     geometry_msgs
     visualization_msgs
     temoto_core
-    temoto_nlp
+    temoto_action_engine
     temoto_context_manager
     temoto_er_manager
   DEPENDS 
@@ -65,4 +65,4 @@ add_executable(temoto_robot_manager
   src/robot_features.cpp
 )
 add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(temoto_robot_manager ${catkin_LIBRARIES} yaml-cpp temoto_core_components)
+target_link_libraries(temoto_robot_manager ${catkin_LIBRARIES} yaml-cpp)

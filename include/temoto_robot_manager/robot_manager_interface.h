@@ -1,19 +1,35 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright 2019 TeMoto Telerobotics
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* Author: Veiko Vunder */
+
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 
 #include "temoto_core/rmp/resource_manager.h"
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/console_colors.h"
-#include "temoto_nlp/base_task/base_task.h"
 #include "temoto_robot_manager/robot_manager_services.h"
-
 #include <vector>
 #include <string>
 
 namespace robot_manager
 {
 
-template <class OwnerTask>
+template <class OwnerAction>
 class RobotManagerInterface : public temoto_core::BaseSubsystem
 {
 public:
@@ -22,12 +38,11 @@ public:
     class_name_ = __func__;
   }
 
-  void initialize(temoto_nlp::BaseTask* task)
+  void initialize(OwnerAction* action)
   {
-    initializeBase(task);
-    log_group_ = "interfaces." + task->getPackageName();
-    
-    name_ = task->getName() + "/robot_manager_interface";
+    initializeBase(action);
+    log_group_ = "interfaces." + action->getPackageName();
+    name_ = action->getName() + "/robot_manager_interface";
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
 
     // create resource manager
