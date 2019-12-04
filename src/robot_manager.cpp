@@ -57,6 +57,9 @@ RobotManager::RobotManager()
                                             &RobotManager::setTargetCb, this);
   server_set_mode_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MODE,
                                           &RobotManager::setModeCb, this);
+  
+  server_get_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_TARGET, 
+                                            &RobotManager::getTargetCb, this);
 
   //TODO: TEMPORARY, REMOVE!
 //      seq: 0
@@ -94,8 +97,13 @@ RobotManager::RobotManager()
 
 
   // Read the robot config for this manager.
-  std::string yaml_filename =
-      ros::package::getPath(ROS_PACKAGE_NAME) + "/conf/" + temoto_core::common::getTemotoNamespace() + ".yaml";
+  TEMOTO_INFO_STREAM(temoto_core::common::getTemotoNamespace());
+
+  TEMOTO_INFO_STREAM("=====yaml filename=====");
+
+  std::string yaml_filename = 
+      ros::package::getPath(ROS_PACKAGE_NAME) + "/conf/" + "robot_description.yaml";
+      TEMOTO_INFO_STREAM(yaml_filename);
   // \TODO: check
   std::ifstream in(yaml_filename);
   YAML::Node yaml_config = YAML::Load(in);
@@ -505,6 +513,10 @@ bool RobotManager::getVizInfoCb(temoto_robot_manager::RobotGetVizInfo::Request& 
   return true;
 }
 
+
+
+  
+
 bool RobotManager::setTargetCb(temoto_robot_manager::RobotSetTarget::Request& req,
                                temoto_robot_manager::RobotSetTarget::Response& res)
 {
@@ -556,6 +568,33 @@ bool RobotManager::setTargetCb(temoto_robot_manager::RobotSetTarget::Request& re
 
   return true;
 }
+
+
+
+bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
+                               temoto_robot_manager::RobotGetTarget::Response& res)
+{
+  //geometry_msgs::Pose test;
+  if (active_robot_->isLocal())
+  {
+    //res.pose = 10;    
+
+    TEMOTO_INFO("Request: '%s'", req.ref_joint.c_str());
+    TEMOTO_INFO("Request: '%s'", req.respect_to.c_str());
+
+    //test = active_robot_->getTarget();
+    res.pose = active_robot_->getTarget();
+    //TEMOTO_INFO_STREAM(test);
+  }
+  else
+  {
+    TEMOTO_INFO("robot is not local");
+  }
+
+  return true;
+}
+
+
 
 bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
                              temoto_robot_manager::RobotSetMode::Response& res)

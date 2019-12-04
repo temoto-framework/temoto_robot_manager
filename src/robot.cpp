@@ -408,6 +408,32 @@ void Robot::execute()
   }
 }
 
+geometry_msgs::Pose Robot::getTarget()
+{
+  std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
+  
+  auto group_it =
+      planning_groups_.find(planning_group_name);
+  TEMOTO_INFO(planning_group_name.c_str());
+
+  geometry_msgs::Pose test;
+  
+  if (group_it != planning_groups_.end())
+  {    
+    test = group_it->second->getCurrentPose().pose;
+  }
+  else 
+  {
+    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+  }
+ 
+  //TEMOTO_INFO_STREAM(test);  
+  
+  return test;
+  
+
+}
+
 
 bool Robot::isLocal() const
 {

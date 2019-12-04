@@ -28,6 +28,7 @@ add_service_files(
   RobotSetTarget.srv
   RobotSetMode.srv
   RobotGetVizInfo.srv
+  RobotGetTarget.srv
 )
 
 generate_messages(
