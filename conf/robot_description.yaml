@@ -1,0 +1,49 @@
+Robots:
+- robot_name: "xarm7_robot"
+  description: "xarm7_robot"
+  reliability: 0.8
+  urdf:
+    package_name: "xarm7_mov_test"
+    executable: "urdf/xarm7_with_gripper.xacro"
+  manipulation:
+    controller:
+      #package_name: "xarm7_wgrip_moveit" 
+      #executable: "demo.launch"
+      package_name: "xarm7_wgrip_moveit" 
+      executable: "move_group.launch"
+      
+      #==Real Robot==
+      #package_name: "xarm_controller"
+      #executable: "xarm7_control.launch"
+      args: "fake_execution:=true load_robot_description:=false allow_trajectory_execution:=true"
+      planning_groups: ["xarm7"]
+    driver:
+      package_name: "xarm7_wgrip_moveit"
+      executable: "demo_test.launch"
+      #package_name: "xarm7_wgrip_moveit"
+      #executable: "planning_context.launch"
+      
+      #==Real Robot==
+      #package_name: "xarm_bringup"
+      #executable: "xarm7_server.launch"
+    
+- robot_name: "panda"
+  description: "panda_robot"
+  reliability: 0.8
+  urdf:
+    package_name: "franka_description"
+    executable: "robots/panda_arm.xacro"
+  manipulation:
+    controller:
+      package_name: "panda_moveit_config" 
+      executable: "move_group.launch"
+      args: "fake_execution:=true allow_trajectory_execution:=true info:=true debug:=false"
+      
+      planning_groups: ["panda_arm"]
+    driver:
+      package_name: "panda_moveit_config"
+      executable: "demo.launch"      
+      #args: "rviz_tutorial:=true"
+      
+      
+      
