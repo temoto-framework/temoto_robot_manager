@@ -50,6 +50,10 @@ public:
 
   void execute();
 
+  
+  geometry_msgs::Pose getTarget();
+
+
   std::string getName() const
   {
     return config_->getName();

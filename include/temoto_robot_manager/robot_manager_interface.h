@@ -41,7 +41,7 @@ public:
   void initialize(OwnerAction* action)
   {
     initializeBase(action);
-    log_group_ = "interfaces." + action->getPackageName();
+    log_group_ = "interfaces." + action->getName();
     name_ = action->getName() + "/robot_manager_interface";
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
 
@@ -54,8 +54,8 @@ public:
 
     // register status callback function
     // resource_manager_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
-//    client_load_ =
-//        nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
+    //client_load_ =
+      //  nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
     client_plan_ =
         nh_.serviceClient<temoto_robot_manager::RobotPlan>(robot_manager::srv_name::SERVER_PLAN);
     client_exec_ =
@@ -64,24 +64,33 @@ public:
         nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
     client_set_target_ =
         nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_TARGET);
+    client_get_target_ =
+        nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_TARGET);
   }
 
   void loadRobot(std::string robot_name = "")
   {
+    
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    validateInterface(prefix);
-
+  
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
     // the name of the topic
     temoto_robot_manager::RobotLoad load_srvc;
     load_srvc.request.robot_name = robot_name;
+  
+    
     try
     {
+      TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
+      TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
       resource_manager_->template call<temoto_robot_manager::RobotLoad>(
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
+          
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {
+      //TEMOTO_INFO_STREAM("========== here ==========");
+      //TEMOTO_INFO_STREAM(error_stack.size);
       throw FORWARD_ERROR(error_stack);
     }
   }
@@ -113,6 +122,7 @@ public:
     msg.request.use_default_target = false;
     msg.request.target_pose = pose;
     msg.request.planning_group = planning_group;
+    
     if (!client_plan_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
@@ -173,6 +183,36 @@ public:
     }
   }
 
+
+// ====== Test - Function to get the pose of the eef respect to something ====
+
+ geometry_msgs::Pose getEndEffPose(std::string object_name,std::string respect_to_link)
+ {
+    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
+    TEMOTO_DEBUG("%s", prefix.c_str());
+    geometry_msgs::Pose pose;
+    
+    TEMOTO_INFO_STREAM("=====getEndEffPose====== " << object_name << respect_to_link);
+
+    temoto_robot_manager::RobotGetTarget msg; 
+
+    msg.request.ref_joint = object_name;
+    msg.request.respect_to = respect_to_link;
+
+    //client_get_target_.call(msg);
+    TEMOTO_INFO_STREAM(client_get_target_.call(msg));
+    TEMOTO_INFO_STREAM("=====GET TARGET ======");
+
+    TEMOTO_INFO_STREAM(msg.response.pose);
+    pose = msg.response.pose;    
+    
+     return pose;
+  }
+  
+// END TEST FUNCTION
+  
+  
+
   /**
    * @brief validateInterface()
    * @param sensor_type
@@ -212,6 +252,9 @@ private:
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_viz_info_;
   ros::ServiceClient client_set_target_;
+  
+  ros::ServiceClient client_get_target_;
+
 
   std::unique_ptr<temoto_core::rmp::ResourceManager<RobotManagerInterface>> resource_manager_;
 };

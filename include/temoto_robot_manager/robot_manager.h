@@ -99,6 +99,8 @@ private:
 
   bool setTargetCb(temoto_robot_manager::RobotSetTarget::Request& req, temoto_robot_manager::RobotSetTarget::Response& res);
 
+  bool getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
+
   bool setModeCb(temoto_robot_manager::RobotSetMode::Request& req, temoto_robot_manager::RobotSetMode::Response& res);
 
   void syncCb(const temoto_core::ConfigSync& msg, const PayloadType& payload);
@@ -138,12 +140,14 @@ private:
   ros::ServiceServer server_exec_;
   ros::ServiceServer server_get_viz_cfg_;
   ros::ServiceServer server_set_target_;
+  ros::ServiceServer server_get_target_;
   ros::ServiceServer server_set_mode_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_get_viz_cfg_;
   ros::ServiceClient client_set_target_;
+  ros::ServiceClient client_get_target_;
   ros::ServiceClient client_set_mode_;
 
   ros::Subscriber target_pose_sub_;
