@@ -19,7 +19,7 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 
-#include "temoto_core/rmp/resource_manager.h"
+#include "temoto_core/trr/resource_registrar.h"
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/console_colors.h"
 #include "temoto_robot_manager/robot_manager_services.h"
@@ -46,14 +46,14 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
 
     // create resource manager
-    resource_manager_ = std::unique_ptr<temoto_core::rmp::ResourceManager<RobotManagerInterface>>(
-        new temoto_core::rmp::ResourceManager<RobotManagerInterface>(name_, this));
+    resource_registrar_ = std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>>(
+        new temoto_core::trr::ResourceRegistrar<RobotManagerInterface>(name_, this));
 
-    // ensure that resource_manager was created
+    // ensure that resource_registrar was created
     validateInterface(prefix);
 
     // register status callback function
-    // resource_manager_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
+    // resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
 //    client_load_ =
 //        nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
     client_plan_ =
@@ -77,7 +77,7 @@ public:
     load_srvc.request.robot_name = robot_name;
     try
     {
-      resource_manager_->template call<temoto_robot_manager::RobotLoad>(
+      resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
     }
     catch(temoto_core::error::ErrorStack& error_stack)
@@ -98,7 +98,7 @@ public:
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
-    else if (msg.response.code == temoto_core::rmp::status_codes::FAILED)
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
     {
       throw FORWARD_ERROR(msg.response.error_stack);
     }
@@ -117,7 +117,7 @@ public:
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
-    else if (msg.response.code == temoto_core::rmp::status_codes::FAILED)
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
     {
       throw FORWARD_ERROR(msg.response.error_stack);
     }
@@ -133,7 +133,7 @@ public:
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
-    else if (msg.response.code == temoto_core::rmp::status_codes::FAILED)
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
     {
       throw FORWARD_ERROR(msg.response.error_stack);
     }
@@ -149,7 +149,7 @@ public:
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
-    else if (msg.response.code == temoto_core::rmp::status_codes::FAILED)
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
     {
       throw FORWARD_ERROR(msg.response.error_stack);
     }
@@ -167,7 +167,7 @@ public:
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
-    else if (msg.response.code == temoto_core::rmp::status_codes::FAILED)
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
     {
       throw FORWARD_ERROR(msg.response.error_stack);
     }
@@ -179,7 +179,7 @@ public:
    */
   void validateInterface(std::string& log_prefix)
   {
-    if (!resource_manager_)
+    if (!resource_registrar_)
     {
       throw CREATE_ERROR(temoto_core::error::Code::UNINITIALIZED, "Interface is not initalized.");
     }
@@ -213,7 +213,7 @@ private:
   ros::ServiceClient client_viz_info_;
   ros::ServiceClient client_set_target_;
 
-  std::unique_ptr<temoto_core::rmp::ResourceManager<RobotManagerInterface>> resource_manager_;
+  std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
 };
 
 } // namespace

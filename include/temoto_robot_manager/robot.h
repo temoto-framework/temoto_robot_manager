@@ -22,7 +22,7 @@
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_er_manager/temoto_er_manager_services.h"
-#include "temoto_core/rmp/resource_manager.h"
+#include "temoto_core/trr/resource_registrar.h"
 
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_manager.h"
@@ -42,7 +42,7 @@ class RobotManager;
 class Robot : public temoto_core::BaseSubsystem
 {
 public:
-  Robot(RobotConfigPtr config_, temoto_core::rmp::ResourceManager<RobotManager>& resource_manager, temoto_core::BaseSubsystem& b);
+  Robot(RobotConfigPtr config_, temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar, temoto_core::BaseSubsystem& b);
   virtual ~Robot();
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
@@ -93,7 +93,7 @@ private:
   RobotConfigPtr config_;
 
   // Resource Manager
-  temoto_core::rmp::ResourceManager<RobotManager>& resource_manager_;
+  temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar_;
 
   // Manipulation related
   bool is_plan_valid_;
