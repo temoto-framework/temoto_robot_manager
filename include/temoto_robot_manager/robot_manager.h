@@ -23,8 +23,8 @@
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "temoto_context_manager/context_manager_services.h"
-#include "temoto_core/rmp/resource_manager.h"
-#include "temoto_core/rmp/config_synchronizer.h"
+#include "temoto_core/trr/resource_registrar.h"
+#include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_robot_manager/robot.h"
@@ -161,10 +161,10 @@ private:
   // temoto_robot_manager::LoadGesture hand_srv_msg_;
   
   // Keeps robot_infos in sync with other managers
-  temoto_core::rmp::ConfigSynchronizer<RobotManager, PayloadType> config_syncer_;
+  temoto_core::trr::ConfigSynchronizer<RobotManager, PayloadType> config_syncer_;
 
   // Resource manager for contacting process manager
-  temoto_core::rmp::ResourceManager<RobotManager> resource_manager_;
+  temoto_core::trr::ResourceRegistrar<RobotManager> resource_registrar_;
   std::mutex default_pose_mutex_;
 
 

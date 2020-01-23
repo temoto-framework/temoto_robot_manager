@@ -23,8 +23,8 @@
 
 namespace robot_manager
 {
-Robot::Robot(RobotConfigPtr config, temoto_core::rmp::ResourceManager<RobotManager>& resource_manager, temoto_core::BaseSubsystem& b)
-  : config_(config), resource_manager_(resource_manager), is_plan_valid_(false), temoto_core::BaseSubsystem(b)
+Robot::Robot(RobotConfigPtr config, temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar, temoto_core::BaseSubsystem& b)
+  : config_(config), resource_registrar_(resource_registrar), is_plan_valid_(false), temoto_core::BaseSubsystem(b)
 {
   class_name_ = "Robot";
 
@@ -42,35 +42,35 @@ Robot::~Robot()
     if (config_->getFeatureURDF().isLoaded())
     {
       TEMOTO_WARN("Unloading URDF Feature.");
-      resource_manager_.unloadClientResource(config_->getFeatureURDF().getResourceId());
+      resource_registrar_.unloadClientResource(config_->getFeatureURDF().getResourceId());
       config_->getFeatureURDF().setLoaded(false);
     }
 
     if (config_->getFeatureManipulation().isLoaded())
     {
       TEMOTO_WARN("Unloading Manipulation Feature.");
-      resource_manager_.unloadClientResource(config_->getFeatureManipulation().getResourceId());
+      resource_registrar_.unloadClientResource(config_->getFeatureManipulation().getResourceId());
       config_->getFeatureManipulation().setLoaded(false);
     }
 
     if (config_->getFeatureManipulation().isDriverLoaded())
     {
       TEMOTO_WARN("Unloading Manipulation driver Feature.");
-      resource_manager_.unloadClientResource(config_->getFeatureManipulation().getDriverResourceId());
+      resource_registrar_.unloadClientResource(config_->getFeatureManipulation().getDriverResourceId());
       config_->getFeatureManipulation().setDriverLoaded(false);
     }
 
     if (config_->getFeatureNavigation().isLoaded())
     {
       TEMOTO_WARN("Unloading Navigation Feature.");
-      resource_manager_.unloadClientResource(config_->getFeatureNavigation().getResourceId());
+      resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getResourceId());
       config_->getFeatureNavigation().setLoaded(false);
     }
 
     if (config_->getFeatureNavigation().isDriverLoaded())
     {
       TEMOTO_WARN("Unloading Navigation driver Feature.");
-      resource_manager_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
+      resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
       config_->getFeatureNavigation().setDriverLoaded(false);
     }
     
@@ -133,7 +133,7 @@ void Robot::waitForParam(const std::string& param, temoto_core::temoto_id::ID in
   while (!nh_.hasParam(param))
   {
     TEMOTO_DEBUG("Waiting for %s ...", param.c_str());
-    if (resource_manager_.hasFailed(interrupt_res_id))
+    if (resource_registrar_.hasFailed(interrupt_res_id))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. A FAILED status was received from process manager.");
     }
@@ -148,7 +148,7 @@ void Robot::waitForTopic(const std::string& topic, temoto_core::temoto_id::ID in
   while (!isTopicAvailable(topic))
   {
     TEMOTO_DEBUG("Waiting for %s ...", topic.c_str());
-    if (resource_manager_.hasFailed(interrupt_res_id))
+    if (resource_registrar_.hasFailed(interrupt_res_id))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. A FAILED status was received from process manager.");
     }
@@ -336,7 +336,7 @@ temoto_core::temoto_id::ID Robot::rosExecute(const std::string& package_name, co
 
   try
   {
-    resource_manager_.call<temoto_er_manager::LoadExtResource>(
+    resource_registrar_.call<temoto_er_manager::LoadExtResource>(
         temoto_er_manager::srv_name::MANAGER, temoto_er_manager::srv_name::SERVER, load_proc_srvc);
   }
   catch(temoto_core::error::ErrorStack& error_stack)
@@ -344,7 +344,7 @@ temoto_core::temoto_id::ID Robot::rosExecute(const std::string& package_name, co
     throw FORWARD_ERROR(error_stack);
   }
 
-  return load_proc_srvc.response.rmp.resource_id;
+  return load_proc_srvc.response.trr.resource_id;
 }
 
 
