@@ -53,15 +53,9 @@ public:
     validateInterface(prefix);
 
     // register status callback function
-<<<<<<< HEAD
-    // resource_manager_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
-    //client_load_ =
-      //  nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
-=======
     // resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
 //    client_load_ =
 //        nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
->>>>>>> master
     client_plan_ =
         nh_.serviceClient<temoto_robot_manager::RobotPlan>(robot_manager::srv_name::SERVER_PLAN);
     client_exec_ =
@@ -89,13 +83,7 @@ public:
     
     try
     {
-<<<<<<< HEAD
-      TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
-      TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
-      resource_manager_->template call<temoto_robot_manager::RobotLoad>(
-=======
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
->>>>>>> master
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
           
     }
