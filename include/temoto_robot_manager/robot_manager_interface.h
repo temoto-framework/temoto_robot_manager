@@ -66,6 +66,8 @@ public:
         nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_TARGET);
     client_get_target_ =
         nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_TARGET);
+    client_goal_ =
+        nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_GOAL);
   }
 
   void loadRobot(std::string robot_name = "")
@@ -208,6 +210,16 @@ public:
     
      return pose;
   }
+
+  void goalNav(std::string object_name,geometry_msgs::PoseStamped& pose)
+  {
+    temoto_robot_manager::RobotGoal msg; 
+    msg.request.move_base_frame = object_name;
+    msg.request.target_pose = pose;
+    TEMOTO_INFO_STREAM(client_goal_.call(msg););
+    TEMOTO_INFO_STREAM("=====GOAL ======");    
+
+  }
   
 // END TEST FUNCTION
   
@@ -238,6 +250,8 @@ public:
     client_exec_.shutdown();
     client_viz_info_.shutdown();
     client_set_target_.shutdown();
+    client_get_target_.shutdown();
+    client_goal_.shutdown();
 
     TEMOTO_DEBUG("RobotManagerInterface destroyed.");
   }
@@ -254,6 +268,9 @@ private:
   ros::ServiceClient client_set_target_;
   
   ros::ServiceClient client_get_target_;
+  ros::ServiceClient client_goal_;
+
+
 
 
   std::unique_ptr<temoto_core::rmp::ResourceManager<RobotManagerInterface>> resource_manager_;

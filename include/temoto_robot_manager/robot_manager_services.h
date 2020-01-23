@@ -26,6 +26,7 @@
 #include "temoto_robot_manager/RobotSetMode.h"
 #include "temoto_robot_manager/RobotGetVizInfo.h"
 #include "temoto_robot_manager/RobotGetTarget.h"
+#include "temoto_robot_manager/RobotGoal.h"
 
 #include <string>
 
@@ -43,6 +44,7 @@ const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
 const std::string SERVER_SET_TARGET = "set_target";
 
 const std::string SERVER_GET_TARGET = "get_target";
+const std::string SERVER_GOAL = "goal";
 
 const std::string SERVER_SET_MODE = "set_mode";
 }

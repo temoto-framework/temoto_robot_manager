@@ -31,6 +31,9 @@
 #include "temoto_robot_manager/robot_config.h"
 
 #include <moveit/move_group_interface/move_group_interface.h>
+#include <move_base_msgs/MoveBaseAction.h>
+#include <actionlib/client/simple_action_client.h>
+
 #include "std_msgs/String.h"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
@@ -101,6 +104,8 @@ private:
 
   bool getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
 
+  bool goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
+
   bool setModeCb(temoto_robot_manager::RobotSetMode::Request& req, temoto_robot_manager::RobotSetMode::Response& res);
 
   void syncCb(const temoto_core::ConfigSync& msg, const PayloadType& payload);
@@ -142,6 +147,7 @@ private:
   ros::ServiceServer server_set_target_;
   ros::ServiceServer server_get_target_;
   ros::ServiceServer server_set_mode_;
+  ros::ServiceServer server_goal_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -149,6 +155,7 @@ private:
   ros::ServiceClient client_set_target_;
   ros::ServiceClient client_get_target_;
   ros::ServiceClient client_set_mode_;
+  ros::ServiceClient client_goal_;
 
   ros::Subscriber target_pose_sub_;
   // temoto_robot_manager::LoadGesture hand_srv_msg_;
@@ -165,6 +172,8 @@ private:
   tf2_ros::Buffer tf2_buffer;
 
   ros::Publisher marker_publisher_;
+
+  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 };
 }

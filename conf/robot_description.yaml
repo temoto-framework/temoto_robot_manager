@@ -7,26 +7,64 @@ Robots:
     executable: "urdf/xarm7_with_gripper.xacro"
   manipulation:
     controller:
-      #package_name: "xarm7_wgrip_moveit" 
-      #executable: "demo.launch"
+      # package_name: "xarm7_moveit_config" 
+      # executable: "move_group.launch"
+
+      
       package_name: "xarm7_wgrip_moveit" 
       executable: "move_group.launch"
-      
+      args: "fake_execution:=false allow_trajectory_execution:=true info:=true debug:=false"
+
+
       #==Real Robot==
       #package_name: "xarm_controller"
-      #executable: "xarm7_control.launch"
-      args: "fake_execution:=true load_robot_description:=false allow_trajectory_execution:=true"
+      #executable: "xarm7_control_temoto.launch"
+      # args: "fake_execution:=false load_robot_description:=false allow_trajectory_execution:=true"
       planning_groups: ["xarm7"]
+
     driver:
+      # Este si sirve
+      # package_name: "xarm7_wgrip_moveit"
+      # executable: "demo_test.launch"
+
+      # package_name: "xarm7_moveit_config"
+      # executable: "demo.launch"
+     
+     
+      #==Real Robot==
+      # package_name: "xarm_bringup"
+      # executable: "xarm7_server.launch"
+      # args: "robot_ip:=192.168.1.216 use_moveit:=true"
+
+      #or 
+      package_name: "xarm7_wgrip_moveit"
+      executable: "real_with_gripper_temoto.launch"
+      args: "robot_ip:=192.168.1.216"
+
+
+- robot_name: "xarm7_robot_sim"
+  description: "xarm7_robot_sim"
+  reliability: 0.8
+  urdf:
+    package_name: "xarm7_mov_test"
+    executable: "urdf/xarm7_with_gripper.xacro"
+  manipulation:
+    controller:
+      # Este si sirve
+      package_name: "xarm7_wgrip_moveit" 
+      executable: "move_group.launch"
+      args: "fake_execution:=true load_robot_description:=false allow_trajectory_execution:=true"
+
+      planning_groups: ["xarm7"]
+
+    driver:
+      # Este si sirve
       package_name: "xarm7_wgrip_moveit"
       executable: "demo_test.launch"
-      #package_name: "xarm7_wgrip_moveit"
-      #executable: "planning_context.launch"
-      
-      #==Real Robot==
-      #package_name: "xarm_bringup"
-      #executable: "xarm7_server.launch"
-    
+
+      # package_name: "xarm7_moveit_config"
+      # executable: "demo.launch"
+         
 - robot_name: "panda"
   description: "panda_robot"
   reliability: 0.8
@@ -46,4 +84,22 @@ Robots:
       #args: "rviz_tutorial:=true"
       
       
-      
+- robot_name: "turtlebot"
+  description: "turtlebot"
+  reliability: 0.8
+  urdf:
+    package_name: "turtlebot3_description"
+    executable: "urdf/turtlebot3_waffle.urdf.xacro"
+  navigation:
+    controller:
+      package_name: "turtlebot3_navigation"
+      executable: "turtlebot3_navigation.launch"
+      global_planner: "navfn/NavfnROS"        #/move_base/DWAPlannerROS/global_plan
+      local_planner: "dwa_local_planner/DWAPlannerROS"         #/move_base/DWAPlannerROS/local_plan
+                                              #dwa_local_planner/DWAPlannerROS
+    driver:
+      package_name: "turtlebot3_gazebo" 
+      executable: "turtlebot3_testNav.launch"      #(for now, always move_base.launch)
+      #package_name: "xarm7_wgrip_moveit"
+      #executable: "demo_test.launch"
+      # args: "model:=waffle"

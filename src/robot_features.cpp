@@ -93,10 +93,13 @@ FeatureNavigation::FeatureNavigation() : FeatureWithDriver("navigation")
 FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDriver("navigation")
 {
   this->package_name_ = nav_conf["controller"]["package_name"].as<std::string>();
-  this->executable_ = "move_base.launch";
+  this->executable_ = nav_conf["controller"]["executable"].as<std::string>();
+
+  // this->executable_ = "move_base.launch";
+
   if (nav_conf["controller"]["args"])
   {
-    this->args_ = nav_conf["driver"]["args"].as<std::string>();
+    this->args_ = nav_conf["controller"]["args"].as<std::string>();
   }
   this->global_planner_ = nav_conf["controller"]["global_planner"].as<std::string>();
   this->local_planner_ = nav_conf["controller"]["local_planner"].as<std::string>();

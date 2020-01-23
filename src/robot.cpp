@@ -62,14 +62,14 @@ Robot::~Robot()
 
     if (config_->getFeatureNavigation().isLoaded())
     {
-      TEMOTO_WARN("Unloading Manipulation Feature.");
+      TEMOTO_WARN("Unloading Navigation Feature.");
       resource_manager_.unloadClientResource(config_->getFeatureNavigation().getResourceId());
       config_->getFeatureNavigation().setLoaded(false);
     }
 
     if (config_->getFeatureNavigation().isDriverLoaded())
     {
-      TEMOTO_WARN("Unloading Manipulation driver Feature.");
+      TEMOTO_WARN("Unloading Navigation driver Feature.");
       resource_manager_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
       config_->getFeatureNavigation().setDriverLoaded(false);
     }
@@ -104,17 +104,23 @@ void Robot::load()
   if (config_->getFeatureURDF().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
     loadUrdf();
+    TEMOTO_INFO("=== LOAD MANIPULATION DRIVER first time=====");
     loadManipulationDriver();  // We need joint states and robot states to visualize the robot
+    TEMOTO_INFO("=== TERMINO EL LOAD MANIPULATION first time=====");
   }
 
   if (config_->getFeatureManipulation().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
+    TEMOTO_INFO("=== LOAD MANIPULATION DRIVER =====");
     loadManipulationDriver();
+    TEMOTO_INFO("=== LOAD MANIPULATION =====");
     loadManipulation();
+    TEMOTO_INFO("=== TERMINO EL LOAD MANIPULATION =====");
   }
   
   if (config_->getFeatureNavigation().isEnabled() and config_->getFeatureNavigation().isDriverEnabled())
   {
+    TEMOTO_INFO("=== IF NAVIGATION .IS DRIVER ENABLE =====");
     loadNavigationDriver();
     loadNavigation();
   }
@@ -251,6 +257,7 @@ void Robot::loadManipulationDriver()
 // Load Move Base
 void Robot::loadNavigation()
 {
+  TEMOTO_INFO("=== ROBOT.cpp LoadNavig =====");
   if (config_->getFeatureNavigation().isLoaded())
   {
     return; // Return if already loaded.
@@ -279,6 +286,9 @@ void Robot::loadNavigation()
 // Load robot driver that will publish odom
 void Robot::loadNavigationDriver()
 {
+
+  TEMOTO_INFO("=== ROBOT.cpp LoadNavigDriver =====");
+
   if (config_->getFeatureNavigation().isDriverLoaded())
   {
     return; // Return if already loaded.
@@ -287,15 +297,26 @@ void Robot::loadNavigationDriver()
   try
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
+    TEMOTO_INFO("=== STAGE 1 =====");
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    TEMOTO_DEBUG("Manipulation driver resource id: %d", res_id);
+    
+    TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);
+    
     ftr.setDriverResourceId(res_id);
+    TEMOTO_INFO("=== STAGE 4 =====");
 
+    //std::string odom_topic = "/odom";
     std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
+    TEMOTO_INFO("=== STAGE 5 =====");
+    TEMOTO_INFO_STREAM("=====ODOM TOPIC ====== " << odom_topic);
+    TEMOTO_INFO_STREAM("=====RES ID ====== " << res_id);
     waitForTopic(odom_topic, res_id);
+    TEMOTO_INFO("=== STAGE 6 =====");
 
     ftr.setDriverLoaded(true);
+    TEMOTO_INFO("=== STAGE 7 =====");
     TEMOTO_DEBUG("Feature 'navigation driver' loaded.");
+    
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -374,7 +395,18 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
   ftr.setActivePlanningGroup(planning_group_name);
 
   group_it->second->setStartStateToCurrentState();
-  group_it->second->setPoseTarget(target_pose);
+
+  
+
+  // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
+  group_it->second->setPoseTarget(target_pose.pose);
+  
+  // TEMOTO_INFO_STREAM("GET CURRENT POSE ROBOT.cpp");
+  // TEMOTO_INFO_STREAM(group_it->second->getCurrentPose());
+  // TEMOTO_INFO_STREAM("GET TARGET POSE ROBOT.cpp");
+  // TEMOTO_INFO_STREAM(group_it->second->getPoseTarget());  
+  //group_it->second->setNamedTarget("test_pose");
+
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
@@ -429,8 +461,14 @@ geometry_msgs::Pose Robot::getTarget()
  
   //TEMOTO_INFO_STREAM(test);  
   
-  return test;
-  
+  return test;  
+
+}
+
+void Robot::goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose)
+{
+   TEMOTO_INFO_STREAM("=====GOAL robot.cpp======");
+   FeatureNavigation& ftr = config_->getFeatureNavigation();
 
 }
 

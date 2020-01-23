@@ -61,6 +61,9 @@ RobotManager::RobotManager()
   server_get_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_TARGET, 
                                             &RobotManager::getTargetCb, this);
 
+  server_goal_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GOAL, 
+                                            &RobotManager::goalCb, this);
+
   //TODO: TEMPORARY, REMOVE!
 //      seq: 0
 //      stamp: 
@@ -132,13 +135,18 @@ void RobotManager::loadLocalRobot(RobotConfigPtr config, temoto_core::temoto_id:
   if (!config)
   {
     throw CREATE_ERROR(temoto_core::error::Code::NULL_PTR, "config == NULL");
+    
   }
 
   try
   {
+    TEMOTO_INFO("=== TRY PARTTTTTT =====");
     active_robot_ = std::make_shared<Robot>(config, resource_manager_, *this);
+    TEMOTO_INFO("=== TRY PARTTTTTT emplace =====");
     loaded_robots_.emplace(resource_id, active_robot_);
+    TEMOTO_INFO("=== TRY PARTTTTTT adjustReliability =====");
     config->adjustReliability(1.0);
+    TEMOTO_INFO("=== adjustReliability =====");
     advertiseConfig(config);
     TEMOTO_DEBUG("Robot '%s' loaded.", config->getName().c_str());
   }
@@ -155,13 +163,17 @@ void RobotManager::loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_
 {
   TEMOTO_INFO("Starting to load robot '%s'...", req.robot_name.c_str());
 
+  
+
   // Find the suitable robot and fill the process manager service request
   auto config = findRobot(req.robot_name, local_configs_);
+  TEMOTO_INFO("=== BEFORE OF CONFIG =====");
   if (config)
   {
     try
     {
       loadLocalRobot(config, res.rmp.resource_id);
+      TEMOTO_INFO("=== THIS IS MY TEST =====");
       res.rmp.code = temoto_core::rmp::status_codes::OK;
       res.rmp.message = "Robot sucessfully loaded.";
     }
@@ -176,6 +188,7 @@ void RobotManager::loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_
     }
     return;
   }
+  
 
   // Try to find suitable candidate from remote managers
   config = findRobot(req.robot_name, remote_configs_);
@@ -594,6 +607,33 @@ bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& re
   return true;
 }
 
+
+bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
+{
+  active_robot_->goal("a", req.target_pose);
+  MoveBaseClient ac("move_base", true);
+  
+  // while(!ac.waitForServer(ros::Duration(5.0))){
+  //   ROS_INFO("Waiting for the move_base action server to come up");
+  // }
+  
+  move_base_msgs::MoveBaseGoal goal;
+
+  goal.target_pose.header.frame_id = req.move_base_frame;
+  goal.target_pose.pose = req.target_pose.pose;
+
+  
+
+  TEMOTO_INFO_STREAM("=====GOAL - CB -  ======");
+  TEMOTO_INFO_STREAM(goal.target_pose);
+  
+
+  ac.sendGoal(goal);
+  
+  TEMOTO_INFO("GOAL");
+
+  return true;
+}
 
 
 bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,

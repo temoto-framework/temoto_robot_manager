@@ -21,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_service_files(
   FILES
-
+  
   RobotLoad.srv
   RobotPlan.srv
   RobotExecute.srv
@@ -29,6 +29,7 @@ add_service_files(
   RobotSetMode.srv
   RobotGetVizInfo.srv
   RobotGetTarget.srv
+  RobotGoal.srv
 )
 
 generate_messages(
