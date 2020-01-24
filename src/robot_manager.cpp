@@ -102,8 +102,6 @@ RobotManager::RobotManager()
   // Read the robot config for this manager.
   TEMOTO_INFO_STREAM(temoto_core::common::getTemotoNamespace());
 
-  TEMOTO_INFO_STREAM("=====yaml filename=====");
-
   std::string yaml_filename = 
       ros::package::getPath(ROS_PACKAGE_NAME) + "/conf/" + "robot_description.yaml";
       TEMOTO_INFO_STREAM(yaml_filename);
@@ -142,9 +140,7 @@ void RobotManager::loadLocalRobot(RobotConfigPtr config, temoto_core::temoto_id:
   {
     active_robot_ = std::make_shared<Robot>(config, resource_registrar_, *this);
     loaded_robots_.emplace(resource_id, active_robot_);
-    TEMOTO_INFO("=== TRY PARTTTTTT adjustReliability =====");
     config->adjustReliability(1.0);
-    TEMOTO_INFO("=== adjustReliability =====");
     advertiseConfig(config);
     TEMOTO_DEBUG("Robot '%s' loaded.", config->getName().c_str());
   }
@@ -165,7 +161,6 @@ void RobotManager::loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_
 
   // Find the suitable robot and fill the process manager service request
   auto config = findRobot(req.robot_name, local_configs_);
-  TEMOTO_INFO("=== BEFORE OF CONFIG =====");
   if (config)
   {
     try
@@ -584,17 +579,11 @@ bool RobotManager::setTargetCb(temoto_robot_manager::RobotSetTarget::Request& re
 bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
                                temoto_robot_manager::RobotGetTarget::Response& res)
 {
-  //geometry_msgs::Pose test;
   if (active_robot_->isLocal())
   {
-    //res.pose = 10;    
-
     TEMOTO_INFO("Request: '%s'", req.ref_joint.c_str());
     TEMOTO_INFO("Request: '%s'", req.respect_to.c_str());
-
-    //test = active_robot_->getTarget();
     res.pose = active_robot_->getTarget();
-    //TEMOTO_INFO_STREAM(test);
   }
   else
   {
@@ -607,29 +596,36 @@ bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& re
 
 bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
 {
-  active_robot_->goal("a", req.target_pose);
-  MoveBaseClient ac("move_base", true);
-  
-  // while(!ac.waitForServer(ros::Duration(5.0))){
-  //   ROS_INFO("Waiting for the move_base action server to come up");
-  // }
-  
-  move_base_msgs::MoveBaseGoal goal;
+  active_robot_->goal("map", req.target_pose);
+  MoveBaseClient ac("/xarm7_temoto/robot_manager/robots/clearbot/move_base", true);   //For testing with clearbot
 
-  goal.target_pose.header.frame_id = req.move_base_frame;
+  // ===== TODO =====
+  // Try active_robot_->getConfig()->getTemotoNamespace() + active_robot_->getName + "/move_base"  
+  // ================
+
+  
+  while(!ac.waitForServer(ros::Duration(5.0))){
+    ROS_INFO("Waiting for the move_base action server to come up");
+  }
+  
+  move_base_msgs::MoveBaseGoal goal;  
   goal.target_pose.pose = req.target_pose.pose;
-
-  
-
-  TEMOTO_INFO_STREAM("=====GOAL - CB -  ======");
-  TEMOTO_INFO_STREAM(goal.target_pose);
-  
+  TEMOTO_INFO_STREAM(goal.target_pose); 
+  goal.target_pose.header.frame_id = "map";
+  goal.target_pose.header.stamp = ros::Time::now();
+ 
+  TEMOTO_INFO_STREAM(goal.target_pose); 
 
   ac.sendGoal(goal);
-  
-  TEMOTO_INFO("GOAL");
+  ac.waitForResult();
+
+  if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    ROS_INFO("The base moved , SUCCEEDED");
+  else
+    ROS_INFO("The base failed to move for some reason");
 
   return true;
+  
 }
 
 

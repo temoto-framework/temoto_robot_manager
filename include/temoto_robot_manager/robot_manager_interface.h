@@ -191,20 +191,13 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
     geometry_msgs::Pose pose;
-    
-    TEMOTO_INFO_STREAM("=====getEndEffPose====== " << object_name << respect_to_link);
-
     temoto_robot_manager::RobotGetTarget msg; 
-
     msg.request.ref_joint = object_name;
     msg.request.respect_to = respect_to_link;
-
     //client_get_target_.call(msg);
     TEMOTO_INFO_STREAM(client_get_target_.call(msg));
-    TEMOTO_INFO_STREAM("=====GET TARGET ======");
-
     TEMOTO_INFO_STREAM(msg.response.pose);
-    pose = msg.response.pose;    
+    pose = msg.response.pose;
     
      return pose;
   }
@@ -215,7 +208,7 @@ public:
     msg.request.move_base_frame = object_name;
     msg.request.target_pose = pose;
     TEMOTO_INFO_STREAM(client_goal_.call(msg););
-    TEMOTO_INFO_STREAM("=====GOAL ======");    
+    //TEMOTO_INFO_STREAM("=====GOAL ======");    
 
   }
   

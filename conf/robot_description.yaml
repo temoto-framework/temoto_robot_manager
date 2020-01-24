@@ -11,9 +11,9 @@ Robots:
       # executable: "move_group.launch"
 
       
-      package_name: "xarm7_wgrip_moveit" 
-      executable: "move_group.launch"
-      args: "fake_execution:=false allow_trajectory_execution:=true info:=true debug:=false"
+      package_name: "xarm7_moveit_config" 
+      executable: "controller_temoto.launch"
+      args: "no_gui_plan:=false"
 
 
       #==Real Robot==
@@ -37,8 +37,8 @@ Robots:
       # args: "robot_ip:=192.168.1.216 use_moveit:=true"
 
       #or 
-      package_name: "xarm7_wgrip_moveit"
-      executable: "real_with_gripper_temoto.launch"
+      package_name: "xarm7_moveit_config"
+      executable: "driver_temoto.launch"
       args: "robot_ip:=192.168.1.216"
 
 
