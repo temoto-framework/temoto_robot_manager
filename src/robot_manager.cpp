@@ -597,12 +597,11 @@ bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& re
 bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
 {
   active_robot_->goal("map", req.target_pose);
-  MoveBaseClient ac("/xarm7_temoto/robot_manager/robots/clearbot/move_base", true);   //For testing with clearbot
+  std::string act_rob_ns = active_robot_->getConfig()->getAbsRobotNamespace() + "/move_base";
 
-  // ===== TODO =====
-  // Try active_robot_->getConfig()->getTemotoNamespace() + active_robot_->getName + "/move_base"  
-  // ================
-
+  //MoveBaseClient ac("/xarm7_temoto/robot_manager/robots/clearbot/move_base", true);   //For testing with clearbot
+  MoveBaseClient ac(act_rob_ns, true);  
+  
   
   while(!ac.waitForServer(ros::Duration(5.0))){
     ROS_INFO("Waiting for the move_base action server to come up");
@@ -613,6 +612,7 @@ bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_
   TEMOTO_INFO_STREAM(goal.target_pose); 
   goal.target_pose.header.frame_id = "map";
   goal.target_pose.header.stamp = ros::Time::now();
+ 
  
   TEMOTO_INFO_STREAM(goal.target_pose); 
 
