@@ -28,8 +28,6 @@ Robots:
     #   executable: "driver_temoto.launch"
     #   args: "robot_ip:=192.168.1.216"
 
-
-
 - robot_name: "xarm7_robot_sim"
   description: "xarm7_robot_sim"
   reliability: 0.8
@@ -92,22 +90,23 @@ Robots:
       #executable: "demo_test.launch"
       # args: "model:=waffle"
 
-
-- robot_name: "ur5_robot_sim"
-  description: "ur5_robot_sim"
+- robot_name: "clearbot"
+  description: "clearbot"
   reliability: 0.8
   urdf:
-    package_name: "ur_description"
-    executable: "urdf/ur5_robot.urdf.xacro"
-  manipulation:
+    package_name: "robotont_description"
+    executable: "xacro/main.urdf.xacro"
+  navigation:
     controller:
-      package_name: "ur_modern_driver"
-      executable: "controller_temoto.launch"
-      args: "config:=true sim:=true"
-      planning_groups: ["ur5"]
+      package_name: "simple_navigation_goals"
+      executable: "temoto_nav.launch"
+      global_planner: "navfn/NavfnROS"        #/move_base/DWAPlannerROS/global_plan
+      local_planner: "base_local_planner/TrajectoryPlannerROS"         #/move_base/DWAPlannerROS/local_plan
+                                              #dwa_local_planner/DWAPlannerROS
     driver:
-      package_name: "ur_gazebo"
-      executable: "ur5.launch"      
+      package_name: "robotont_driver" 
+      executable: "driver_temoto.launch"      #(for now, always move_base.launch)
+
 
 - robot_name: "ur5_robot"
   description: "ur5_robot"
@@ -125,3 +124,21 @@ Robots:
       package_name: "ur_robot_driver"
       executable: "ur5_modified_bringup.launch"
       args: "robot_ip:=192.168.1.100"
+
+
+- robot_name: "mir100"
+  description: "mir100"
+  reliability: 0.8
+  urdf:
+    package_name: "mir_description"
+    executable: "urdf/mir.urdf.xacro"
+  navigation:
+    controller:
+      package_name: " "
+      executable: ".....launch"
+      global_planner: "SBPLLatticePlanner"        #/move_base/DWAPlannerROS/global_plan
+      local_planner: "base_local_planner/dwb_local_planner"         #/move_base/DWAPlannerROS/local_plan
+                                              #dwa_local_planner/DWAPlannerROS
+    driver:
+      package_name: "mir_driver" 
+      executable: "mir.launch"      #(for now, always move_base.launch)

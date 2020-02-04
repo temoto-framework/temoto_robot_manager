@@ -58,11 +58,11 @@ RobotManager::RobotManager()
   server_set_mode_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MODE,
                                           &RobotManager::setModeCb, this);
   
-  server_get_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_TARGET, 
-                                            &RobotManager::getTargetCb, this);
+  server_get_manipulation_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET, 
+                                            &RobotManager::getManipulationTargetCb, this);
 
-  server_goal_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GOAL, 
-                                            &RobotManager::goalCb, this);
+  server_navigation_goal_ = nh_.advertiseService(robot_manager::srv_name::SERVER_NAVIGATION_GOAL, 
+                                            &RobotManager::goalNavigationCb, this);
 
   //TODO: TEMPORARY, REMOVE!
 //      seq: 0
@@ -576,7 +576,7 @@ bool RobotManager::setTargetCb(temoto_robot_manager::RobotSetTarget::Request& re
 
 
 
-bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
+bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
                                temoto_robot_manager::RobotGetTarget::Response& res)
 {
   if (active_robot_->isLocal())
@@ -594,7 +594,7 @@ bool RobotManager::getTargetCb(temoto_robot_manager::RobotGetTarget::Request& re
 }
 
 
-bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
+bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
 {
   active_robot_->goal("map", req.target_pose);
   std::string act_rob_ns = active_robot_->getConfig()->getAbsRobotNamespace() + "/move_base";
@@ -610,7 +610,7 @@ bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_
   move_base_msgs::MoveBaseGoal goal;  
   goal.target_pose.pose = req.target_pose.pose;
   TEMOTO_INFO_STREAM(goal.target_pose); 
-  goal.target_pose.header.frame_id = "map";
+  goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
   goal.target_pose.header.stamp = ros::Time::now();
  
  
@@ -620,10 +620,13 @@ bool RobotManager::goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_
   ac.waitForResult();
 
   if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+  {
     ROS_INFO("The base moved , SUCCEEDED");
+  }
   else
+  {
     ROS_INFO("The base failed to move for some reason");
-
+  }
   return true;
   
 }

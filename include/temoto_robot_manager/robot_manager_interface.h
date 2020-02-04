@@ -64,22 +64,21 @@ public:
         nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
     client_set_target_ =
         nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_TARGET);
-    client_get_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_TARGET);
-    client_goal_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_GOAL);
+    client_get_manipulation_target_ =
+        nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
+    client_navigation_goal_ =
+        nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
   }
 
   void loadRobot(std::string robot_name = "")
   {
     
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-  
+    validateInterface(prefix);
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
     // the name of the topic
     temoto_robot_manager::RobotLoad load_srvc;
-    load_srvc.request.robot_name = robot_name;
-  
+    load_srvc.request.robot_name = robot_name;  
     
     try
     {
@@ -194,21 +193,27 @@ public:
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.ref_joint = object_name;
     msg.request.respect_to = respect_to_link;
-    //client_get_target_.call(msg);
-    TEMOTO_INFO_STREAM(client_get_target_.call(msg));
+    //client_get_manipulation_target_.call(msg);
+    TEMOTO_INFO_STREAM(client_get_manipulation_target_.call(msg));
     TEMOTO_INFO_STREAM(msg.response.pose);
     pose = msg.response.pose;
     
      return pose;
   }
 
-  void goalNav(std::string object_name,geometry_msgs::PoseStamped& pose)
+  void navigationGoal(std::string object_name,geometry_msgs::PoseStamped& pose)
   {
     temoto_robot_manager::RobotGoal msg; 
     msg.request.move_base_frame = object_name;
     msg.request.target_pose = pose;
-    TEMOTO_INFO_STREAM(client_goal_.call(msg););
-    //TEMOTO_INFO_STREAM("=====GOAL ======");    
+    if (client_navigation_goal_.call(msg))
+    {
+    TEMOTO_DEBUG("The goal was set successfully");
+    }
+    else
+    {
+    TEMOTO_ERROR("Failed to reach the server"); 
+    }  
 
   }
   
@@ -241,8 +246,8 @@ public:
     client_exec_.shutdown();
     client_viz_info_.shutdown();
     client_set_target_.shutdown();
-    client_get_target_.shutdown();
-    client_goal_.shutdown();
+    client_get_manipulation_target_.shutdown();
+    client_navigation_goal_.shutdown();
 
     TEMOTO_DEBUG("RobotManagerInterface destroyed.");
   }
@@ -258,8 +263,8 @@ private:
   ros::ServiceClient client_viz_info_;
   ros::ServiceClient client_set_target_;
   
-  ros::ServiceClient client_get_target_;
-  ros::ServiceClient client_goal_;
+  ros::ServiceClient client_get_manipulation_target_;
+  ros::ServiceClient client_navigation_goal_;
 
 
 

@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cmake_modules
   moveit_ros_planning_interface
+  move_base_msgs
   tf2
   tf2_geometry_msgs
   geometry_msgs

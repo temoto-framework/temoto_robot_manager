@@ -23,14 +23,12 @@
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_core/trr/resource_registrar.h"
-
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_manager.h"
 #include "temoto_robot_manager/robot_features.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
-
 #include <string>
 #include <map>
 #include <vector>
@@ -51,11 +49,9 @@ public:
   void plan(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
 
   void execute();
-
   
   geometry_msgs::Pose getTarget();
   void goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
-
 
   std::string getName() const
   {
@@ -107,8 +103,6 @@ private:
   moveit::planning_interface::MoveGroupInterface::Plan last_plan;
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>>
       planning_groups_;
-
-  //move_base_msgs::MoveBaseGoal goal2;
 };
 }
 

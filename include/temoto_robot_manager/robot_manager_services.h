@@ -43,8 +43,8 @@ const std::string SERVER_EXECUTE = "execute";
 const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
 const std::string SERVER_SET_TARGET = "set_target";
 
-const std::string SERVER_GET_TARGET = "get_target";
-const std::string SERVER_GOAL = "goal";
+const std::string SERVER_GET_MANIPULATION_TARGET = "get_target";
+const std::string SERVER_NAVIGATION_GOAL = "goal";
 
 const std::string SERVER_SET_MODE = "set_mode";
 }

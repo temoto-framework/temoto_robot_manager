@@ -29,11 +29,9 @@
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
-
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-
 #include "std_msgs/String.h"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
@@ -102,9 +100,9 @@ private:
 
   bool setTargetCb(temoto_robot_manager::RobotSetTarget::Request& req, temoto_robot_manager::RobotSetTarget::Response& res);
 
-  bool getTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
+  bool getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
 
-  bool goalCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
+  bool goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
 
   bool setModeCb(temoto_robot_manager::RobotSetMode::Request& req, temoto_robot_manager::RobotSetMode::Response& res);
 
@@ -145,17 +143,17 @@ private:
   ros::ServiceServer server_exec_;
   ros::ServiceServer server_get_viz_cfg_;
   ros::ServiceServer server_set_target_;
-  ros::ServiceServer server_get_target_;
+  ros::ServiceServer server_get_manipulation_target_;
   ros::ServiceServer server_set_mode_;
-  ros::ServiceServer server_goal_;
+  ros::ServiceServer server_navigation_goal_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_get_viz_cfg_;
   ros::ServiceClient client_set_target_;
-  ros::ServiceClient client_get_target_;
+  ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_set_mode_;
-  ros::ServiceClient client_goal_;
+  ros::ServiceClient client_navigation_goal_;
 
   ros::Subscriber target_pose_sub_;
   // temoto_robot_manager::LoadGesture hand_srv_msg_;

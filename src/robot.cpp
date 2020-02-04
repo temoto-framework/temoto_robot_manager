@@ -20,7 +20,6 @@
 #include "temoto_core/temoto_error/temoto_error.h"
 #include "ros/package.h"
 
-
 namespace robot_manager
 {
 Robot::Robot(RobotConfigPtr config, temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar, temoto_core::BaseSubsystem& b)
@@ -431,6 +430,9 @@ geometry_msgs::Pose Robot::getTarget()
   if (group_it != planning_groups_.end())
   {    
     current_pose = group_it->second->getCurrentPose().pose;
+    current_pose = group_it->second->getCurrentPose().pose;
+    current_pose = group_it->second->getCurrentPose().pose;
+
   }
   else 
   {
