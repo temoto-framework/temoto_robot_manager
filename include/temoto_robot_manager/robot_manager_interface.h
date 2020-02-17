@@ -82,13 +82,15 @@ public:
     
     try
     {
+      TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
+      TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
+
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
           
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {
-      //TEMOTO_INFO_STREAM("========== here ==========");
       //TEMOTO_INFO_STREAM(error_stack.size);
       throw FORWARD_ERROR(error_stack);
     }
@@ -97,7 +99,8 @@ public:
   void plan(std::string planning_group = "")
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-
+    TEMOTO_DEBUG("%s", prefix.c_str());
+    
     temoto_robot_manager::RobotPlan msg;
     msg.request.use_default_target = true;
     msg.request.planning_group = planning_group;

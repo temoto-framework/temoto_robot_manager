@@ -50,8 +50,10 @@ public:
 
   void execute();
   
-  geometry_msgs::Pose getTarget();
-  void goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
+  geometry_msgs::Pose getManipulationTarget();
+  void goalNavigation(const std::string planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  //void goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
+  void goal();
 
   std::string getName() const
   {
@@ -103,6 +105,8 @@ private:
   moveit::planning_interface::MoveGroupInterface::Plan last_plan;
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>>
       planning_groups_;
+
+  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 };
 }
 

@@ -86,8 +86,6 @@ Robot::~Robot()
   TEMOTO_DEBUG("Robot destructed");
 }
 
-
-
 void Robot::load()
 {
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
@@ -278,7 +276,6 @@ void Robot::loadNavigation()
 // Load robot driver that will publish odom
 void Robot::loadNavigationDriver()
 {
-
   if (config_->getFeatureNavigation().isDriverLoaded())
   {
     return; // Return if already loaded.
@@ -324,7 +321,6 @@ temoto_core::temoto_id::ID Robot::rosExecute(const std::string& package_name, co
 
   return load_proc_srvc.response.trr.resource_id;
 }
-
 
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
@@ -374,17 +370,8 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
 
   group_it->second->setStartStateToCurrentState();
 
-  
-
   // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
   group_it->second->setPoseTarget(target_pose.pose);
-  
-  // TEMOTO_INFO_STREAM("GET CURRENT POSE ROBOT.cpp");
-  // TEMOTO_INFO_STREAM(group_it->second->getCurrentPose());
-  // TEMOTO_INFO_STREAM("GET TARGET POSE ROBOT.cpp");
-  // TEMOTO_INFO_STREAM(group_it->second->getPoseTarget());  
-  //group_it->second->setNamedTarget("test_pose");
-
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
@@ -418,36 +405,73 @@ void Robot::execute()
   }
 }
 
-geometry_msgs::Pose Robot::getTarget()
+geometry_msgs::Pose Robot::getManipulationTarget()
 {
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   
   auto group_it = planning_groups_.find(planning_group_name);
-  TEMOTO_INFO(planning_group_name.c_str());
+  TEMOTO_INFO_STREAM(planning_group_name.c_str());
 
   geometry_msgs::Pose current_pose;
   
   if (group_it != planning_groups_.end())
   {    
-    current_pose = group_it->second->getCurrentPose().pose;
-    current_pose = group_it->second->getCurrentPose().pose;
-    current_pose = group_it->second->getCurrentPose().pose;
-
+    current_pose = group_it->second->getCurrentPose().pose;    
+    //group_it->second->setNamedTarget("test_pose");
   }
   else 
   {
+    //TODO: This section has to utilize temoto error management system
     TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
   } 
   //TEMOTO_INFO_STREAM(current_pose);    
   return current_pose;  
-
 }
 
-void Robot::goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const std::string planning_group_name, const geometry_msgs::PoseStamped& target_pose)
+{
+    FeatureNavigation& ftr = config_->getFeatureNavigation();
+    std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
+    
+    //Asi me funcionaba en robot_manager.cpp
+    //std::string act_rob_ns = active_robot_->getConfig()->getAbsRobotNamespace() + "/move_base";
+    //MoveBaseClient ac("/xarm7_temoto/robot_manager/robots/clearbot/move_base", true);   //For testing with clearbot
+
+    MoveBaseClient ac(act_rob_ns, true);    
+    
+    while(!ac.waitForServer(ros::Duration(5.0))){
+      ROS_INFO("Waiting for the move_base action server to come up");
+    }
+    
+    move_base_msgs::MoveBaseGoal goal;
+    
+    goal.target_pose.pose = target_pose.pose;
+    TEMOTO_INFO_STREAM(goal.target_pose); 
+    goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
+    //goal.target_pose.header.frame_id = planning_group_name;         
+    goal.target_pose.header.stamp = ros::Time::now();  
+  
+    TEMOTO_INFO_STREAM(goal.target_pose); 
+
+    ac.sendGoal(goal);
+    ac.waitForResult();
+
+    if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+      ROS_INFO("The base moved , SUCCEEDED");
+    }
+    else
+    {
+      ROS_INFO("The base failed to move for some reason");
+    }
+}
+
+void Robot::goal()
 {
    FeatureNavigation& ftr = config_->getFeatureNavigation();
-}
 
+
+}
 
 bool Robot::isLocal() const
 {

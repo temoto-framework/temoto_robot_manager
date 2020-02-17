@@ -7,26 +7,26 @@ Robots:
     executable: "urdf/xarm7_with_gripper.xacro"
   manipulation:
     #======== Real Robot from original repository =================================
-    controller:
-      package_name: "xarm7_moveit_config" 
-      executable: "controller_temoto.launch"
-      args: "fake_execution:=false show_rviz:=true debug:=false"
-      planning_groups: ["xarm7"]
-    driver:
-      package_name: "xarm7_moveit_config"
-      executable: "driver_temoto.launch"
-      args: "robot_ip:=192.168.1.216"
-    
-    #======== Robot with gripper =================================
     # controller:
-    #   package_name: "xarm7_wgrip_moveit" 
+    #   package_name: "xarm7_moveit_config" 
     #   executable: "controller_temoto.launch"
     #   args: "fake_execution:=false show_rviz:=true debug:=false"
     #   planning_groups: ["xarm7"]
     # driver:
-    #   package_name: "xarm7_wgrip_moveit"
+    #   package_name: "xarm7_moveit_config"
     #   executable: "driver_temoto.launch"
     #   args: "robot_ip:=192.168.1.216"
+    
+    #======== Robot with base and gripper =================================
+    controller:
+      package_name: "xarm7_wgrip_moveit" 
+      executable: "controller_temoto_2.launch"
+      args: "fake_execution:=false show_rviz:=true debug:=false"
+      planning_groups: ["xarm7"]
+    driver:
+      package_name: "xarm7_wgrip_moveit"
+      executable: "driver_temoto_2.launch"
+      args: "robot_ip:=192.168.1.216"
 
 - robot_name: "xarm7_robot_sim"
   description: "xarm7_robot_sim"
@@ -46,7 +46,8 @@ Robots:
     driver:
       # Este si sirve
       package_name: "xarm7_wgrip_moveit"
-      executable: "demo_test.launch"
+      executable: "demo_test2.launch"
+      args: "load_move_group:=false"
 
       # package_name: "xarm7_moveit_config"
       # executable: "demo.launch"
