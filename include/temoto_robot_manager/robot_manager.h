@@ -29,7 +29,6 @@
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
-#include <moveit/move_group_interface/move_group_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include "std_msgs/String.h"
@@ -39,6 +38,7 @@
 #include <mutex>
 #include <vector>
 #include <map>
+#include <boost/filesystem/operations.hpp>
 
 namespace robot_manager
 {
@@ -113,6 +113,7 @@ private:
   void advertiseConfigs(RobotConfigs configs);
 
   RobotConfigs parseRobotConfigs(const YAML::Node& config);
+  RobotConfigs parseRobotConfigs(const YAML::Node& config, RobotConfigs configs);  
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
 
@@ -125,6 +126,9 @@ private:
 
   void loadLocalRobot(RobotConfigPtr info_ptr, temoto_core::temoto_id::ID resource_id);
 
+  void readRobotDescription(const std::string& path_file_rob_description);
+
+  void findRobotDescriptionFiles(boost::filesystem::path current_dir);
 
   typedef std::shared_ptr<Robot> RobotPtr;
   typedef std::map<temoto_core::temoto_id::ID, RobotPtr> Robots;
@@ -170,8 +174,6 @@ private:
   tf2_ros::Buffer tf2_buffer;
 
   ros::Publisher marker_publisher_;
-
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 };
 }
