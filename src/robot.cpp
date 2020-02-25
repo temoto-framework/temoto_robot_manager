@@ -349,7 +349,7 @@ void Robot::removePlanningGroup(const std::string& planning_group_name)
   planning_groups_.erase(planning_group_name);
 }
 
-void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose)
+void Robot::planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
 {
   if (!planning_groups_.size())
   {
@@ -373,6 +373,7 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
   // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
   group_it->second->setPoseTarget(target_pose.pose);
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
+  
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
@@ -380,7 +381,35 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
   }
 }
 
-void Robot::execute()
+void Robot::planManipulationPath(std::string& planning_group_name, const std::string& named_target)
+{
+  if (!planning_groups_.size())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+  }
+
+  FeatureManipulation& ftr = config_->getFeatureManipulation();
+
+  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group_name);
+  if (group_it == planning_groups_.end())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
+  }
+  ftr.setActivePlanningGroup(planning_group_name);
+  group_it->second->setStartStateToCurrentState();
+  group_it->second->setNamedTarget(named_target);
+  is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
+  
+  TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
+  if(!is_plan_valid_)
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning with group '%s' failed.", group_it->first.c_str());
+  }
+}
+
+void Robot::executeManipulationPath()
 {
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   moveit::planning_interface::MoveGroupInterface::Plan empty_plan;
@@ -410,7 +439,7 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   
   auto group_it = planning_groups_.find(planning_group_name);
-  TEMOTO_INFO_STREAM(planning_group_name.c_str());
+  TEMOTO_INFO(planning_group_name.c_str());
 
   geometry_msgs::Pose current_pose;
   
@@ -428,7 +457,7 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   return current_pose;  
 }
 
-void Robot::goalNavigation(const std::string planning_group_name, const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
 {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
@@ -464,13 +493,6 @@ void Robot::goalNavigation(const std::string planning_group_name, const geometry
     {
       ROS_INFO("The base failed to move for some reason");
     }
-}
-
-void Robot::goal()
-{
-   FeatureNavigation& ftr = config_->getFeatureNavigation();
-
-
 }
 
 bool Robot::isLocal() const

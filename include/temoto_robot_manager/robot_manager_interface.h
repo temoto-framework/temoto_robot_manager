@@ -96,15 +96,16 @@ public:
     }
   }
 
-  void plan(std::string planning_group = "")
+  void plan(const std::string& robot_name, std::string planning_group = "")
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
     
     temoto_robot_manager::RobotPlan msg;
     msg.request.use_default_target = true;
+    msg.request.use_named_target = false;
     msg.request.planning_group = planning_group;
-
+    msg.request.robot = robot_name;
     if (!client_plan_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
@@ -115,15 +116,41 @@ public:
     }
   }
 
-  void plan(const geometry_msgs::PoseStamped& pose, std::string planning_group = "")
+  void plan(const std::string& robot_name,
+            const std::string& planning_group,
+            const geometry_msgs::PoseStamped& pose)
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
 
     temoto_robot_manager::RobotPlan msg;
     msg.request.use_default_target = false;
+    msg.request.use_named_target = false;
     msg.request.target_pose = pose;
     msg.request.planning_group = planning_group;
+    // msg.request.robot = robot_name;
+    
+    if (!client_plan_.call(msg))
+    {
+      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+    }
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+    {
+      throw FORWARD_ERROR(msg.response.error_stack);
+    }
+  }
+
+  void plan(const std::string& robot_name,const std::string& planning_group,const std::string& named_target_pose)
+  {
+    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
+    TEMOTO_DEBUG("%s", prefix.c_str());
+
+    temoto_robot_manager::RobotPlan msg;
+    msg.request.use_default_target = false;
+    msg.request.use_named_target = true;
+    msg.request.named_target = named_target_pose;
+    msg.request.planning_group = planning_group;
+    msg.request.robot = robot_name;
     
     if (!client_plan_.call(msg))
     {

@@ -46,15 +46,14 @@ public:
   virtual ~Robot();
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
-  void plan(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
+  void planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  void planManipulationPath(std::string& planning_group_name, const std::string& named_target);  
 
-  void execute();
+  void executeManipulationPath();
   
   geometry_msgs::Pose getManipulationTarget();
-  void goalNavigation(const std::string planning_group_name, const geometry_msgs::PoseStamped& target_pose);
-  //void goal(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
-  void goal();
-
+  void goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  
   std::string getName() const
   {
     return config_->getName();

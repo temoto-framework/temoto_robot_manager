@@ -91,22 +91,22 @@ Robots:
       #executable: "demo_test.launch"
       # args: "model:=waffle"
 
-- robot_name: "clearbot"
-  description: "clearbot"
-  reliability: 0.8
-  urdf:
-    package_name: "robotont_description"
-    executable: "xacro/main.urdf.xacro"
-  navigation:
-    controller:
-      package_name: "simple_navigation_goals"
-      executable: "temoto_nav.launch"
-      global_planner: "navfn/NavfnROS"        #/move_base/DWAPlannerROS/global_plan
-      local_planner: "base_local_planner/TrajectoryPlannerROS"         #/move_base/DWAPlannerROS/local_plan
-                                              #dwa_local_planner/DWAPlannerROS
-    driver:
-      package_name: "robotont_driver" 
-      executable: "driver_temoto.launch"      #(for now, always move_base.launch)
+# - robot_name: "clearbot"
+#   description: "clearbot"
+#   reliability: 0.8
+#   urdf:
+#     package_name: "robotont_description"
+#     executable: "xacro/main.urdf.xacro"
+#   navigation:
+#     controller:
+#       package_name: "simple_navigation_goals"
+#       executable: "temoto_nav.launch"
+#       global_planner: "navfn/NavfnROS"        #/move_base/DWAPlannerROS/global_plan
+#       local_planner: "base_local_planner/TrajectoryPlannerROS"         #/move_base/DWAPlannerROS/local_plan
+#                                               #dwa_local_planner/DWAPlannerROS
+#     driver:
+#       package_name: "robotont_driver" 
+#       executable: "driver_temoto.launch"      #(for now, always move_base.launch)
 
 
 - robot_name: "ur5_robot"
@@ -125,6 +125,23 @@ Robots:
       package_name: "ur_robot_driver"
       executable: "ur5_modified_bringup.launch"
       args: "robot_ip:=192.168.1.100"
+
+- robot_name: "ur5_robot_sim"
+  description: "ur5_robot_sim"
+  reliability: 0.8
+  urdf:
+    package_name: "ur_description_robots"
+    executable: "urdf/ur5_with_base.xacro"
+  manipulation:
+    controller:
+      package_name: "ur5_v2_moveit_config"
+      executable: "demo.launch"  
+      # args: "config:=true"    
+      planning_groups: ["manipulator"]
+    driver:
+      package_name: "ur5_v2_moveit_config"
+      executable: "demo.launch"
+      
 
 
 - robot_name: "mir100"

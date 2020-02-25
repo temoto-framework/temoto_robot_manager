@@ -80,7 +80,7 @@ private:
    * are going to be published
    * @return
    */
-  bool planCb(temoto_robot_manager::RobotPlan::Request& req, temoto_robot_manager::RobotPlan::Response& res);
+  bool planManipulationPathCb(temoto_robot_manager::RobotPlan::Request& req, temoto_robot_manager::RobotPlan::Response& res);
 
   /**
    * @brief Service that executes the moveit plan
@@ -89,7 +89,7 @@ private:
    * @return
    */
 
-  bool execCb(temoto_robot_manager::RobotExecute::Request& req, temoto_robot_manager::RobotExecute::Response& res);
+  bool execManipulationPathCb(temoto_robot_manager::RobotExecute::Request& req, temoto_robot_manager::RobotExecute::Response& res);
 
   /**
    * @brief Service that sets robot manager default target
@@ -98,7 +98,7 @@ private:
    * @return
    */
 
-  bool setTargetCb(temoto_robot_manager::RobotSetTarget::Request& req, temoto_robot_manager::RobotSetTarget::Response& res);
+  bool setManipulationTargetCb(temoto_robot_manager::RobotSetTarget::Request& req, temoto_robot_manager::RobotSetTarget::Response& res);
 
   bool getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
 
@@ -113,6 +113,7 @@ private:
   void advertiseConfigs(RobotConfigs configs);
 
   RobotConfigs parseRobotConfigs(const YAML::Node& config);
+  
   RobotConfigs parseRobotConfigs(const YAML::Node& config, RobotConfigs configs);  
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
