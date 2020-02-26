@@ -105,7 +105,7 @@ public:
     msg.request.use_default_target = true;
     msg.request.use_named_target = false;
     msg.request.planning_group = planning_group;
-    msg.request.robot = robot_name;
+    msg.request.robot_name = robot_name;
     if (!client_plan_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
@@ -128,7 +128,7 @@ public:
     msg.request.use_named_target = false;
     msg.request.target_pose = pose;
     msg.request.planning_group = planning_group;
-    // msg.request.robot = robot_name;
+    msg.request.robot_name = robot_name;
     
     if (!client_plan_.call(msg))
     {
@@ -150,7 +150,7 @@ public:
     msg.request.use_named_target = true;
     msg.request.named_target = named_target_pose;
     msg.request.planning_group = planning_group;
-    msg.request.robot = robot_name;
+    msg.request.robot_name = robot_name;
     
     if (!client_plan_.call(msg))
     {
@@ -215,27 +215,27 @@ public:
 
 // ====== Test - Function to get the pose of the eef respect to something ====
 
- geometry_msgs::Pose getEndEffPose(std::string object_name,std::string respect_to_link)
+ geometry_msgs::Pose getEndEffPose(const std::string& robot_name)
  {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
     geometry_msgs::Pose pose;
     temoto_robot_manager::RobotGetTarget msg; 
-    msg.request.ref_joint = object_name;
-    msg.request.respect_to = respect_to_link;
-    //client_get_manipulation_target_.call(msg);
-    TEMOTO_INFO_STREAM(client_get_manipulation_target_.call(msg));
+    msg.request.robot_name = robot_name;
+    client_get_manipulation_target_.call(msg);
+    //TEMOTO_INFO_STREAM(client_get_manipulation_target_.call(msg));
     TEMOTO_INFO_STREAM(msg.response.pose);
     pose = msg.response.pose;
     
      return pose;
   }
 
-  void navigationGoal(std::string object_name,geometry_msgs::PoseStamped& pose)
+  void navigationGoal(const std::string& robot_name,const std::string& object_name,const geometry_msgs::PoseStamped& pose)
   {
     temoto_robot_manager::RobotGoal msg; 
     msg.request.move_base_frame = object_name;
     msg.request.target_pose = pose;
+    msg.request.robot_name = robot_name;
     if (client_navigation_goal_.call(msg))
     {
     TEMOTO_DEBUG("The goal was set successfully");
@@ -244,13 +244,8 @@ public:
     {
     TEMOTO_ERROR("Failed to reach the server"); 
     }  
-
   }
   
-// END TEST FUNCTION
-  
-  
-
   /**
    * @brief validateInterface()
    * @param sensor_type
@@ -291,14 +286,10 @@ private:
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_viz_info_;
-  ros::ServiceClient client_set_target_;
-  
+  ros::ServiceClient client_set_target_;  
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_navigation_goal_;
-
-
-
-
+  
   std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
 };
 

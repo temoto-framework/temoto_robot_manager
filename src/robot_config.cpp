@@ -62,7 +62,6 @@ void RobotConfig::parseName()
   }
 }
 
-
 void RobotConfig::parseTemotoNamespace()
 {
   try

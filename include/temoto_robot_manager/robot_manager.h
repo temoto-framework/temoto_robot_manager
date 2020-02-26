@@ -170,12 +170,10 @@ private:
   temoto_core::trr::ResourceRegistrar<RobotManager> resource_registrar_;
   std::mutex default_pose_mutex_;
 
-
   tf2_ros::TransformListener tf2_listener;
   tf2_ros::Buffer tf2_buffer;
 
   ros::Publisher marker_publisher_;
-
 };
 }
 

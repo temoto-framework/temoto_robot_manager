@@ -95,8 +95,6 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDr
   this->package_name_ = nav_conf["controller"]["package_name"].as<std::string>();
   this->executable_ = nav_conf["controller"]["executable"].as<std::string>();
 
-  // this->executable_ = "move_base.launch";
-
   if (nav_conf["controller"]["args"])
   {
     this->args_ = nav_conf["controller"]["args"].as<std::string>();

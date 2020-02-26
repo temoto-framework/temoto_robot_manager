@@ -2,7 +2,7 @@ bool use_default_target
 bool use_named_target
 string planning_group
 string named_target
-string robot
+string robot_name
 geometry_msgs/PoseStamped target_pose
 
 ---

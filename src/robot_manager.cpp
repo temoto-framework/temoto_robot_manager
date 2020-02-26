@@ -130,9 +130,12 @@ RobotManager::RobotManager()
     source_path_ += token + "/";
   }
   source_path_ += "src/";
+
   TEMOTO_INFO_STREAM(source_path_);  
+
   boost::filesystem::path current_dir (source_path_);
   findRobotDescriptionFiles(current_dir);
+
   TEMOTO_INFO("Robot manager is ready.");
 }
 
@@ -165,7 +168,6 @@ void RobotManager::readRobotDescription(const std::string& path_file_rob_descrip
     for (auto& config : local_configs_)
     {
       TEMOTO_DEBUG("Added robot: '%s'.", config->getName().c_str());
-      TEMOTO_INFO("Added robot: '%s'.", config->getName().c_str());
       TEMOTO_DEBUG_STREAM("CONFIG: \n" << config->toString());
     }
     // Advertise the parsed local robots
@@ -415,7 +417,6 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config)
 
 RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, RobotConfigs configs)
 {
-  // Commented this variable to avoid reset when the function is called again. Now is parse as argument
   // RobotConfigs configs;
 
   if (!yaml_config.IsMap())
@@ -449,7 +450,6 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
     {
       RobotConfig config(*node_it, *this);
       
-      //================================
       bool compare = false;
       for (const auto& config_compare : configs)
       {
@@ -461,10 +461,6 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
         }
       }    
       
-      //================================
-      // Always get 0 in the count_if
-      // int a = std::count(configs.begin(), configs.end(),config.getName());
-      // TEMOTO_INFO("'%d'",a);
       if (std::count_if(configs.begin(), configs.end(),
                         [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
       {
@@ -490,19 +486,18 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
 
 bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Request& req, temoto_robot_manager::RobotPlan::Response& res)
 {  
-  /// TEST MIO / TO ERASE 
-  TEMOTO_INFO_STREAM(" ===== ACTIVE ROBOT ===== ");
-  TEMOTO_INFO_STREAM(active_robot_->getName().c_str());
-  auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+  TEMOTO_DEBUG("ACTIVE ROBOT...");
+  TEMOTO_DEBUG(active_robot_->getName().c_str());
+  if (active_robot_->getName().c_str() != req.robot_name)
+  {
+    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
                                  [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
                                   //  return p.second->getName() == "xarm7_robot_sim";
-                                  return p.second->getName() == req.robot;
-                                 });
-  
-  active_robot_ = robot_it->second;
-  TEMOTO_INFO_STREAM(" ===== ACTIVE ROBOT ===== ");
-  TEMOTO_INFO_STREAM(active_robot_->getName().c_str());
-  // HASTA ACA
+                                  return p.second->getName() == req.robot_name;
+                                 });  
+    active_robot_ = robot_it->second;
+  }    
+  TEMOTO_DEBUG(active_robot_->getName().c_str());
 
   TEMOTO_DEBUG("PLANNING...");
   if (!active_robot_)
@@ -537,8 +532,7 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Reque
       }
       else
       {
-        active_robot_->planManipulationPath(req.planning_group, pose);
-        
+        active_robot_->planManipulationPath(req.planning_group, pose);        
       }      
     }
     catch (temoto_core::error::ErrorStack(e))
@@ -712,18 +706,25 @@ bool RobotManager::setManipulationTargetCb(temoto_robot_manager::RobotSetTarget:
 }
 
 bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
-                               temoto_robot_manager::RobotGetTarget::Response& res)
+                                          temoto_robot_manager::RobotGetTarget::Response& res)
 {
-  if (active_robot_->isLocal())
+  if (active_robot_->getName().c_str() != req.robot_name)
   {
-    TEMOTO_INFO("Request: '%s'", req.ref_joint.c_str());
-    TEMOTO_INFO("Request: '%s'", req.respect_to.c_str());
+    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
+                                  //  return p.second->getName() == "xarm7_robot_sim";
+                                  return p.second->getName() == req.robot_name;
+                                 });  
+    active_robot_ = robot_it->second;
+  }
+
+  if (active_robot_->isLocal())
+  {    
     res.pose = active_robot_->getManipulationTarget();
   }
   else
   {
     TEMOTO_INFO("robot is not local");
-    // =================  Test  =============================================================00
     std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
                         robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET;
     ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(topic);
@@ -738,14 +739,22 @@ bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget:
     else
     {
       TEMOTO_ERROR("Call to remote RobotManager service failed.");      
-    }
-    // =================  Test  =============================================================
+    }    
   }  
   return true;
 }
 
-bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res)
+bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, 
+                                    temoto_robot_manager::RobotGoal::Response& res)
 {
+  if (active_robot_->getName().c_str() != req.robot_name)
+  {
+    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
+                                  return p.second->getName() == req.robot_name;
+                                 });  
+    active_robot_ = robot_it->second;
+  }
   TEMOTO_DEBUG("GOAL NAVIGATION...");
   if (!active_robot_)
   {
@@ -758,9 +767,8 @@ bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& re
 
   if (active_robot_->isLocal())
   {
-    active_robot_->goalNavigation("map", req.target_pose);
-    //active_robot_->goal();
-    TEMOTO_DEBUG("DONE NAVIGATION TO THE GOAL...");    
+    active_robot_->goalNavigation("map", req.target_pose);  // The robot would move with respect to this coordinate frame
+    TEMOTO_DEBUG("DONE NAVIGATION TO THE GOAL...");        
   }
   else
   {
@@ -784,7 +792,6 @@ bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& re
   }  
   return true;  
 }
-
 
 bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
                              temoto_robot_manager::RobotSetMode::Response& res)

@@ -1,5 +1,4 @@
-string ref_joint
-string respect_to
+string robot_name
 
 ---
 
