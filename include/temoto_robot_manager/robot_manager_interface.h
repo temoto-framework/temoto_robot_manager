@@ -62,8 +62,8 @@ public:
         nh_.serviceClient<temoto_robot_manager::RobotExecute>(robot_manager::srv_name::SERVER_EXECUTE);
     client_viz_info_ =
         nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
-    client_set_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_TARGET);
+    client_set_manipulation_target_ =
+        nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET);
     client_get_manipulation_target_ =
         nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
     client_navigation_goal_ =
@@ -84,14 +84,11 @@ public:
     {
       TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
       TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
-
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
-          robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
-          
+          robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);          
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {
-      //TEMOTO_INFO_STREAM(error_stack.size);
       throw FORWARD_ERROR(error_stack);
     }
   }
@@ -202,7 +199,7 @@ public:
 
     temoto_robot_manager::RobotSetTarget msg;
     msg.request.object_name = object_name;
-    if (!client_set_target_.call(msg))
+    if (!client_set_manipulation_target_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
     }
@@ -212,22 +209,16 @@ public:
     }
   }
 
-
-// ====== Test - Function to get the pose of the eef respect to something ====
-
  geometry_msgs::Pose getEndEffPose(const std::string& robot_name)
- {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
+ {    
     geometry_msgs::Pose pose;
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.robot_name = robot_name;
     client_get_manipulation_target_.call(msg);
-    //TEMOTO_INFO_STREAM(client_get_manipulation_target_.call(msg));
-    TEMOTO_INFO_STREAM(msg.response.pose);
+    //TEMOTO_INFO_STREAM(msg.response.pose);
     pose = msg.response.pose;
     
-     return pose;
+    return pose;
   }
 
   void navigationGoal(const std::string& robot_name,const std::string& object_name,const geometry_msgs::PoseStamped& pose)
@@ -270,7 +261,7 @@ public:
     client_plan_.shutdown();
     client_exec_.shutdown();
     client_viz_info_.shutdown();
-    client_set_target_.shutdown();
+    client_set_manipulation_target_.shutdown();
     client_get_manipulation_target_.shutdown();
     client_navigation_goal_.shutdown();
 
@@ -286,10 +277,10 @@ private:
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_viz_info_;
-  ros::ServiceClient client_set_target_;  
+  ros::ServiceClient client_set_manipulation_target_;  
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_navigation_goal_;
-  
+
   std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
 };
 

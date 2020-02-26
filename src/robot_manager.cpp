@@ -54,7 +54,7 @@ RobotManager::RobotManager()
       nh_.advertiseService(robot_manager::srv_name::SERVER_EXECUTE, &RobotManager::execManipulationPathCb, this);
   server_get_viz_cfg_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_VIZ_INFO,
                                              &RobotManager::getVizInfoCb, this);
-  server_set_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_TARGET,
+  server_set_manipulation_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET,
                                             &RobotManager::setManipulationTargetCb, this);
   server_set_mode_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MODE,
                                           &RobotManager::setModeCb, this);
@@ -156,7 +156,8 @@ void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir
   }
 }
 
-void RobotManager::readRobotDescription(const std::string& path_file_rob_description){
+void RobotManager::readRobotDescription(const std::string& path_file_rob_description)
+{
   std::ifstream in(path_file_rob_description);
   YAML::Node yaml_config = YAML::Load(in);  
   // Parse the Robots section
@@ -669,7 +670,6 @@ bool RobotManager::setManipulationTargetCb(temoto_robot_manager::RobotSetTarget:
       resource_registrar_.call<temoto_context_manager::TrackObject>(temoto_context_manager::srv_name::MANAGER,
                                                     temoto_context_manager::srv_name::TRACK_OBJECT_SERVER,
                                                     track_object_msg);
-
       TEMOTO_DEBUG("Subscribing to '%s'", track_object_msg.response.object_topic.c_str());
       target_pose_sub_ = nh_.subscribe(track_object_msg.response.object_topic, 1,
                                        &RobotManager::targetPoseCb, this);
@@ -683,9 +683,8 @@ bool RobotManager::setManipulationTargetCb(temoto_robot_manager::RobotSetTarget:
   else
   {
     // This is remote robot, forward the set target command
-
     std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_SET_TARGET;
+                        robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET;
     ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(topic);
     temoto_robot_manager::RobotSetTarget fwd_target_srvc;
     fwd_target_srvc.request = req;
@@ -712,7 +711,6 @@ bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget:
   {
     auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
                                  [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  //  return p.second->getName() == "xarm7_robot_sim";
                                   return p.second->getName() == req.robot_name;
                                  });  
     active_robot_ = robot_it->second;
@@ -997,7 +995,8 @@ RobotConfigPtr RobotManager::findRobot(const std::string& robot_name, const Robo
     return NULL;
   }
 
-  std::sort(candidates.begin(), candidates.end(), [](RobotConfigPtr& rc1, RobotConfigPtr& rc2) {
+  std::sort(candidates.begin(), candidates.end(), [](RobotConfigPtr& rc1, RobotConfigPtr& rc2) 
+  {
     return rc1->getReliability() > rc2->getReliability();
   });
 

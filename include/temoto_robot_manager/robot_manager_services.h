@@ -41,9 +41,9 @@ const std::string SERVER_LOAD = "load";
 const std::string SERVER_PLAN = "plan";
 const std::string SERVER_EXECUTE = "execute";
 const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
-const std::string SERVER_SET_TARGET = "set_target";
-const std::string SERVER_GET_MANIPULATION_TARGET = "get_target";
-const std::string SERVER_NAVIGATION_GOAL = "goal";
+const std::string SERVER_SET_MANIPULATION_TARGET = "set_manipulation_target";
+const std::string SERVER_GET_MANIPULATION_TARGET = "get_manipulation_target";
+const std::string SERVER_NAVIGATION_GOAL = "navigation_goal";
 const std::string SERVER_SET_MODE = "set_mode";
 }
 

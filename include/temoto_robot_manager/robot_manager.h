@@ -29,7 +29,6 @@
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
-#include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include "std_msgs/String.h"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -147,7 +146,7 @@ private:
   ros::ServiceServer server_plan_;
   ros::ServiceServer server_exec_;
   ros::ServiceServer server_get_viz_cfg_;
-  ros::ServiceServer server_set_target_;
+  ros::ServiceServer server_set_manipulation_target_;
   ros::ServiceServer server_get_manipulation_target_;
   ros::ServiceServer server_set_mode_;
   ros::ServiceServer server_navigation_goal_;
@@ -155,7 +154,7 @@ private:
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
   ros::ServiceClient client_get_viz_cfg_;
-  ros::ServiceClient client_set_target_;
+  ros::ServiceClient client_set_manipulation_target_;
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
