@@ -796,7 +796,7 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
 {
   TEMOTO_INFO("SET MODE...");
   // input validation
-  if (req.mode != modes::AUTO && req.mode != modes::NAVIGATION && req.mode != modes::MANIPULATION)
+  if (req.mode != modes::AUTO && req.mode != modes::NAVIGATION && req.mode != modes::MANIPULATION && req.mode != modes::GRIPPER)
   {
     TEMOTO_ERROR("Mode '%s' is not supported.", req.mode.c_str());
     res.message = "Mode is not supported.";

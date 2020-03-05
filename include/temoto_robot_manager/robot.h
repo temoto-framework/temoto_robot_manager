@@ -80,6 +80,8 @@ private:
   void loadManipulationDriver();
   void loadNavigation();
   void loadNavigationDriver();
+  void loadGripper();
+  void loadGripperDriver();
 
   temoto_core::temoto_id::ID rosExecute(const std::string& package_name, const std::string& executable,
                   const std::string& args = "");

@@ -46,6 +46,7 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b) 
   parseUrdf();
   parseManipulation();
   parseNavigation();
+  parseGripper();
 }
 
 void RobotConfig::parseName()
@@ -150,6 +151,24 @@ void RobotConfig::parseNavigation()
   }
 }
 
+void RobotConfig::parseGripper()
+{  
+  if (!yaml_config_["gripper"].IsDefined())
+  {
+    return;
+  }
+
+  try
+  {
+    feature_gripper_ = FeatureGripper(yaml_config_["gripper"]);
+    TEMOTO_INFO_STREAM("PARSING GRIPPER ...");
+  }
+  catch (YAML::Exception& e)
+  {
+    TEMOTO_WARN("CONFIG: error parsing gripper: %s", e.what());
+  }
+}
+
 std::string RobotConfig::toString() const
 {
   std::string ret;
@@ -160,6 +179,7 @@ std::string RobotConfig::toString() const
   ret += feature_urdf_.isEnabled() ? "    urdf\n" : "";
   ret += feature_manipulation_.isEnabled() ? "    manipulation\n" : "";
   ret += feature_navigation_.isEnabled() ? "    navigation\n" : "";
+  ret += feature_gripper_.isEnabled() ? "    gripper\n" : "";
   return ret;
 }
 

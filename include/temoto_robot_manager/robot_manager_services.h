@@ -52,6 +52,7 @@ namespace modes
 const std::string AUTO = "auto";
 const std::string NAVIGATION = "navigation";
 const std::string MANIPULATION = "manipulation";
+const std::string GRIPPER = "gripper";
 }
 }
 

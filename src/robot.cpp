@@ -72,6 +72,20 @@ Robot::~Robot()
       resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
       config_->getFeatureNavigation().setDriverLoaded(false);
     }
+
+    if (config_->getFeatureGripper().isLoaded())
+    {
+      TEMOTO_WARN("Unloading Gripper Feature.");
+      resource_registrar_.unloadClientResource(config_->getFeatureGripper().getResourceId());
+      config_->getFeatureGripper().setLoaded(false);
+    }
+
+    if (config_->getFeatureGripper().isDriverLoaded())
+    {
+      TEMOTO_WARN("Unloading Gripper driver Feature.");
+      resource_registrar_.unloadClientResource(config_->getFeatureGripper().getDriverResourceId());
+      config_->getFeatureGripper().setDriverLoaded(false);
+    }
     
     // Remove parameters
     if(nh_.deleteParam(config_->getAbsRobotNamespace()))
@@ -89,10 +103,10 @@ Robot::~Robot()
 void Robot::load()
 {
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
-      !config_->getFeatureNavigation().isEnabled())
+      !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled())
   {
     throw CREATE_ERROR(temoto_core::error::Code::ROBOT_CONFIG_FAIL, "Robot is missing features. Please specify "
-                                                       "urdf, manipulation, navigation sections in "
+                                                       "urdf, manipulation, navigation, gripper sections in "
                                                        "the configuration file.");
   }
 
@@ -100,19 +114,25 @@ void Robot::load()
   if (config_->getFeatureURDF().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
     loadUrdf();
-    loadManipulationDriver();  // We need joint states and robot states to visualize the robot    
+    loadManipulationDriver();  // We need joint states and robot states to visualize the robot
   }
 
   if (config_->getFeatureManipulation().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
     loadManipulationDriver();
-    loadManipulation();    
+    loadManipulation();
   }
   
   if (config_->getFeatureNavigation().isEnabled() and config_->getFeatureNavigation().isDriverEnabled())
   {
     loadNavigationDriver();
     loadNavigation();
+  }
+
+  if (config_->getFeatureGripper().isEnabled() and config_->getFeatureGripper().isDriverEnabled())
+  {
+    loadGripperDriver();
+    loadGripper();
   }
 }
 
@@ -284,13 +304,82 @@ void Robot::loadNavigationDriver()
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);    
+    TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);
     ftr.setDriverResourceId(res_id);
     //std::string odom_topic = "/odom";
     std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
     waitForTopic(odom_topic, res_id);
     ftr.setDriverLoaded(true);
+    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");
         
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
+
+void Robot::loadGripper()
+{
+  if (config_->getFeatureGripper().isLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();
+    temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+    TEMOTO_DEBUG("Gripper resource id: %d", res_id);
+    ftr.setResourceId(res_id);
+
+    // TODO: Review what is the topic for gripper 
+    // Topic or Param
+    // std::string gripper_param = config_->getAbsRobotNamespace() + "/gripper";
+    // waitForParam(gripper_param, res_id);  
+    
+    
+    ros::Duration(5).sleep();
+
+    for (auto group : ftr.getGripperPlanningGroups())
+    {
+      //Define Various planning groups ?
+      //Same variable ?
+      // TEMOTO_DEBUG("Adding gripper planning group '%s'.", group.c_str());
+      // addPlanningGroup(group);
+      TEMOTO_INFO_STREAM("Load Gripper - Planning groups - %Test%");      
+    }
+
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
+
+void Robot::loadGripperDriver()
+{
+  if (config_->getFeatureGripper().isDriverLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();
+    temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
+    TEMOTO_DEBUG("Gripper driver resource id: %d", res_id);
+    ftr.setDriverResourceId(res_id);
+    TEMOTO_INFO_STREAM("Load Gripper Driver - %Test%");      
+    // TODO: Review what is the topic for gripper 
+    // wait for Topic or Param?
+    // std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper";
+    // waitForTopic(gripper_topic, res_id);
+
+    ftr.setDriverLoaded(true);
+    TEMOTO_DEBUG("Feature 'Gripper driver' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -526,6 +615,13 @@ std::string Robot::getVizInfo()
     rviz["navigation"]["global_planner"] = config_->getFeatureNavigation().getGlobalPlanner();
     rviz["navigation"]["local_planner"] = config_->getFeatureNavigation().getLocalPlanner();
   }
+
+  if (config_->getFeatureGripper().isEnabled())
+  {
+    rviz["gripper"]["gripper_ns"] = act_rob_ns;
+    rviz["gripper"]["active_gripper_planning_group"] =
+        config_->getFeatureGripper().getActiveGripperPlanningGroup();
+  }
   
   return YAML::Dump(info);
 }
@@ -536,6 +632,8 @@ bool Robot::hasResource(temoto_core::temoto_id::ID resource_id)
           config_->getFeatureManipulation().getResourceId() == resource_id ||
           config_->getFeatureManipulation().getDriverResourceId() == resource_id ||
           config_->getFeatureNavigation().getResourceId() == resource_id ||
-          config_->getFeatureNavigation().getDriverResourceId() == resource_id);
+          config_->getFeatureNavigation().getDriverResourceId() == resource_id ||
+          config_->getFeatureGripper().getResourceId() == resource_id ||
+          config_->getFeatureGripper().getDriverResourceId() == resource_id);
 }
 }

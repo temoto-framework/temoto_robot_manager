@@ -211,6 +211,33 @@ private:
   std::string local_planner_;
 };
 
+class FeatureGripper : public FeatureWithDriver
+{
+public:
+  FeatureGripper();
+  FeatureGripper(const YAML::Node& gripp_conf);
+
+  std::vector<std::string> getGripperPlanningGroups() const
+  {
+    return gripper_planning_groups_;
+  }
+
+  std::string getActiveGripperPlanningGroup() const
+  {
+    return active_gripper_planning_group_;
+  }
+
+  std::string setActiveGripperPlanningGroup(std::string gripper_planning_group_name)
+  {
+    //TODO: check if group exists
+    active_gripper_planning_group_ = gripper_planning_group_name;
+  }
+  
+private:
+  std::vector<std::string> gripper_planning_groups_;
+  std::string active_gripper_planning_group_;
+};
+
 //bool operator==(const Feature& feature1, const Feature& feature2);
 }
 

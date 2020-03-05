@@ -71,21 +71,19 @@ public:
   }
 
   void loadRobot(std::string robot_name = "")
-  {
-    
+  {    
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     validateInterface(prefix);
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
     // the name of the topic
     temoto_robot_manager::RobotLoad load_srvc;
-    load_srvc.request.robot_name = robot_name;  
-    
+    load_srvc.request.robot_name = robot_name;      
     try
     {
       TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
       TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
-          robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);          
+          robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {

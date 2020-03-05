@@ -112,6 +112,50 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDr
   this->driver_enabled_ = true;
 }
 
+FeatureGripper::FeatureGripper() : FeatureWithDriver("gripper")
+{
+}
+
+FeatureGripper::FeatureGripper(const YAML::Node& grip_conf)
+  : FeatureWithDriver("gripper")
+{
+  this->package_name_ = grip_conf["controller"]["package_name"].as<std::string>();
+  if (grip_conf["controller"]["executable"])
+  {
+    this->executable_ = grip_conf["controller"]["executable"].as<std::string>();
+  }
+  else
+  {
+    this->executable_ = "move_group.launch";      // For now a defaul value.. 
+                                                  // TODO: change to the right one
+  }
+
+  if (grip_conf["controller"]["args"])
+  {
+    this->args_ = grip_conf["controller"]["args"].as<std::string>();
+  }
+
+  // parse gripper planning groups
+  YAML::Node yaml_groups = grip_conf["controller"]["gripper_planning_groups"];
+  for (YAML::const_iterator it = yaml_groups.begin(); it != yaml_groups.end(); ++it)
+  {
+    gripper_planning_groups_.emplace_back(it->as<std::string>());
+  }
+  if(gripper_planning_groups_.size())
+  {
+    active_gripper_planning_group_ = gripper_planning_groups_.front();
+  }
+  this->feature_enabled_ = true;
+
+  this->driver_package_name_ = grip_conf["driver"]["package_name"].as<std::string>();
+  this->driver_executable_ = grip_conf["driver"]["executable"].as<std::string>();
+  if (grip_conf["driver"]["args"])
+  {
+    this->driver_args_ = grip_conf["driver"]["args"].as<std::string>();
+  }
+  this->driver_enabled_ = true;
+}
+
 // bool operator==(const RobotFeature& rf1, const RobotFeature& rf2)
 //{
 //  return (rf1.getType() == rf2.getType() && rf1.getPackageName() == rf2.getPackageName() &&
