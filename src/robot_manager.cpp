@@ -490,7 +490,7 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
   return configs;
 }
 
-bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Request& req, temoto_robot_manager::RobotPlan::Response& res)
+bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlanManipulation::Request& req, temoto_robot_manager::RobotPlanManipulation::Response& res)
 {  
   TEMOTO_DEBUG("ACTIVE ROBOT...");
   TEMOTO_DEBUG(active_robot_->getName().c_str());
@@ -556,8 +556,8 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Reque
     // This robot is present in a remote robot manager, forward the planning command to there.
     std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
                         robot_manager::srv_name::SERVER_PLAN;
-    ros::ServiceClient client_plan = nh_.serviceClient<temoto_robot_manager::RobotPlan>(topic);
-    temoto_robot_manager::RobotPlan fwd_plan_srvc;
+    ros::ServiceClient client_plan = nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(topic);
+    temoto_robot_manager::RobotPlanManipulation fwd_plan_srvc;
     fwd_plan_srvc.request = req;
     fwd_plan_srvc.response = res;
     if (client_plan.call(fwd_plan_srvc))
@@ -576,8 +576,8 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Reque
   return true;
 }
 
-bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecute::Request& req,
-                          temoto_robot_manager::RobotExecute::Response& res)
+bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecutePlan::Request& req,
+                          temoto_robot_manager::RobotExecutePlan::Response& res)
 {
   TEMOTO_INFO("EXECUTING...");
   if (active_robot_)
@@ -594,8 +594,8 @@ bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecute::Re
       // This robot is present in a remote robotmanager, forward the command to there.
       std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
                           robot_manager::srv_name::SERVER_EXECUTE;
-      ros::ServiceClient client_exec = nh_.serviceClient<temoto_robot_manager::RobotExecute>(topic);
-      temoto_robot_manager::RobotExecute fwd_exec_srvc;
+      ros::ServiceClient client_exec = nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(topic);
+      temoto_robot_manager::RobotExecutePlan fwd_exec_srvc;
       fwd_exec_srvc.request = req;
       fwd_exec_srvc.response = res;
       if (client_exec.call(fwd_exec_srvc))

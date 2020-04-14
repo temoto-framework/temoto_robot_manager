@@ -79,7 +79,7 @@ private:
    * are going to be published
    * @return
    */
-  bool planManipulationPathCb(temoto_robot_manager::RobotPlan::Request& req, temoto_robot_manager::RobotPlan::Response& res);
+  bool planManipulationPathCb(temoto_robot_manager::RobotPlanManipulation::Request& req, temoto_robot_manager::RobotPlanManipulation::Response& res);
 
   /**
    * @brief Service that executes the moveit plan
@@ -88,7 +88,7 @@ private:
    * @return
    */
 
-  bool execManipulationPathCb(temoto_robot_manager::RobotExecute::Request& req, temoto_robot_manager::RobotExecute::Response& res);
+  bool execManipulationPathCb(temoto_robot_manager::RobotExecutePlan::Request& req, temoto_robot_manager::RobotExecutePlan::Response& res);
 
   /**
    * @brief Service that sets robot manager default target

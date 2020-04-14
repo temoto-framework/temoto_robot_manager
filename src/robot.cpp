@@ -550,11 +550,11 @@ void Robot::goalNavigation(const std::string& planning_group_name, const geometr
     
     MoveBaseClient ac(act_rob_ns, true);    
     
-    while(!ac.waitForServer(ros::Duration(5.0)))
+    if (!ac.waitForServer(ros::Duration(5.0)))
     {
-      ROS_INFO("Waiting for the move_base action server to come up");
+      ROS_INFO("The move_base action server did not come up");
     }
-    
+       
     move_base_msgs::MoveBaseGoal goal;
     
     goal.target_pose.pose = target_pose.pose;

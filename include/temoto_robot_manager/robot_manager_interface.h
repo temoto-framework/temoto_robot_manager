@@ -57,9 +57,9 @@ public:
 //    client_load_ =
 //        nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
     client_plan_ =
-        nh_.serviceClient<temoto_robot_manager::RobotPlan>(robot_manager::srv_name::SERVER_PLAN);
+        nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(robot_manager::srv_name::SERVER_PLAN);
     client_exec_ =
-        nh_.serviceClient<temoto_robot_manager::RobotExecute>(robot_manager::srv_name::SERVER_EXECUTE);
+        nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(robot_manager::srv_name::SERVER_EXECUTE);
     client_viz_info_ =
         nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
     client_set_manipulation_target_ =
@@ -96,7 +96,7 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
     
-    temoto_robot_manager::RobotPlan msg;
+    temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = true;
     msg.request.use_named_target = false;
     msg.request.planning_group = planning_group;
@@ -118,7 +118,7 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
 
-    temoto_robot_manager::RobotPlan msg;
+    temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = false;
     msg.request.use_named_target = false;
     msg.request.target_pose = pose;
@@ -140,7 +140,7 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
 
-    temoto_robot_manager::RobotPlan msg;
+    temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = false;
     msg.request.use_named_target = true;
     msg.request.named_target = named_target_pose;
@@ -162,7 +162,7 @@ public:
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
 
-    temoto_robot_manager::RobotExecute msg;
+    temoto_robot_manager::RobotExecutePlan msg;
     if (!client_exec_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");

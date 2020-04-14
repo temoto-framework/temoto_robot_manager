@@ -20,8 +20,8 @@
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_SERVICES_H
 
 #include "temoto_robot_manager/RobotLoad.h"
-#include "temoto_robot_manager/RobotPlan.h"
-#include "temoto_robot_manager/RobotExecute.h"
+#include "temoto_robot_manager/RobotPlanManipulation.h"
+#include "temoto_robot_manager/RobotExecutePlan.h"
 #include "temoto_robot_manager/RobotSetTarget.h"
 #include "temoto_robot_manager/RobotSetMode.h"
 #include "temoto_robot_manager/RobotGetVizInfo.h"

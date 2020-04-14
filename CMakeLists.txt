@@ -24,8 +24,8 @@ add_service_files(
   FILES
   
   RobotLoad.srv
-  RobotPlan.srv
-  RobotExecute.srv
+  RobotPlanManipulation.srv
+  RobotExecutePlan.srv
   RobotSetTarget.srv
   RobotSetMode.srv
   RobotGetVizInfo.srv
