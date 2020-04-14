@@ -65,7 +65,11 @@ RobotManager::RobotManager()
   server_navigation_goal_ = nh_.advertiseService(robot_manager::srv_name::SERVER_NAVIGATION_GOAL, 
                                             &RobotManager::goalNavigationCb, this);
 
-  //TODO: TEMPORARY, REMOVE!
+  server_gripper_control_position_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION, 
+                                            &RobotManager::gripperControlPositionCb, this);
+
+
+//TODO: TEMPORARY, REMOVE!
 //      seq: 0
 //      stamp: 
 //        secs: 0
@@ -174,6 +178,7 @@ void RobotManager::readRobotDescription(const std::string& path_file_rob_descrip
     // Advertise the parsed local robots
     advertiseConfigs(local_configs_);
   }
+  TEMOTO_INFO("Robot manager is ready.");
 }
 
 void RobotManager::loadLocalRobot(RobotConfigPtr config, temoto_core::temoto_id::ID resource_id)
@@ -548,7 +553,7 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlan::Reque
   }
   else
   {
-    // This robot is present in a remote robotmanager, forward the planning command to there.
+    // This robot is present in a remote robot manager, forward the planning command to there.
     std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
                         robot_manager::srv_name::SERVER_PLAN;
     ros::ServiceClient client_plan = nh_.serviceClient<temoto_robot_manager::RobotPlan>(topic);
@@ -1002,6 +1007,58 @@ RobotConfigPtr RobotManager::findRobot(const std::string& robot_name, const Robo
 
   // Get the name of the package and first launchable
   return candidates.front();
+}
+
+bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, 
+                                    temoto_robot_manager::RobotGripperControlPosition::Response& res)
+{
+  TEMOTO_INFO_STREAM("inside of callback function");
+  TEMOTO_INFO_STREAM(active_robot_->getName().c_str());
+  if (active_robot_->getName().c_str() != req.gripper_name)
+  {
+    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
+                                  return p.second->getName() == req.gripper_name;
+                                 });  
+    active_robot_ = robot_it->second;
+  }
+  TEMOTO_INFO_STREAM("GRIPPER CONTROL...");
+  
+  if (!active_robot_)
+  {    
+    //TODO: Add the correspondig error, for now using the plan code
+    TEMOTO_INFO_STREAM("Unable to control because gripper is not loaded");
+    return true;
+  }
+
+  if (active_robot_->isLocal())
+  {
+    TEMOTO_INFO_STREAM("gripper is local - ");  
+    TEMOTO_INFO_STREAM(req.gripper_name);  
+    TEMOTO_INFO_STREAM(req.control);  
+
+    active_robot_->controlGripper(req.gripper_name,req.control);
+    TEMOTO_INFO_STREAM("THE GRIPPER MOVED...");
+  }
+  else
+  {
+    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
+                        robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION;
+    ros::ServiceClient client_gripper_control_position_ = nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(topic);
+    temoto_robot_manager::RobotGripperControlPosition fwd_gripper_srvc;
+    fwd_gripper_srvc.request = req;
+    fwd_gripper_srvc.response = res;
+    if (client_gripper_control_position_.call(fwd_gripper_srvc))
+    {
+      res = fwd_gripper_srvc.response;
+    }
+    else
+    {      
+      TEMOTO_INFO_STREAM("Call to remote RobotManager / gripper - service failed.");
+      return true;
+    }
+  }  
+  return true; 
 }
 
 }  // namespace robot_manager

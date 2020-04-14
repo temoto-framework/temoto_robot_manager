@@ -68,10 +68,12 @@ public:
         nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
     client_navigation_goal_ =
         nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
+    client_gripper_control_position_ =
+        nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
   }
 
   void loadRobot(std::string robot_name = "")
-  {    
+  {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     validateInterface(prefix);
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
@@ -80,8 +82,6 @@ public:
     load_srvc.request.robot_name = robot_name;      
     try
     {
-      TEMOTO_INFO_STREAM(robot_manager::srv_name::MANAGER);
-      TEMOTO_INFO_STREAM(robot_manager::srv_name::SERVER_LOAD);
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
     }
@@ -91,7 +91,7 @@ public:
     }
   }
 
-  void plan(const std::string& robot_name, std::string planning_group = "")
+  void planManipulation(const std::string& robot_name, std::string planning_group = "")
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
@@ -111,7 +111,7 @@ public:
     }
   }
 
-  void plan(const std::string& robot_name,
+  void planManipulation(const std::string& robot_name,
             const std::string& planning_group,
             const geometry_msgs::PoseStamped& pose)
   {
@@ -135,7 +135,7 @@ public:
     }
   }
 
-  void plan(const std::string& robot_name,const std::string& planning_group,const std::string& named_target_pose)
+  void planManipulation(const std::string& robot_name,const std::string& planning_group,const std::string& named_target_pose)
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
     TEMOTO_DEBUG("%s", prefix.c_str());
@@ -208,7 +208,7 @@ public:
   }
 
  geometry_msgs::Pose getEndEffPose(const std::string& robot_name)
- {    
+ {
     geometry_msgs::Pose pose;
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.robot_name = robot_name;
@@ -219,7 +219,7 @@ public:
     return pose;
   }
 
-  void navigationGoal(const std::string& robot_name,const std::string& object_name,const geometry_msgs::PoseStamped& pose)
+  void navigationGoal(const std::string& robot_name, const std::string& object_name, const geometry_msgs::PoseStamped& pose)
   {
     temoto_robot_manager::RobotGoal msg; 
     msg.request.move_base_frame = object_name;
@@ -227,12 +227,28 @@ public:
     msg.request.robot_name = robot_name;
     if (client_navigation_goal_.call(msg))
     {
-    TEMOTO_DEBUG("The goal was set successfully");
+      TEMOTO_DEBUG("The goal was set successfully");
     }
     else
     {
-    TEMOTO_ERROR("Failed to reach the server"); 
+      TEMOTO_ERROR("Failed to reach the server"); 
     }  
+  }
+
+  void controlGripperPosition(const std::string& gripper_name,const int& position)
+  {
+    temoto_robot_manager::RobotGripperControlPosition msg;    
+    msg.request.gripper_name = gripper_name;
+    msg.request.control = position;
+
+    if (client_gripper_control_position_.call(msg))
+    {
+    TEMOTO_DEBUG("The gripper move");
+    }
+    else
+    {
+    TEMOTO_ERROR("Failed to reach the server for gripper control"); 
+    }
   }
   
   /**
@@ -262,6 +278,7 @@ public:
     client_set_manipulation_target_.shutdown();
     client_get_manipulation_target_.shutdown();
     client_navigation_goal_.shutdown();
+    client_gripper_control_position_.shutdown();
 
     TEMOTO_DEBUG("RobotManagerInterface destroyed.");
   }
@@ -278,9 +295,11 @@ private:
   ros::ServiceClient client_set_manipulation_target_;  
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_navigation_goal_;
+  ros::ServiceClient client_gripper_control_position_;  
 
   std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
 };
 
 } // namespace
 #endif
+

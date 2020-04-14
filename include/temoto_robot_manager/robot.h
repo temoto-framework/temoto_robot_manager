@@ -26,6 +26,7 @@
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_manager.h"
 #include "temoto_robot_manager/robot_features.h"
+#include "temoto_robot_manager/GripperControl.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
@@ -53,6 +54,7 @@ public:
   
   geometry_msgs::Pose getManipulationTarget();
   void goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  void controlGripper(const std::string& gripper_name, const int position);
   
   std::string getName() const
   {
@@ -108,7 +110,10 @@ private:
       planning_groups_;
 
   typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+
+  ros::ServiceClient client_gripper_control;
 };
 }
 
 #endif
+

@@ -126,27 +126,14 @@ FeatureGripper::FeatureGripper(const YAML::Node& grip_conf)
   }
   else
   {
-    this->executable_ = "move_group.launch";      // For now a defaul value.. 
-                                                  // TODO: change to the right one
+    this->executable_ = "temoto_gripper_converter.launch";      // For now a defaul value.. 
+                                                                // TODO: change to the right one
   }
-
   if (grip_conf["controller"]["args"])
   {
     this->args_ = grip_conf["controller"]["args"].as<std::string>();
   }
-
-  // parse gripper planning groups
-  YAML::Node yaml_groups = grip_conf["controller"]["gripper_planning_groups"];
-  for (YAML::const_iterator it = yaml_groups.begin(); it != yaml_groups.end(); ++it)
-  {
-    gripper_planning_groups_.emplace_back(it->as<std::string>());
-  }
-  if(gripper_planning_groups_.size())
-  {
-    active_gripper_planning_group_ = gripper_planning_groups_.front();
-  }
   this->feature_enabled_ = true;
-
   this->driver_package_name_ = grip_conf["driver"]["package_name"].as<std::string>();
   this->driver_executable_ = grip_conf["driver"]["executable"].as<std::string>();
   if (grip_conf["driver"]["args"])
@@ -162,3 +149,4 @@ FeatureGripper::FeatureGripper(const YAML::Node& grip_conf)
 //          rf1.getExecutable() == rf2.getExecutable() && rf1.getArgs() == rf2.getArgs());
 //}
 }
+

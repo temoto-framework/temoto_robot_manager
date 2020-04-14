@@ -103,6 +103,8 @@ private:
 
   bool goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
 
+  bool gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, temoto_robot_manager::RobotGripperControlPosition::Response& res);
+  
   bool setModeCb(temoto_robot_manager::RobotSetMode::Request& req, temoto_robot_manager::RobotSetMode::Response& res);
 
   void syncCb(const temoto_core::ConfigSync& msg, const PayloadType& payload);
@@ -150,6 +152,7 @@ private:
   ros::ServiceServer server_get_manipulation_target_;
   ros::ServiceServer server_set_mode_;
   ros::ServiceServer server_navigation_goal_;
+  ros::ServiceServer server_gripper_control_position_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -158,6 +161,7 @@ private:
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
+  ros::ServiceClient client_gripper_control_position_;
 
   ros::Subscriber target_pose_sub_;
   // temoto_robot_manager::LoadGesture hand_srv_msg_;
@@ -177,3 +181,4 @@ private:
 }
 
 #endif
+

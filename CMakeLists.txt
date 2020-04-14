@@ -31,6 +31,8 @@ add_service_files(
   RobotGetVizInfo.srv
   RobotGetTarget.srv
   RobotGoal.srv
+  RobotGripperControlPosition.srv
+  GripperControl.srv
 )
 
 generate_messages(

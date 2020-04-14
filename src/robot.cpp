@@ -131,7 +131,7 @@ void Robot::load()
 
   if (config_->getFeatureGripper().isEnabled() and config_->getFeatureGripper().isDriverEnabled())
   {
-    loadGripperDriver();
+    //loadGripperDriver();
     loadGripper();
   }
 }
@@ -331,24 +331,21 @@ void Robot::loadGripper()
     FeatureGripper& ftr = config_->getFeatureGripper();
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     TEMOTO_DEBUG("Gripper resource id: %d", res_id);
+
+    TEMOTO_INFO_STREAM("===== Load Gripper %Test% =====");      
+    TEMOTO_INFO("Gripper resource id: %d", res_id);
+    TEMOTO_INFO_STREAM(ftr.getPackageName());
+    TEMOTO_INFO_STREAM(ftr.getExecutable());
+    TEMOTO_INFO_STREAM(ftr.getArgs());
+
     ftr.setResourceId(res_id);
 
     // TODO: Review what is the topic for gripper 
     // Topic or Param
     // std::string gripper_param = config_->getAbsRobotNamespace() + "/gripper";
     // waitForParam(gripper_param, res_id);  
-    
-    
+        
     ros::Duration(5).sleep();
-
-    for (auto group : ftr.getGripperPlanningGroups())
-    {
-      //Define Various planning groups ?
-      //Same variable ?
-      // TEMOTO_DEBUG("Adding gripper planning group '%s'.", group.c_str());
-      // addPlanningGroup(group);
-      TEMOTO_INFO_STREAM("Load Gripper - Planning groups - %Test%");      
-    }
 
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
@@ -364,6 +361,7 @@ void Robot::loadGripperDriver()
   if (config_->getFeatureGripper().isDriverLoaded())
   {
     return; // Return if already loaded.
+    TEMOTO_INFO_STREAM("IF statement - Load Gripper Driver - %Test%");   
   }
 
   try
@@ -378,11 +376,12 @@ void Robot::loadGripperDriver()
     // std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper";
     // waitForTopic(gripper_topic, res_id);
 
-    ftr.setDriverLoaded(true);
+    //ftr.setDriverLoaded(true);
     TEMOTO_DEBUG("Feature 'Gripper driver' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
+    TEMOTO_INFO_STREAM("Error statement - Load Gripper Driver - %Test%");
     throw FORWARD_ERROR(error_stack);
   }
 }
@@ -579,6 +578,46 @@ void Robot::goalNavigation(const std::string& planning_group_name, const geometr
     }
 }
 
+void Robot::controlGripper(const std::string& gripper_name,const int position)
+{
+  TEMOTO_INFO_STREAM("=============== TEST GRIPPER 1============");
+  
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();   
+       
+    std::string argument = std::to_string(position);
+    TEMOTO_INFO_STREAM("=============== TEST GRIPPER 2============");
+    TEMOTO_INFO_STREAM(ftr.getPackageName());
+    TEMOTO_INFO_STREAM(ftr.getExecutable());
+    
+    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+    
+    ros::Duration(5).sleep();
+    
+    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+    
+    ros::ServiceClient client_gripper_control = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
+    temoto_robot_manager::GripperControl gripper_srvc;
+    gripper_srvc.request.position = position;
+    
+    if (client_gripper_control.call(gripper_srvc))
+    {
+      TEMOTO_DEBUG("Call to gripper control was sucessful.");
+      TEMOTO_INFO_STREAM("Call gripper was sucessfull");
+    }
+    else
+    {
+      TEMOTO_ERROR("Call to remote RobotManager service failed.");
+      TEMOTO_INFO_STREAM("Call gripper failed");
+    }  
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
+
 bool Robot::isLocal() const
 {
   if (config_) 
@@ -618,9 +657,7 @@ std::string Robot::getVizInfo()
 
   if (config_->getFeatureGripper().isEnabled())
   {
-    rviz["gripper"]["gripper_ns"] = act_rob_ns;
-    rviz["gripper"]["active_gripper_planning_group"] =
-        config_->getFeatureGripper().getActiveGripperPlanningGroup();
+    rviz["gripper"]["gripper_ns"] = act_rob_ns;    
   }
   
   return YAML::Dump(info);
@@ -637,3 +674,4 @@ bool Robot::hasResource(temoto_core::temoto_id::ID resource_id)
           config_->getFeatureGripper().getDriverResourceId() == resource_id);
 }
 }
+
