@@ -555,7 +555,6 @@ void Robot::controlGripper(const std::string& gripper_name,const int position)
     FeatureGripper& ftr = config_->getFeatureGripper();   
     std::string argument = std::to_string(position);
     std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
-    ros::Duration(5).sleep();
     
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
     client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
