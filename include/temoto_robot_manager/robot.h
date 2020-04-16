@@ -109,11 +109,12 @@ private:
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>>
       planning_groups_;
 
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient_;
 
-  ros::ServiceClient client_gripper_control;
+  ros::ServiceClient client_gripper_control_;
 };
 }
 
 #endif
+
 

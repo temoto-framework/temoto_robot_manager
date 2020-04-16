@@ -214,10 +214,8 @@ void Robot::loadManipulation()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     TEMOTO_DEBUG("Manipulation resource id: %d", res_id);
     ftr.setResourceId(res_id);
-
     std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param, res_id);
-
     ros::Duration(5).sleep();
 
     // Add planning groups
@@ -282,7 +280,6 @@ void Robot::loadNavigation()
     // wait for command velocity to be published
     std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/cmd_vel";
     waitForTopic(cmd_vel_topic, res_id);
-
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'navigation' loaded.");
   }
@@ -306,12 +303,10 @@ void Robot::loadNavigationDriver()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);
     ftr.setDriverResourceId(res_id);
-    //std::string odom_topic = "/odom";
     std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
     waitForTopic(odom_topic, res_id);
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");
-        
+    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");        
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -332,7 +327,6 @@ void Robot::loadGripper()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     TEMOTO_DEBUG("Gripper resource id: %d", res_id);          
     ftr.setResourceId(res_id);
-    ros::Duration(5).sleep();
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
   }
@@ -524,7 +518,7 @@ void Robot::goalNavigation(const std::string& planning_group_name, const geometr
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
     
-    MoveBaseClient ac(act_rob_ns, true);    
+    MoveBaseClient_ ac(act_rob_ns, true);    
     
     if (!ac.waitForServer(ros::Duration(5.0)))
     {
@@ -564,11 +558,11 @@ void Robot::controlGripper(const std::string& gripper_name,const int position)
     ros::Duration(5).sleep();
     
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
-    ros::ServiceClient client_gripper_control = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
+    client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
     temoto_robot_manager::GripperControl gripper_srvc;
     gripper_srvc.request.position = position;
     
-    if (client_gripper_control.call(gripper_srvc))
+    if (client_gripper_control_.call(gripper_srvc))
     {
       TEMOTO_DEBUG("Call to gripper control was sucessful.");
     }
