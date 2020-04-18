@@ -1,5 +1,5 @@
 string gripper_name
-int64 position
+float32 position
 
 ---
 

@@ -235,7 +235,7 @@ public:
     }  
   }
 
-  void controlGripperPosition(const std::string& gripper_name,const int& position)
+  void controlGripperPosition(const std::string& gripper_name,const float& position)
   {
     temoto_robot_manager::RobotGripperControlPosition msg;    
     msg.request.gripper_name = gripper_name;

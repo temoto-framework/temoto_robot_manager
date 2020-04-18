@@ -54,7 +54,7 @@ public:
   
   geometry_msgs::Pose getManipulationTarget();
   void goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
-  void controlGripper(const std::string& gripper_name, const int position);
+  void controlGripper(const std::string& gripper_name, const float position);
   
   std::string getName() const
   {

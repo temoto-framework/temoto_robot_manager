@@ -1012,8 +1012,6 @@ RobotConfigPtr RobotManager::findRobot(const std::string& robot_name, const Robo
 bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, 
                                     temoto_robot_manager::RobotGripperControlPosition::Response& res)
 {
-  TEMOTO_INFO_STREAM("inside of callback function");
-  TEMOTO_INFO_STREAM(active_robot_->getName().c_str());
   if (active_robot_->getName().c_str() != req.gripper_name)
   {
     auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
@@ -1022,7 +1020,6 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
                                  });  
     active_robot_ = robot_it->second;
   }
-  TEMOTO_INFO_STREAM("GRIPPER CONTROL...");
   
   if (!active_robot_)
   {    
@@ -1033,10 +1030,6 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
 
   if (active_robot_->isLocal())
   {
-    TEMOTO_INFO_STREAM("gripper is local - ");  
-    TEMOTO_INFO_STREAM(req.gripper_name);  
-    TEMOTO_INFO_STREAM(req.control);  
-
     active_robot_->controlGripper(req.gripper_name,req.control);
     TEMOTO_INFO_STREAM("THE GRIPPER MOVED...");
   }

@@ -1,5 +1,5 @@
 string gripper_name
-int64 control
+float32 control
 
 ---
 

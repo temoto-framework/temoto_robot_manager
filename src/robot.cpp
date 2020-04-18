@@ -548,7 +548,7 @@ void Robot::goalNavigation(const std::string& planning_group_name, const geometr
     }
 }
 
-void Robot::controlGripper(const std::string& gripper_name,const int position)
+void Robot::controlGripper(const std::string& gripper_name,const float position)
 {
   try
   {
@@ -559,8 +559,8 @@ void Robot::controlGripper(const std::string& gripper_name,const int position)
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
     client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
     temoto_robot_manager::GripperControl gripper_srvc;
-    gripper_srvc.request.position = position;
-    
+    gripper_srvc.request.gripper_name = gripper_name;
+    gripper_srvc.request.position = position;    
     if (client_gripper_control_.call(gripper_srvc))
     {
       TEMOTO_DEBUG("Call to gripper control was sucessful.");
