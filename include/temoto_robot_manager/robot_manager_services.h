@@ -20,11 +20,14 @@
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_SERVICES_H
 
 #include "temoto_robot_manager/RobotLoad.h"
-#include "temoto_robot_manager/RobotPlan.h"
-#include "temoto_robot_manager/RobotExecute.h"
+#include "temoto_robot_manager/RobotPlanManipulation.h"
+#include "temoto_robot_manager/RobotExecutePlan.h"
 #include "temoto_robot_manager/RobotSetTarget.h"
 #include "temoto_robot_manager/RobotSetMode.h"
 #include "temoto_robot_manager/RobotGetVizInfo.h"
+#include "temoto_robot_manager/RobotGetTarget.h"
+#include "temoto_robot_manager/RobotGoal.h"
+#include "temoto_robot_manager/RobotGripperControlPosition.h"
 
 #include <string>
 
@@ -39,8 +42,11 @@ const std::string SERVER_LOAD = "load";
 const std::string SERVER_PLAN = "plan";
 const std::string SERVER_EXECUTE = "execute";
 const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
-const std::string SERVER_SET_TARGET = "set_target";
+const std::string SERVER_SET_MANIPULATION_TARGET = "set_manipulation_target";
+const std::string SERVER_GET_MANIPULATION_TARGET = "get_manipulation_target";
+const std::string SERVER_NAVIGATION_GOAL = "navigation_goal";
 const std::string SERVER_SET_MODE = "set_mode";
+const std::string SERVER_GRIPPER_CONTROL_POSITION = "gripper_control_position";
 }
 
 namespace modes
@@ -48,6 +54,7 @@ namespace modes
 const std::string AUTO = "auto";
 const std::string NAVIGATION = "navigation";
 const std::string MANIPULATION = "manipulation";
+const std::string GRIPPER = "gripper";
 }
 }
 
@@ -57,3 +64,4 @@ static bool operator==(const temoto_robot_manager::RobotLoad::Request& r1,
   return (r1.robot_name == r2.robot_name);
 }
 #endif
+

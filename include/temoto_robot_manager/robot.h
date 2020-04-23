@@ -23,12 +23,13 @@
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_er_manager/temoto_er_manager_services.h"
 #include "temoto_core/trr/resource_registrar.h"
-
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_manager.h"
 #include "temoto_robot_manager/robot_features.h"
+#include "temoto_robot_manager/GripperControl.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
+#include <move_base_msgs/MoveBaseAction.h>
 #include <string>
 #include <map>
 #include <vector>
@@ -46,10 +47,15 @@ public:
   virtual ~Robot();
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
-  void plan(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose);
+  void planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  void planManipulationPath(std::string& planning_group_name, const std::string& named_target);  
 
-  void execute();
-
+  void executeManipulationPath();
+  
+  geometry_msgs::Pose getManipulationTarget();
+  void goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  void controlGripper(const std::string& gripper_name, const float position);
+  
   std::string getName() const
   {
     return config_->getName();
@@ -76,6 +82,8 @@ private:
   void loadManipulationDriver();
   void loadNavigation();
   void loadNavigationDriver();
+  void loadGripper();
+  void loadGripperDriver();
 
   temoto_core::temoto_id::ID rosExecute(const std::string& package_name, const std::string& executable,
                   const std::string& args = "");
@@ -100,7 +108,13 @@ private:
   moveit::planning_interface::MoveGroupInterface::Plan last_plan;
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>>
       planning_groups_;
+
+  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient_;
+
+  ros::ServiceClient client_gripper_control_;
 };
 }
 
 #endif
+
+

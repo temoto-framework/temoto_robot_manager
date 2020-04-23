@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cmake_modules
   moveit_ros_planning_interface
+  move_base_msgs
   tf2
   tf2_geometry_msgs
   geometry_msgs
@@ -21,13 +22,17 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_service_files(
   FILES
-
+  
   RobotLoad.srv
-  RobotPlan.srv
-  RobotExecute.srv
+  RobotPlanManipulation.srv
+  RobotExecutePlan.srv
   RobotSetTarget.srv
   RobotSetMode.srv
   RobotGetVizInfo.srv
+  RobotGetTarget.srv
+  RobotGoal.srv
+  RobotGripperControlPosition.srv
+  GripperControl.srv
 )
 
 generate_messages(

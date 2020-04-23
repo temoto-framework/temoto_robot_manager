@@ -211,7 +211,16 @@ private:
   std::string local_planner_;
 };
 
+class FeatureGripper : public FeatureWithDriver
+{
+public:
+  FeatureGripper();
+  FeatureGripper(const YAML::Node& gripp_conf);
+  
+};
+
 //bool operator==(const Feature& feature1, const Feature& feature2);
 }
 
 #endif
+

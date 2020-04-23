@@ -93,10 +93,11 @@ FeatureNavigation::FeatureNavigation() : FeatureWithDriver("navigation")
 FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDriver("navigation")
 {
   this->package_name_ = nav_conf["controller"]["package_name"].as<std::string>();
-  this->executable_ = "move_base.launch";
+  this->executable_ = nav_conf["controller"]["executable"].as<std::string>();
+
   if (nav_conf["controller"]["args"])
   {
-    this->args_ = nav_conf["driver"]["args"].as<std::string>();
+    this->args_ = nav_conf["controller"]["args"].as<std::string>();
   }
   this->global_planner_ = nav_conf["controller"]["global_planner"].as<std::string>();
   this->local_planner_ = nav_conf["controller"]["local_planner"].as<std::string>();
@@ -111,9 +112,41 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDr
   this->driver_enabled_ = true;
 }
 
+FeatureGripper::FeatureGripper() : FeatureWithDriver("gripper")
+{
+}
+
+FeatureGripper::FeatureGripper(const YAML::Node& grip_conf)
+  : FeatureWithDriver("gripper")
+{
+  this->package_name_ = grip_conf["controller"]["package_name"].as<std::string>();
+  if (grip_conf["controller"]["executable"])
+  {
+    this->executable_ = grip_conf["controller"]["executable"].as<std::string>();
+  }
+  else
+  {
+    this->executable_ = "temoto_gripper_converter.launch";      // For now a defaul value.. 
+                                                                // TODO: change to the right one
+  }
+  if (grip_conf["controller"]["args"])
+  {
+    this->args_ = grip_conf["controller"]["args"].as<std::string>();
+  }
+  this->feature_enabled_ = true;
+  this->driver_package_name_ = grip_conf["driver"]["package_name"].as<std::string>();
+  this->driver_executable_ = grip_conf["driver"]["executable"].as<std::string>();
+  if (grip_conf["driver"]["args"])
+  {
+    this->driver_args_ = grip_conf["driver"]["args"].as<std::string>();
+  }
+  this->driver_enabled_ = true;
+}
+
 // bool operator==(const RobotFeature& rf1, const RobotFeature& rf2)
 //{
 //  return (rf1.getType() == rf2.getType() && rf1.getPackageName() == rf2.getPackageName() &&
 //          rf1.getExecutable() == rf2.getExecutable() && rf1.getArgs() == rf2.getArgs());
 //}
 }
+

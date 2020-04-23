@@ -20,7 +20,6 @@
 #include "temoto_core/temoto_error/temoto_error.h"
 #include "ros/package.h"
 
-
 namespace robot_manager
 {
 Robot::Robot(RobotConfigPtr config, temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar, temoto_core::BaseSubsystem& b)
@@ -62,16 +61,30 @@ Robot::~Robot()
 
     if (config_->getFeatureNavigation().isLoaded())
     {
-      TEMOTO_WARN("Unloading Manipulation Feature.");
+      TEMOTO_WARN("Unloading Navigation Feature.");
       resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getResourceId());
       config_->getFeatureNavigation().setLoaded(false);
     }
 
     if (config_->getFeatureNavigation().isDriverLoaded())
     {
-      TEMOTO_WARN("Unloading Manipulation driver Feature.");
+      TEMOTO_WARN("Unloading Navigation driver Feature.");
       resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
       config_->getFeatureNavigation().setDriverLoaded(false);
+    }
+
+    if (config_->getFeatureGripper().isLoaded())
+    {
+      TEMOTO_WARN("Unloading Gripper Feature.");
+      resource_registrar_.unloadClientResource(config_->getFeatureGripper().getResourceId());
+      config_->getFeatureGripper().setLoaded(false);
+    }
+
+    if (config_->getFeatureGripper().isDriverLoaded())
+    {
+      TEMOTO_WARN("Unloading Gripper driver Feature.");
+      resource_registrar_.unloadClientResource(config_->getFeatureGripper().getDriverResourceId());
+      config_->getFeatureGripper().setDriverLoaded(false);
     }
     
     // Remove parameters
@@ -87,20 +100,17 @@ Robot::~Robot()
   TEMOTO_DEBUG("Robot destructed");
 }
 
-
-
 void Robot::load()
 {
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
-      !config_->getFeatureNavigation().isEnabled())
+      !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled())
   {
     throw CREATE_ERROR(temoto_core::error::Code::ROBOT_CONFIG_FAIL, "Robot is missing features. Please specify "
-                                                       "urdf, manipulation, navigation sections in "
+                                                       "urdf, manipulation, navigation, gripper sections in "
                                                        "the configuration file.");
   }
 
-  // Load robot features
-  
+  // Load robot features  
   if (config_->getFeatureURDF().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
     loadUrdf();
@@ -117,6 +127,12 @@ void Robot::load()
   {
     loadNavigationDriver();
     loadNavigation();
+  }
+
+  if (config_->getFeatureGripper().isEnabled() and config_->getFeatureGripper().isDriverEnabled())
+  {
+    loadGripperDriver();
+    loadGripper();
   }
 }
 
@@ -198,10 +214,8 @@ void Robot::loadManipulation()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     TEMOTO_DEBUG("Manipulation resource id: %d", res_id);
     ftr.setResourceId(res_id);
-
     std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param, res_id);
-
     ros::Duration(5).sleep();
 
     // Add planning groups
@@ -266,7 +280,6 @@ void Robot::loadNavigation()
     // wait for command velocity to be published
     std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/cmd_vel";
     waitForTopic(cmd_vel_topic, res_id);
-
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'navigation' loaded.");
   }
@@ -288,14 +301,54 @@ void Robot::loadNavigationDriver()
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    TEMOTO_DEBUG("Manipulation driver resource id: %d", res_id);
+    TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);
     ftr.setDriverResourceId(res_id);
-
     std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
     waitForTopic(odom_topic, res_id);
-
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");
+    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");        
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
+
+void Robot::loadGripper()
+{
+  if (config_->getFeatureGripper().isLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();
+    temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+    TEMOTO_DEBUG("Gripper resource id: %d", res_id);          
+    ftr.setResourceId(res_id);
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
+
+void Robot::loadGripperDriver()
+{
+  if (config_->getFeatureGripper().isDriverLoaded())
+  {
+    return; // Return if already loaded.
+  }
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();
+    temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
+    TEMOTO_DEBUG("Gripper driver resource id: %d", res_id);
+    ftr.setDriverResourceId(res_id);
+    TEMOTO_DEBUG("Feature 'Gripper driver' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -326,7 +379,6 @@ temoto_core::temoto_id::ID Robot::rosExecute(const std::string& package_name, co
   return load_proc_srvc.response.trr.resource_id;
 }
 
-
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
   //Prepare robot description path and a nodehandle, which is in robot's namespace
@@ -354,7 +406,7 @@ void Robot::removePlanningGroup(const std::string& planning_group_name)
   planning_groups_.erase(planning_group_name);
 }
 
-void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& target_pose)
+void Robot::planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
 {
   if (!planning_groups_.size())
   {
@@ -374,8 +426,11 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
   ftr.setActivePlanningGroup(planning_group_name);
 
   group_it->second->setStartStateToCurrentState();
-  group_it->second->setPoseTarget(target_pose);
+
+  // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
+  group_it->second->setPoseTarget(target_pose.pose);
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
+  
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
@@ -383,7 +438,35 @@ void Robot::plan(std::string planning_group_name, geometry_msgs::PoseStamped& ta
   }
 }
 
-void Robot::execute()
+void Robot::planManipulationPath(std::string& planning_group_name, const std::string& named_target)
+{
+  if (!planning_groups_.size())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+  }
+
+  FeatureManipulation& ftr = config_->getFeatureManipulation();
+
+  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group_name);
+  if (group_it == planning_groups_.end())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
+  }
+  ftr.setActivePlanningGroup(planning_group_name);
+  group_it->second->setStartStateToCurrentState();
+  group_it->second->setNamedTarget(named_target);
+  is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
+  
+  TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
+  if(!is_plan_valid_)
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning with group '%s' failed.", group_it->first.c_str());
+  }
+}
+
+void Robot::executeManipulationPath()
 {
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   moveit::planning_interface::MoveGroupInterface::Plan empty_plan;
@@ -408,6 +491,90 @@ void Robot::execute()
   }
 }
 
+geometry_msgs::Pose Robot::getManipulationTarget()
+{
+  std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
+  
+  auto group_it = planning_groups_.find(planning_group_name);
+  TEMOTO_INFO(planning_group_name.c_str());
+
+  geometry_msgs::Pose current_pose;
+  
+  if (group_it != planning_groups_.end())
+  {    
+    current_pose = group_it->second->getCurrentPose().pose;    
+    //group_it->second->setNamedTarget("test_pose");
+  }
+  else 
+  {
+    //TODO: This section has to utilize temoto error management system
+    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+  } 
+  return current_pose;  
+}
+
+void Robot::goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
+{
+    FeatureNavigation& ftr = config_->getFeatureNavigation();
+    std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
+    
+    MoveBaseClient_ ac(act_rob_ns, true);    
+    
+    if (!ac.waitForServer(ros::Duration(5.0)))
+    {
+      ROS_INFO("The move_base action server did not come up");
+    }
+       
+    move_base_msgs::MoveBaseGoal goal;
+    
+    goal.target_pose.pose = target_pose.pose;
+    TEMOTO_INFO_STREAM(goal.target_pose); 
+    //goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
+    goal.target_pose.header.frame_id = planning_group_name;         
+    goal.target_pose.header.stamp = ros::Time::now();  
+  
+    TEMOTO_INFO_STREAM(goal.target_pose); 
+
+    ac.sendGoal(goal);
+    ac.waitForResult();
+
+    if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+      ROS_INFO("The base moved , SUCCEEDED");
+    }
+    else
+    {
+      ROS_INFO("The base failed to move");
+    }
+}
+
+void Robot::controlGripper(const std::string& gripper_name,const float position)
+{
+  try
+  {
+    FeatureGripper& ftr = config_->getFeatureGripper();   
+    std::string argument = std::to_string(position);
+    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+    
+    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+    client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
+    temoto_robot_manager::GripperControl gripper_srvc;
+    gripper_srvc.request.gripper_name = gripper_name;
+    gripper_srvc.request.position = position;    
+    if (client_gripper_control_.call(gripper_srvc))
+    {
+      TEMOTO_DEBUG("Call to gripper control was sucessful.");
+    }
+    else
+    {
+      TEMOTO_ERROR("Call to remote RobotManager service failed.");
+    }  
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
+}
 
 bool Robot::isLocal() const
 {
@@ -445,6 +612,11 @@ std::string Robot::getVizInfo()
     rviz["navigation"]["global_planner"] = config_->getFeatureNavigation().getGlobalPlanner();
     rviz["navigation"]["local_planner"] = config_->getFeatureNavigation().getLocalPlanner();
   }
+
+  if (config_->getFeatureGripper().isEnabled())
+  {
+    rviz["gripper"]["gripper_ns"] = act_rob_ns;    
+  }
   
   return YAML::Dump(info);
 }
@@ -455,6 +627,10 @@ bool Robot::hasResource(temoto_core::temoto_id::ID resource_id)
           config_->getFeatureManipulation().getResourceId() == resource_id ||
           config_->getFeatureManipulation().getDriverResourceId() == resource_id ||
           config_->getFeatureNavigation().getResourceId() == resource_id ||
-          config_->getFeatureNavigation().getDriverResourceId() == resource_id);
+          config_->getFeatureNavigation().getDriverResourceId() == resource_id ||
+          config_->getFeatureGripper().getResourceId() == resource_id ||
+          config_->getFeatureGripper().getDriverResourceId() == resource_id);
 }
 }
+
+

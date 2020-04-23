@@ -1,0 +1,6 @@
+string robot_name
+
+---
+
+geometry_msgs/Pose pose
+temoto_core/Error[] error_stack

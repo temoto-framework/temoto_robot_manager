@@ -73,6 +73,7 @@ public:
   void parseUrdf();
   void parseManipulation();
   void parseNavigation();
+  void parseGripper();
 
   std::string getName() const
   {
@@ -102,6 +103,11 @@ public:
   FeatureNavigation& getFeatureNavigation()
   {
     return feature_navigation_;
+  }
+
+  FeatureGripper& getFeatureGripper()
+  {
+    return feature_gripper_;
   }
 
   void adjustReliability(float reliability)
@@ -137,6 +143,7 @@ private:
   FeatureURDF feature_urdf_;
   FeatureManipulation feature_manipulation_;
   FeatureNavigation feature_navigation_;
+  FeatureGripper feature_gripper_;
   
   std::string name_;
   std::string description_;
@@ -215,3 +222,4 @@ static bool operator==(const RobotConfig& r1, const RobotConfig& r2)
 //
 //}
 #endif
+

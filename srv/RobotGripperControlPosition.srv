@@ -1,0 +1,5 @@
+string gripper_name
+float32 control
+
+---
+
