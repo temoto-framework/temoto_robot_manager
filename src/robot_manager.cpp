@@ -498,7 +498,6 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlanManipul
   {
     auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
                                  [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  //  return p.second->getName() == "xarm7_robot_sim";
                                   return p.second->getName() == req.robot_name;
                                  });  
     active_robot_ = robot_it->second;
@@ -1031,7 +1030,6 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
   if (active_robot_->isLocal())
   {
     active_robot_->controlGripper(req.gripper_name,req.control);
-    TEMOTO_INFO_STREAM("THE GRIPPER MOVED...");
   }
   else
   {

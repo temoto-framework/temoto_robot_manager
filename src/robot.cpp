@@ -133,7 +133,7 @@ void Robot::load()
   {
     loadGripperDriver();
     loadGripper();
-  }
+  }  
 }
 
 void Robot::waitForParam(const std::string& param, temoto_core::temoto_id::ID interrupt_res_id)
@@ -280,6 +280,7 @@ void Robot::loadNavigation()
     // wait for command velocity to be published
     std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/cmd_vel";
     waitForTopic(cmd_vel_topic, res_id);
+    ros::Duration(5).sleep();
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'navigation' loaded.");
   }
@@ -327,8 +328,11 @@ void Robot::loadGripper()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     TEMOTO_DEBUG("Gripper resource id: %d", res_id);          
     ftr.setResourceId(res_id);
+    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+    ros::service::waitForService(gripper_topic,-1);
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+    
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -349,6 +353,10 @@ void Robot::loadGripperDriver()
     TEMOTO_DEBUG("Gripper driver resource id: %d", res_id);
     ftr.setDriverResourceId(res_id);
     TEMOTO_DEBUG("Feature 'Gripper driver' loaded.");
+    ros::Duration(5).sleep();
+    TEMOTO_INFO_STREAM("Finish Load Gripper Driver ");
+    //
+
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -503,7 +511,6 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   if (group_it != planning_groups_.end())
   {    
     current_pose = group_it->second->getCurrentPose().pose;    
-    //group_it->second->setNamedTarget("test_pose");
   }
   else 
   {
@@ -513,7 +520,7 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   return current_pose;  
 }
 
-void Robot::goalNavigation(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
 {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
@@ -530,7 +537,7 @@ void Robot::goalNavigation(const std::string& planning_group_name, const geometr
     goal.target_pose.pose = target_pose.pose;
     TEMOTO_INFO_STREAM(goal.target_pose); 
     //goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
-    goal.target_pose.header.frame_id = planning_group_name;         
+    goal.target_pose.header.frame_id = reference_frame;         
     goal.target_pose.header.stamp = ros::Time::now();  
   
     TEMOTO_INFO_STREAM(goal.target_pose); 

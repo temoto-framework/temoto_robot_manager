@@ -79,7 +79,7 @@ public:
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
     // the name of the topic
     temoto_robot_manager::RobotLoad load_srvc;
-    load_srvc.request.robot_name = robot_name;      
+    load_srvc.request.robot_name = robot_name;
     try
     {
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
