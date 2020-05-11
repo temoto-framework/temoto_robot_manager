@@ -22,7 +22,6 @@
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_robot_manager/robot_manager_services.h"
-#include "temoto_context_manager/context_manager_services.h"
 #include "temoto_core/trr/resource_registrar.h"
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
@@ -90,15 +89,6 @@ private:
 
   bool execManipulationPathCb(temoto_robot_manager::RobotExecutePlan::Request& req, temoto_robot_manager::RobotExecutePlan::Response& res);
 
-  /**
-   * @brief Service that sets robot manager default target
-   * @param LoadSpeech request message
-   * @param LoadSpeech response message
-   * @return
-   */
-
-  bool setManipulationTargetCb(temoto_robot_manager::RobotSetTarget::Request& req, temoto_robot_manager::RobotSetTarget::Response& res);
-
   bool getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
 
   bool goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
@@ -120,9 +110,7 @@ private:
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
 
   bool getVizInfoCb(temoto_robot_manager::RobotGetVizInfo::Request& req,
-                       temoto_robot_manager::RobotGetVizInfo::Response& res);
-
-  void targetPoseCb(const temoto_context_manager::ObjectContainer& msg);
+                    temoto_robot_manager::RobotGetVizInfo::Response& res);
 
   void statusInfoCb(temoto_core::ResourceStatus& srv);
 

@@ -48,25 +48,34 @@ RobotManager::RobotManager()
   config_syncer_.requestRemoteConfigs();
 
   // Fire up additional servers for performing various actions on a robot.
-  server_plan_ =
-      nh_.advertiseService(robot_manager::srv_name::SERVER_PLAN, &RobotManager::planManipulationPathCb, this);
-  server_exec_ =
-      nh_.advertiseService(robot_manager::srv_name::SERVER_EXECUTE, &RobotManager::execManipulationPathCb, this);
-  server_get_viz_cfg_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_VIZ_INFO,
-                                             &RobotManager::getVizInfoCb, this);
-  server_set_manipulation_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET,
-                                            &RobotManager::setManipulationTargetCb, this);
-  server_set_mode_ = nh_.advertiseService(robot_manager::srv_name::SERVER_SET_MODE,
-                                          &RobotManager::setModeCb, this);
-  
-  server_get_manipulation_target_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET, 
-                                            &RobotManager::getManipulationTargetCb, this);
-
-  server_navigation_goal_ = nh_.advertiseService(robot_manager::srv_name::SERVER_NAVIGATION_GOAL, 
-                                            &RobotManager::goalNavigationCb, this);
-
-  server_gripper_control_position_ = nh_.advertiseService(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION, 
-                                            &RobotManager::gripperControlPositionCb, this);
+  server_plan_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_PLAN,
+    &RobotManager::planManipulationPathCb,
+    this);
+  server_exec_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_EXECUTE,
+    &RobotManager::execManipulationPathCb,
+    this);
+  server_get_viz_cfg_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_GET_VIZ_INFO,
+    &RobotManager::getVizInfoCb,
+    this);
+  server_set_mode_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_SET_MODE,
+    &RobotManager::setModeCb,
+    this);
+  server_get_manipulation_target_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET,
+    &RobotManager::getManipulationTargetCb,
+    this);
+  server_navigation_goal_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_NAVIGATION_GOAL, 
+    &RobotManager::goalNavigationCb,
+    this);
+  server_gripper_control_position_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION,
+    &RobotManager::gripperControlPositionCb,
+    this);
 
 
 //TODO: TEMPORARY, REMOVE!
@@ -461,9 +470,9 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
       {
         if (config.getName() == config_compare->getName())
         {
-          TEMOTO_INFO("Equal");
+          TEMOTO_INFO_STREAM("Equal");
           compare = true;
-          TEMOTO_INFO(config.getName().c_str());          
+          TEMOTO_INFO_STREAM(config.getName().c_str());          
         }
       }    
       
@@ -492,8 +501,8 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
 
 bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlanManipulation::Request& req, temoto_robot_manager::RobotPlanManipulation::Response& res)
 {  
-  TEMOTO_DEBUG("ACTIVE ROBOT...");
-  TEMOTO_DEBUG(active_robot_->getName().c_str());
+  TEMOTO_DEBUG_STREAM("ACTIVE ROBOT...");
+  TEMOTO_DEBUG_STREAM(active_robot_->getName().c_str());
   if (active_robot_->getName().c_str() != req.robot_name)
   {
     auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
@@ -502,9 +511,9 @@ bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlanManipul
                                  });  
     active_robot_ = robot_it->second;
   }    
-  TEMOTO_DEBUG(active_robot_->getName().c_str());
+  TEMOTO_DEBUG_STREAM(active_robot_->getName().c_str());
 
-  TEMOTO_DEBUG("PLANNING...");
+  TEMOTO_DEBUG_STREAM("PLANNING...");
   if (!active_robot_)
   {
     res.error_stack = CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL, "Unable to plan, because no robot "
@@ -659,55 +668,6 @@ bool RobotManager::getVizInfoCb(temoto_robot_manager::RobotGetVizInfo::Request& 
   return true;
 }
 
-bool RobotManager::setManipulationTargetCb(temoto_robot_manager::RobotSetTarget::Request& req,
-                               temoto_robot_manager::RobotSetTarget::Response& res)
-{
-  if (active_robot_->isLocal())
-  {
-    TEMOTO_INFO("Setting target to object '%s'", req.object_name.c_str());
-
-    temoto_context_manager::TrackObject track_object_msg;
-    track_object_msg.request.object_name = req.object_name;
-
-    try
-    {
-      resource_registrar_.call<temoto_context_manager::TrackObject>(temoto_context_manager::srv_name::MANAGER,
-                                                    temoto_context_manager::srv_name::TRACK_OBJECT_SERVER,
-                                                    track_object_msg);
-      TEMOTO_DEBUG("Subscribing to '%s'", track_object_msg.response.object_topic.c_str());
-      target_pose_sub_ = nh_.subscribe(track_object_msg.response.object_topic, 1,
-                                       &RobotManager::targetPoseCb, this);
-    }
-    catch (temoto_core::error::ErrorStack& error_stack)
-    {
-      res.error_stack = FORWARD_ERROR(error_stack);
-      res.code = temoto_core::trr::status_codes::FAILED;
-    }
-  }
-  else
-  {
-    // This is remote robot, forward the set target command
-    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET;
-    ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(topic);
-    temoto_robot_manager::RobotSetTarget fwd_target_srvc;
-    fwd_target_srvc.request = req;
-    fwd_target_srvc.response = res;
-    if (client_mode.call(fwd_target_srvc))
-    {
-      TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
-      res = fwd_target_srvc.response;
-    }
-    else
-    {
-      TEMOTO_ERROR("Call to remote RobotManager service failed.");
-      res.message = "Call to remote RobotManager service failed.";
-      res.code = temoto_core::trr::status_codes::FAILED;
-    }
-  }
-  return true;
-}
-
 bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
                                           temoto_robot_manager::RobotGetTarget::Response& res)
 {
@@ -844,68 +804,6 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
     TEMOTO_ERROR("Unable to set mode, because the robot is not loaded.");
   }
   return true;
-}
-
-// Take palm pose of whichever hand is present, prefer left_hand.
-// Store the pose in a class member for later use when planning is requested.
-void RobotManager::targetPoseCb(const temoto_context_manager::ObjectContainer& msg)
-{
-    default_pose_mutex_.lock();
-    default_target_pose_ = msg.pose;
-
-    geometry_msgs::TransformStamped tf_world_to_target;
-    try
-    {
-      tf_world_to_target =
-          tf2_buffer.lookupTransform("world", msg.pose.header.frame_id, ros::Time(0));
-      tf2::doTransform(msg.pose, default_target_pose_, tf_world_to_target);
-      default_target_pose_.header.frame_id = "world";
-    }
-    catch(tf2::TransformException ex)
-    {
-      TEMOTO_ERROR("%s",ex.what());
-    }
-
-//    tf::StampedTransform transform;
-//    //default_target_pose_.pose.position.x = transform.getOrigin().x() + msg.pose.pose.position.x;
-//    //default_target_pose_.pose.position.y = transform.getOrigin().y() + msg.pose.pose.position.y;
-//    //default_target_pose_.pose.position.z = transform.getOrigin().z() + msg.pose.pose.position.z;
-//    
-//    default_target_pose_.pose.position.x = transform.getOrigin().x();
-//    default_target_pose_.pose.position.y = transform.getOrigin().y();
-//    default_target_pose_.pose.position.z = transform.getOrigin().z();
-//
-//    tf::Quaternion q = transform.getRotation().normalized();
-//    //default_target_pose_.pose.orientation.x = (double)q.getX() + msg.pose.pose.orientation.x;
-//    //default_target_pose_.pose.orientation.y = (double)q.getY() + msg.pose.pose.orientation.y;
-//    //default_target_pose_.pose.orientation.z = (double)q.getZ() + msg.pose.pose.orientation.z;
-//    //default_target_pose_.pose.orientation.w = (double)q.getW() + msg.pose.pose.orientation.w;
-//
-//    default_target_pose_.pose.orientation.x = (double)q.getX();
-//    default_target_pose_.pose.orientation.y = (double)q.getY();
-//    default_target_pose_.pose.orientation.z = (double)q.getZ();
-//    default_target_pose_.pose.orientation.w = (double)q.getW();
-
-    temoto_context_manager::ObjectContainer msg2 = msg;
-    msg2.marker.header = default_target_pose_.header;
-    msg2.marker.pose = default_target_pose_.pose;
-    msg2.marker.ns = "blah2346";
-    msg2.marker.id = 0;
-    //  msg2.marker.type = visualization_msgs::Marker::CUBE;
-    // msg2.marker.color.g = 1.0;
-    msg2.marker.lifetime = ros::Duration();
-
-    if (marker_publisher_)
-    {
-      marker_publisher_.publish(msg2.marker);
-  }
-  else
-  {
-    TEMOTO_ERROR("no marker publisher");
-  }
-//    TEMOTO_DEBUG_STREAM(default_target_pose_);
-
-    default_pose_mutex_.unlock();
 }
 
 void RobotManager::statusInfoCb(temoto_core::ResourceStatus& srv)

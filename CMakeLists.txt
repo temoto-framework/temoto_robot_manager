@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   temoto_core
   temoto_action_engine
-  temoto_context_manager
   temoto_er_manager
 )
 
@@ -52,7 +51,6 @@ catkin_package(
     visualization_msgs
     temoto_core
     temoto_action_engine
-    temoto_context_manager
     temoto_er_manager
   DEPENDS 
 )
