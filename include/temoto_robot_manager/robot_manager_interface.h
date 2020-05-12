@@ -157,12 +157,12 @@ public:
     }
   }
 
-  void execute()
+  void execute(const std::string& robot_name)
   {
     std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-
+    TEMOTO_DEBUG("%s", prefix.c_str());    
     temoto_robot_manager::RobotExecutePlan msg;
+    msg.request.robot_name = robot_name;
     if (!client_exec_.call(msg))
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");

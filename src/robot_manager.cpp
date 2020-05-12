@@ -76,24 +76,7 @@ RobotManager::RobotManager()
     robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION,
     &RobotManager::gripperControlPositionCb,
     this);
-
-
-//TODO: TEMPORARY, REMOVE!
-//      seq: 0
-//      stamp: 
-//        secs: 0
-//        nsecs:         0
-//      frame_id: "/base_link"
-//    pose: 
-//      position: 
-//        x: 0.539124787814
-//        y: -0.592158374795
-//        z: 0.717273819597
-//      orientation: 
-//        x: 0.383115589721
-//        y: 0.0150255505036
-//        z: -0.0361555479561
-//        w: 0.922870226032  
+  
   std::string marker_topic = temoto_core::common::getAbsolutePath("world_to_target_marker");
   // Advertise the marker topic
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>(marker_topic, 10);
@@ -588,6 +571,14 @@ bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecutePlan
                           temoto_robot_manager::RobotExecutePlan::Response& res)
 {
   TEMOTO_INFO("EXECUTING...");
+  if (active_robot_->getName().c_str() != req.robot_name)
+  {
+    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
+                                  return p.second->getName() == req.robot_name;
+                                 });  
+    active_robot_ = robot_it->second;
+  }    
   if (active_robot_)
   {
     if (active_robot_->isLocal())
