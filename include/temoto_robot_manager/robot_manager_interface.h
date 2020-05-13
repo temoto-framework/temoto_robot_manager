@@ -15,6 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Author: Veiko Vunder */
+/* Author: Fabian Parra */
 
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
@@ -29,7 +30,7 @@
 namespace robot_manager
 {
 
-template <class OwnerAction>
+template <class ParentSubsystem>
 class RobotManagerInterface : public temoto_core::BaseSubsystem
 {
 public:
@@ -38,19 +39,18 @@ public:
     class_name_ = __func__;
   }
 
-  void initialize(OwnerAction* action)
+  void initialize(ParentSubsystem* parent_subsystem)
   {
-    initializeBase(action);
-    log_group_ = "interfaces." + action->getName();
-    name_ = action->getName() + "/robot_manager_interface";
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
+    initializeBase(parent_subsystem);
+    log_group_ = "interfaces." + parent_subsystem->class_name_;
+    subsystem_name_ = parent_subsystem->class_name_ + "/robot_manager_interface";
 
     // create resource manager
     resource_registrar_ = std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>>(
-        new temoto_core::trr::ResourceRegistrar<RobotManagerInterface>(name_, this));
+        new temoto_core::trr::ResourceRegistrar<RobotManagerInterface>(subsystem_name_, this));
 
     // ensure that resource_registrar was created
-    validateInterface(prefix);
+    validateInterface();
 
     // register status callback function
     // resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
@@ -74,8 +74,7 @@ public:
 
   void loadRobot(std::string robot_name = "")
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    validateInterface(prefix);
+    validateInterface();
     // Contact the "Context Manager", pass the gesture specifier and if successful, get
     // the name of the topic
     temoto_robot_manager::RobotLoad load_srvc;
@@ -93,9 +92,6 @@ public:
 
   void planManipulation(const std::string& robot_name, std::string planning_group = "")
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-    
     temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = true;
     msg.request.use_named_target = false;
@@ -115,9 +111,6 @@ public:
             const std::string& planning_group,
             const geometry_msgs::PoseStamped& pose)
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-
     temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = false;
     msg.request.use_named_target = false;
@@ -137,9 +130,6 @@ public:
 
   void planManipulation(const std::string& robot_name,const std::string& planning_group,const std::string& named_target_pose)
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-
     temoto_robot_manager::RobotPlanManipulation msg;
     msg.request.use_default_target = false;
     msg.request.use_named_target = true;
@@ -158,9 +148,7 @@ public:
   }
 
   void execute(const std::string& robot_name)
-  {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());    
+  {   
     temoto_robot_manager::RobotExecutePlan msg;
     msg.request.robot_name = robot_name;
     if (!client_exec_.call(msg))
@@ -175,9 +163,6 @@ public:
 
   std::string getMoveitRvizConfig()
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-
     temoto_robot_manager::RobotGetVizInfo msg;
     if (!client_viz_info_.call(msg))
     {
@@ -192,9 +177,6 @@ public:
 
   void setTarget(std::string object_name)
   {
-    std::string prefix = temoto_core::common::generateLogPrefix(log_subsys_, log_class_, __func__);
-    TEMOTO_DEBUG("%s", prefix.c_str());
-
     temoto_robot_manager::RobotSetTarget msg;
     msg.request.object_name = object_name;
     if (!client_set_manipulation_target_.call(msg))
@@ -255,7 +237,7 @@ public:
    * @brief validateInterface()
    * @param sensor_type
    */
-  void validateInterface(std::string& log_prefix)
+  void validateInterface()
   {
     if (!resource_registrar_)
     {
@@ -265,7 +247,7 @@ public:
 
   const std::string& getName() const
   {
-    return name_;
+    return subsystem_name_;
   }
 
   ~RobotManagerInterface()
@@ -284,8 +266,6 @@ public:
   }
 
 private:
-  std::string name_;
-  std::string log_class_, log_subsys_, log_group_;
 
   ros::NodeHandle nh_;
   ros::ServiceClient client_load_;
