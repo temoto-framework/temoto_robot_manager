@@ -78,11 +78,11 @@ private:
   void loadHardware();
   void waitForHardware();
   void loadUrdf();
-  void loadManipulation();
+  void loadManipulationController();
   void loadManipulationDriver();
-  void loadNavigation();
+  void loadNavigationController();
   void loadNavigationDriver();
-  void loadGripper();
+  void loadGripperController();
   void loadGripperDriver();
 
   temoto_core::temoto_id::ID rosExecute(const std::string& package_name, const std::string& executable,

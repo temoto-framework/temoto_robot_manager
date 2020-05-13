@@ -111,28 +111,27 @@ void Robot::load()
   }
 
   // Load robot features  
-  if (config_->getFeatureURDF().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
+  if (config_->getFeatureURDF().isEnabled())
   {
     loadUrdf();
-    loadManipulationDriver();  // We need joint states and robot states to visualize the robot
   }
 
   if (config_->getFeatureManipulation().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
   {
     loadManipulationDriver();
-    loadManipulation();
+    loadManipulationController();
   }
   
   if (config_->getFeatureNavigation().isEnabled() and config_->getFeatureNavigation().isDriverEnabled())
   {
     loadNavigationDriver();
-    loadNavigation();
+    loadNavigationController();
   }
 
   if (config_->getFeatureGripper().isEnabled() and config_->getFeatureGripper().isDriverEnabled())
   {
     loadGripperDriver();
-    loadGripper();
+    loadGripperController();
   }  
 }
 
@@ -192,7 +191,7 @@ void Robot::loadUrdf()
     std::string robot_desc_param = config_->getAbsRobotNamespace() + "/robot_description";
     waitForParam(robot_desc_param, res_id);
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'urdf' loaded.");
+    TEMOTO_DEBUG("Feature 'URDF' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -201,7 +200,7 @@ void Robot::loadUrdf()
 }
 
 // Load move group and move group interfaces
-void Robot::loadManipulation()
+void Robot::loadManipulationController()
 {
   if (config_->getFeatureManipulation().isLoaded())
   {
@@ -227,7 +226,7 @@ void Robot::loadManipulation()
     }
 
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'manipulation' loaded.");
+    TEMOTO_DEBUG("Feature 'Manipulation Controller' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -254,7 +253,7 @@ void Robot::loadManipulationDriver()
     waitForTopic(joint_states_topic, res_id);
 
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'manipulation driver' loaded.");
+    TEMOTO_DEBUG("Feature 'Manipulation Driver' loaded.");
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -263,7 +262,7 @@ void Robot::loadManipulationDriver()
 }
 
 // Load Move Base
-void Robot::loadNavigation()
+void Robot::loadNavigationController()
 {
   if (config_->getFeatureNavigation().isLoaded())
   {
@@ -282,7 +281,7 @@ void Robot::loadNavigation()
     waitForTopic(cmd_vel_topic, res_id);
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'navigation' loaded.");
+    TEMOTO_DEBUG("Feature 'Navigation Controller' loaded.");
   }
   catch (temoto_core::error::ErrorStack& error_stack)
   {
@@ -307,7 +306,7 @@ void Robot::loadNavigationDriver()
     std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
     waitForTopic(odom_topic, res_id);
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'navigation driver' loaded.");        
+    TEMOTO_DEBUG("Feature 'Navigation Driver' loaded.");        
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
@@ -315,7 +314,7 @@ void Robot::loadNavigationDriver()
   }
 }
 
-void Robot::loadGripper()
+void Robot::loadGripperController()
 {
   if (config_->getFeatureGripper().isLoaded())
   {
@@ -331,7 +330,7 @@ void Robot::loadGripper()
     std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
     ros::service::waitForService(gripper_topic,-1);
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+    TEMOTO_DEBUG("Feature 'Gripper Controller' loaded.");
     
   }
   catch(temoto_core::error::ErrorStack& error_stack)
