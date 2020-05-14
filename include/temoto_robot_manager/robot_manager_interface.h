@@ -71,7 +71,7 @@ public:
     client_gripper_control_position_ =
       nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
     client_get_robot_config_ =
-      nh_.serviceClient<temoto_robot_manager::RobotGetconfig>(robot_manager::srv_name::SERVER_GET_CONFIG);
+      nh_.serviceClient<temoto_robot_manager::RobotGetConfig>(robot_manager::srv_name::SERVER_GET_CONFIG);
   }
 
   YAML::Node getRobotConfig(const std::string& robot_name)
