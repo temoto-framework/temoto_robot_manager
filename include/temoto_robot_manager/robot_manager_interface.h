@@ -24,6 +24,7 @@
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/console_colors.h"
 #include "temoto_robot_manager/robot_manager_services.h"
+#include "yaml-cpp/yaml.h"
 #include <vector>
 #include <string>
 
@@ -54,22 +55,49 @@ public:
 
     // register status callback function
     // resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
-//    client_load_ =
-//        nh_.serviceClient<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::SERVER_LOAD);
+
     client_plan_ =
-        nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(robot_manager::srv_name::SERVER_PLAN);
+      nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(robot_manager::srv_name::SERVER_PLAN);
     client_exec_ =
-        nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(robot_manager::srv_name::SERVER_EXECUTE);
+      nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(robot_manager::srv_name::SERVER_EXECUTE);
     client_viz_info_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
+      nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
     client_set_manipulation_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET);
+      nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET);
     client_get_manipulation_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
+      nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
     client_navigation_goal_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
+      nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
     client_gripper_control_position_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
+      nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
+    client_get_robot_config_ =
+      nh_.serviceClient<temoto_robot_manager::RobotGetconfig>(robot_manager::srv_name::SERVER_GET_CONFIG);
+  }
+
+  YAML::Node getRobotConfig(const std::string& robot_name)
+  {
+    validateInterface();
+    temoto_robot_manager::RobotGetConfig msg;
+    msg.request.robot_name = robot_name;
+    if (!client_get_robot_config_.call(msg))
+    {
+      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+    }
+    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+    {
+      throw FORWARD_ERROR(msg.response.error_stack);
+    }
+    else
+    {
+      try
+      {
+        return YAML::Load(msg.response.robot_config);
+      }
+      catch(const std::exception& e)
+      {
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, e.what());
+      }
+    }
   }
 
   void loadRobot(std::string robot_name = "")
@@ -275,7 +303,8 @@ private:
   ros::ServiceClient client_set_manipulation_target_;  
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_navigation_goal_;
-  ros::ServiceClient client_gripper_control_position_;  
+  ros::ServiceClient client_gripper_control_position_;
+  ros::ServiceClient client_get_robot_config_; 
 
   std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
 };

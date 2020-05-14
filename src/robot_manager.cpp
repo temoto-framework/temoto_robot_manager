@@ -71,6 +71,10 @@ RobotManager::RobotManager()
     robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION,
     &RobotManager::gripperControlPositionCb,
     this);
+  server_get_robot_config_ = nh_.advertiseService(
+    robot_manager::srv_name::SERVER_GET_CONFIG,
+    &RobotManager::getRobotConfigCb,
+    this);
   
   std::string marker_topic = temoto_core::common::getAbsolutePath("world_to_target_marker");
   // Advertise the marker topic
@@ -216,7 +220,6 @@ void RobotManager::loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_
     return;
   }
   
-
   // Try to find suitable candidate from remote managers
   config = findRobot(req.robot_name, remote_configs_);
   if (config)
@@ -930,6 +933,49 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
     else
     {      
       TEMOTO_INFO_STREAM("Call to remote RobotManager / gripper - service failed.");
+      return true;
+    }
+  }  
+  return true; 
+}
+
+bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Request& req,
+                                    temoto_robot_manager::RobotGetConfig::Response& res)
+{
+  auto robot_it = std::find_if(
+    loaded_robots_.begin(),
+    loaded_robots_.end(),
+    [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool 
+    {
+      return p.second->getName() == req.robot_name;
+    });
+  
+  if (!robot_it->second)
+  {    
+    //TODO: Add the correspondig error, for now using the plan code
+    TEMOTO_INFO_STREAM("Could not find robot '" << req.robot_name << "'");
+    return true;
+  }
+
+  if (robot_it->second->isLocal())
+  {
+    res.robot_config = robot_it->second->getConfig()->getYamlConfigString();
+  }
+  else
+  {
+    std::string topic = "/" + robot_it->second->getConfig()->getTemotoNamespace() + "/" +
+                        robot_manager::srv_name::SERVER_GET_CONFIG;
+    ros::ServiceClient client_get_robot_config_ = nh_.serviceClient<temoto_robot_manager::RobotGetConfig>(topic);
+    temoto_robot_manager::RobotGetConfig get_config_srvc;
+    get_config_srvc.request = req;
+    get_config_srvc.response = res;
+    if (client_get_robot_config_.call(get_config_srvc))
+    {
+      res = get_config_srvc.response;
+    }
+    else
+    {      
+      TEMOTO_INFO_STREAM("Call to remote RobotManager/" << srv_name::SERVER_GET_CONFIG << " failed.");
       return true;
     }
   }  

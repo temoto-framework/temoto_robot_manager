@@ -24,7 +24,7 @@
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_robot_manager/robot_features.h"
 
-#include <yaml-cpp/yaml.h>
+#include "yaml-cpp/yaml.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -118,9 +118,14 @@ public:
     reliability_.resetReliability(reliability);
   }
 
-  YAML::Node getYAMLConfig() const
+  const YAML::Node& getYAMLConfig() const
   {
     return yaml_config_;
+  }
+
+  std::string getYamlConfigString() const
+  {
+    return getYAMLConfig().as<std::string>();
   }
 
   void setTemotoNamespace(std::string temoto_namespace)

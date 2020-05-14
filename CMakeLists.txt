@@ -9,11 +9,11 @@ find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   moveit_ros_planning_interface
   move_base_msgs
-  tf2
-  tf2_geometry_msgs
   geometry_msgs
   visualization_msgs
   std_msgs
+  tf2
+  tf2_geometry_msgs
   temoto_core
   temoto_action_engine
   temoto_er_manager
@@ -29,6 +29,7 @@ add_service_files(
   RobotSetMode.srv
   RobotGetVizInfo.srv
   RobotGetTarget.srv
+  RobotGetConfig.srv
   RobotGoal.srv
   RobotGripperControlPosition.srv
   GripperControl.srv
