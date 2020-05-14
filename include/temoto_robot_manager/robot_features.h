@@ -206,9 +206,21 @@ public:
     return local_planner_;
   }
 
+  const std::string& getOdomTopic() const
+  {
+    return odom_topic_;
+  }
+
+  const std::string& getCmdVelTopic() const
+  {
+    return cmd_vel_topic_;
+  }
+
 private:
   std::string global_planner_;
   std::string local_planner_;
+  std::string odom_topic_;
+  std::string cmd_vel_topic_;
 };
 
 class FeatureGripper : public FeatureWithDriver

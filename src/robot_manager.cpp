@@ -34,11 +34,6 @@ RobotManager::RobotManager()
   , mode_(modes::AUTO)
   , tf2_listener(tf2_buffer)
 {
-
-  //\TODO:Remove, deprecated
-  log_class_ = this->class_name_;
-  log_subsys_ = this->subsystem_name_;
-
   // Start the server for loading/unloading robots as resources
   resource_registrar_.addServer<temoto_robot_manager::RobotLoad>(srv_name::SERVER_LOAD, &RobotManager::loadCb,
                                                    &RobotManager::unloadCb);
@@ -81,7 +76,7 @@ RobotManager::RobotManager()
   // Advertise the marker topic
   marker_publisher_ = nh_.advertise<visualization_msgs::Marker>(marker_topic, 10);
 
-//Set the initial default stamped pose in the world frame, until target tracking is not set.
+  //Set the initial default stamped pose in the world frame, until target tracking is not set.
   default_target_pose_.header.stamp = ros::Time::now();
   default_target_pose_.header.frame_id = "world";
   default_target_pose_.pose.position.x = 0.539124787814;

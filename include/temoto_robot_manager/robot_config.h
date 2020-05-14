@@ -43,8 +43,6 @@ public:
 
   RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b);
   
-
-
   std::string toString() const;
 
   /* * * * * * * * * * * *
@@ -166,60 +164,5 @@ static bool operator==(const RobotConfig& r1, const RobotConfig& r2)
 
 } // robot_manager namespace
 
-//namespace YAML
-//{
-//template <>
-//struct convert<robot_manager::RobotConfig>
-//{
-//  static Node encode(const robot_manager::RobotConfig& config)
-//  {
-//    Node node;
-//    node["robot_name"] = config.getName();
-//    node["package_name"] = config.getPackageName();
-//    node["executable"] = config.getExecutable();
-//    node["description"] = config.getDescription();
-//    node["reliability"] = config.getReliability();
-//    return node;
-//  }
-//
-//  static bool decode(const Node& node, robot_manager::RobotConfig& config)
-//  {
-//    if (!node.IsMap() || node.size() < 3)
-//    {
-//      return false;
-//    }
-//
-//    try
-//    {
-//      config.setName(node["robot_name"].as<std::string>());
-//      config.setPackageName(node["package_name"].as<std::string>());
-//      config.setExecutable(node["executable"].as<std::string>());
-//    }
-//    catch (YAML::InvalidNode e)
-//    {
-//      return false;
-//    }
-//
-//    try
-//    {
-//      config.setDescription(node["description"].as<std::string>());
-//    }
-//    catch (YAML::InvalidNode e)
-//    {
-//    }
-//
-//    try
-//    {
-//      config.resetReliability(node["reliability"].as<float>());
-//    }
-//    catch (YAML::InvalidNode e)
-//    {
-//    }
-//
-//    return true;
-//  }
-//};
-//
-//}
 #endif
 

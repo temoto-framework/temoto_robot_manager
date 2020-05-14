@@ -277,7 +277,7 @@ void Robot::loadNavigationController()
     ftr.setResourceId(res_id);
 
     // wait for command velocity to be published
-    std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/cmd_vel";
+    std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
     waitForTopic(cmd_vel_topic, res_id);
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
@@ -303,7 +303,7 @@ void Robot::loadNavigationDriver()
     temoto_core::temoto_id::ID res_id = rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     TEMOTO_DEBUG("Navigation driver resource id: %d", res_id);
     ftr.setDriverResourceId(res_id);
-    std::string odom_topic = config_->getAbsRobotNamespace() + "/odom";
+    std::string odom_topic = config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
     waitForTopic(odom_topic, res_id);
     ftr.setDriverLoaded(true);
     TEMOTO_DEBUG("Feature 'Navigation Driver' loaded.");        
@@ -503,7 +503,7 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   
   auto group_it = planning_groups_.find(planning_group_name);
-  TEMOTO_INFO(planning_group_name.c_str());
+  TEMOTO_INFO_STREAM(planning_group_name.c_str());
 
   geometry_msgs::Pose current_pose;
   

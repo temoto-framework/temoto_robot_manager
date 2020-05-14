@@ -52,7 +52,7 @@ public:
 
   const std::string& getName() const
   {
-    return log_subsys_;
+    return subsystem_name_;
   }
 
 private:
@@ -129,8 +129,6 @@ private:
 
   std::string mode_;
   geometry_msgs::PoseStamped default_target_pose_;
-
-  std::string log_class_, log_subsys_;
 
   ros::NodeHandle nh_;
   ros::ServiceServer server_plan_;

@@ -90,7 +90,8 @@ FeatureNavigation::FeatureNavigation() : FeatureWithDriver("navigation")
 {
 }
 
-FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDriver("navigation")
+FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
+: FeatureWithDriver("navigation")
 {
   this->package_name_ = nav_conf["controller"]["package_name"].as<std::string>();
   this->executable_ = nav_conf["controller"]["executable"].as<std::string>();
@@ -105,10 +106,33 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf) : FeatureWithDr
 
   this->driver_package_name_ = nav_conf["driver"]["package_name"].as<std::string>();
   this->driver_executable_ = nav_conf["driver"]["executable"].as<std::string>();
+
+  // Get additional driver arguments
   if (nav_conf["driver"]["args"])
   {
     this->driver_args_ = nav_conf["driver"]["args"].as<std::string>();
   }
+
+  // Get the odom topic
+  if (nav_conf["driver"]["odom_topic"])
+  {
+    this->odom_topic_ = nav_conf["driver"]["odom_topic"].as<std::string>();
+  }
+  else
+  {
+    this->odom_topic_ = "odom";
+  }
+
+  // Get the cmd_vel topic
+  if (nav_conf["driver"]["cmd_vel_topic"])
+  {
+    this->cmd_vel_topic_ = nav_conf["driver"]["cmd_vel_topic"].as<std::string>();
+  }
+  else
+  {
+    this->cmd_vel_topic_ = "cmd_vel";
+  }
+  
   this->driver_enabled_ = true;
 }
 
