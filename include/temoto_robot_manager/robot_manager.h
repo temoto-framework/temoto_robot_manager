@@ -151,7 +151,6 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
-  ros::ServiceClient client_get_robot_config_;
 
   ros::Subscriber target_pose_sub_;
   // temoto_robot_manager::LoadGesture hand_srv_msg_;

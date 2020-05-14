@@ -125,7 +125,9 @@ public:
 
   std::string getYamlConfigString() const
   {
-    return getYAMLConfig().as<std::string>();
+    std::stringstream ss;
+    ss << getYAMLConfig();
+    return ss.str();
   }
 
   void setTemotoNamespace(std::string temoto_namespace)
