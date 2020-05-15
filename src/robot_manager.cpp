@@ -942,6 +942,7 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
 bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Request& req,
                                     temoto_robot_manager::RobotGetConfig::Response& res)
 {
+  TEMOTO_DEBUG_STREAM("Received a request to send the config of '" << req.robot_name << "'.");
   /*
    * Look for local robot configs
    */ 
@@ -955,7 +956,9 @@ bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Reques
   
   if (local_robot_config_it != local_configs_.end())
   { 
+    TEMOTO_DEBUG_STREAM("Found the config of '" << req.robot_name << "' in known local robot configs.");
     res.robot_config = (*local_robot_config_it)->getYamlConfigString();
+    res.robot_absolute_namespace = (*local_robot_config_it)->getAbsRobotNamespace();
     return true;
   }
 
@@ -972,7 +975,9 @@ bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Reques
   
   if (remote_robot_config_it != remote_configs_.end())
   { 
+    TEMOTO_DEBUG_STREAM("Found the config of '" << req.robot_name << "' in known remote robot configs.");
     res.robot_config = (*remote_robot_config_it)->getYamlConfigString();
+    res.robot_absolute_namespace = (*remote_robot_config_it)->getAbsRobotNamespace();
     return true;
   }
 
