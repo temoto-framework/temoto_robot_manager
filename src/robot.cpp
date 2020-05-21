@@ -110,27 +110,48 @@ void Robot::load()
                                                        "the configuration file.");
   }
 
-  // Load robot features  
+  // Load URDF
   if (config_->getFeatureURDF().isEnabled())
   {
     loadUrdf();
   }
 
-  if (config_->getFeatureManipulation().isEnabled() and config_->getFeatureManipulation().isDriverEnabled())
+  /*
+   * Load manipulation
+   */ 
+  if (config_->getFeatureManipulation().isDriverEnabled())
   {
     loadManipulationDriver();
+  }
+
+  if (config_->getFeatureManipulation().isEnabled())
+  {
     loadManipulationController();
   }
   
-  if (config_->getFeatureNavigation().isEnabled() and config_->getFeatureNavigation().isDriverEnabled())
+  /*
+   * Load navigation
+   */ 
+  if (config_->getFeatureNavigation().isDriverEnabled())
   {
     loadNavigationDriver();
+  }
+
+  if (config_->getFeatureNavigation().isEnabled())
+  {
     loadNavigationController();
   }
 
-  if (config_->getFeatureGripper().isEnabled() and config_->getFeatureGripper().isDriverEnabled())
+  /*
+   * Load gripper
+   */ 
+  if (config_->getFeatureGripper().isDriverEnabled())
   {
     loadGripperDriver();
+  }  
+
+  if (config_->getFeatureGripper().isEnabled())
+  {
     loadGripperController();
   }  
 }
