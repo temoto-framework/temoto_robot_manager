@@ -92,48 +92,37 @@ FeatureNavigation::FeatureNavigation() : FeatureWithDriver("navigation")
 
 FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
 : FeatureWithDriver("navigation")
+, odom_topic_("odom")
+, cmd_vel_topic_("cmd_vel")
 {
-  this->package_name_ = nav_conf["controller"]["package_name"].as<std::string>();
-  this->executable_ = nav_conf["controller"]["executable"].as<std::string>();
-
-  if (nav_conf["controller"]["args"])
+  /*
+   * Get the controller configuration. Not required
+   */
+  if (nav_conf["controller"].IsDefined())
   {
-    this->args_ = nav_conf["controller"]["args"].as<std::string>();
-  }
-  this->global_planner_ = nav_conf["controller"]["global_planner"].as<std::string>();
-  this->local_planner_ = nav_conf["controller"]["local_planner"].as<std::string>();
-  this->feature_enabled_ = true;
-
-  this->driver_package_name_ = nav_conf["driver"]["package_name"].as<std::string>();
-  this->driver_executable_ = nav_conf["driver"]["executable"].as<std::string>();
-
-  // Get additional driver arguments
-  if (nav_conf["driver"]["args"])
-  {
-    this->driver_args_ = nav_conf["driver"]["args"].as<std::string>();
+    this->feature_enabled_ = setFromConfig(nav_conf["controller"]["package_name"], this->package_name_)
+                          && setFromConfig(nav_conf["controller"]["executable"], this->executable_);
+    // Optional parameters                     
+    if (this->feature_enabled_)
+    {
+      setFromConfig(nav_conf["controller"]["args"], this->args_);
+      setFromConfig(nav_conf["controller"]["global_planner"], this->global_planner_);
+      setFromConfig(nav_conf["controller"]["local_planner"], this->local_planner_);
+    }
   }
 
-  // Get the odom topic
-  if (nav_conf["driver"]["odom_topic"])
+  /*
+   * Get the driver configuration. Required
+   */
+  this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
+                       && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
+  // Optional parameters
+  if (this->driver_enabled_)
   {
-    this->odom_topic_ = nav_conf["driver"]["odom_topic"].as<std::string>();
+    setFromConfig(nav_conf["driver"]["args"], this->driver_args_);
+    setFromConfig(nav_conf["driver"]["odom_topic"], this->odom_topic_);
+    setFromConfig(nav_conf["driver"]["cmd_vel_topic"], this->cmd_vel_topic_);
   }
-  else
-  {
-    this->odom_topic_ = "odom";
-  }
-
-  // Get the cmd_vel topic
-  if (nav_conf["driver"]["cmd_vel_topic"])
-  {
-    this->cmd_vel_topic_ = nav_conf["driver"]["cmd_vel_topic"].as<std::string>();
-  }
-  else
-  {
-    this->cmd_vel_topic_ = "cmd_vel";
-  }
-  
-  this->driver_enabled_ = true;
 }
 
 FeatureGripper::FeatureGripper() : FeatureWithDriver("gripper")

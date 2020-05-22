@@ -81,6 +81,16 @@ public:
     resource_id_ = id;
   }
 
+  bool setFromConfig(const YAML::Node& config, std::string& parameter)
+  {
+    if (config.IsDefined())
+    {
+      parameter = config.as<std::string>();
+      return true;
+    }
+    return false;
+  }
+
 protected:
   std::string name_;
   std::string package_name_;
