@@ -876,6 +876,7 @@ bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperCo
                                     temoto_robot_manager::RobotGripperControlPosition::Response& res)
 {
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  TEMOTO_INFO_STREAM("GRIPPER CONTROL...");
   
   if (!loaded_robot)
   {    
