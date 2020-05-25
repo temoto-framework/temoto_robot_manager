@@ -91,7 +91,7 @@ private:
 
   bool getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
 
-  bool goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, temoto_robot_manager::RobotGoal::Response& res);
+  bool goalNavigationCb(temoto_robot_manager::RobotNavigationGoal::Request& req, temoto_robot_manager::RobotNavigationGoal::Response& res);
 
   bool gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, temoto_robot_manager::RobotGripperControlPosition::Response& res);
   
@@ -120,9 +120,11 @@ private:
 
   void findRobotDescriptionFiles(boost::filesystem::path current_dir);
 
+  std::shared_ptr<Robot> findLoadedRobot(const std::string& robot_name);
+
   typedef std::shared_ptr<Robot> RobotPtr;
-  typedef std::map<temoto_core::temoto_id::ID, RobotPtr> Robots;
-  RobotPtr active_robot_;
+  typedef std::map<temoto_core::temoto_id::ID, RobotPtr> Robots;  
+  
   Robots loaded_robots_;
   RobotConfigs local_configs_;
   RobotConfigs remote_configs_;

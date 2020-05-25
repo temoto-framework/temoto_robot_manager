@@ -26,7 +26,7 @@
 #include "temoto_robot_manager/RobotSetMode.h"
 #include "temoto_robot_manager/RobotGetVizInfo.h"
 #include "temoto_robot_manager/RobotGetTarget.h"
-#include "temoto_robot_manager/RobotGoal.h"
+#include "temoto_robot_manager/RobotNavigationGoal.h"
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 
 #include <string>
