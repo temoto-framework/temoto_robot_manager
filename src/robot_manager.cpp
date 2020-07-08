@@ -543,9 +543,6 @@ bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecutePlan
       TEMOTO_DEBUG_STREAM("Executing a manipulation path for robot '" << loaded_robot->getName() << " ...");
       loaded_robot->executeManipulationPath();
       TEMOTO_DEBUG("Done executing.");
-
-      res.message = "Execute command sent to MoveIt";
-      res.code = temoto_core::trr::status_codes::OK;
     }
     else
     {
@@ -680,20 +677,17 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
   // input validation
   if (req.mode != modes::AUTO && req.mode != modes::NAVIGATION && req.mode != modes::MANIPULATION && req.mode != modes::GRIPPER)
   {
-    TEMOTO_ERROR("Mode '%s' is not supported.", req.mode.c_str());
-    res.message = "Mode is not supported.";
-    res.code = temoto_core::trr::status_codes::FAILED;
-    return true;
+    throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Mode" + req.mode + "is not supported.");
   }
-  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
-  if (loaded_robot)
+
+  try
   {
+    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
     if (loaded_robot->isLocal())
     {
       mode_ = req.mode;
       TEMOTO_DEBUG("Robot mode set to: %s...", mode_.c_str());
-      res.message = "Robot mode set to '" + mode_ + "'.";
-      res.code = temoto_core::trr::status_codes::OK;
     }
     else
     {
@@ -704,6 +698,7 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
       temoto_robot_manager::RobotSetMode fwd_mode_srvc;
       fwd_mode_srvc.request = req;
       fwd_mode_srvc.response = res;
+      
       if (client_mode.call(fwd_mode_srvc))
       {
         TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
@@ -714,12 +709,12 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
         throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
       }
     }
+    return true;
   }
-  else
+  catch(temoto_core::error::ErrorStack& error_stack)
   {
-    TEMOTO_ERROR("Unable to set mode, because the robot is not loaded.");
+    throw FORWARD_ERROR(error_stack);
   }
-  return true;
 }
 
 void RobotManager::statusInfoCb(temoto_core::ResourceStatus& srv)
