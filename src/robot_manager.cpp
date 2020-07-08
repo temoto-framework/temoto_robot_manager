@@ -181,8 +181,8 @@ void RobotManager::loadLocalRobot(RobotConfigPtr config, temoto_core::temoto_id:
 
   try
   {
-    active_robot_ = std::make_shared<Robot>(config, resource_registrar_, *this);
-    loaded_robots_.emplace(resource_id, active_robot_);
+    auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
+    loaded_robots_.emplace(resource_id, loaded_robot);
     TEMOTO_DEBUG("Robot '%s' loaded.", config->getName().c_str());
   }
   catch (temoto_core::error::ErrorStack& error_stack)
@@ -237,8 +237,8 @@ void RobotManager::loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_
                                                   config->getTemotoNamespace());
       TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
       res.trr = load_robot_srvc.response.trr;
-      active_robot_ = std::make_shared<Robot>(config, resource_registrar_, *this);
-      loaded_robots_.emplace(load_robot_srvc.response.trr.resource_id, active_robot_);
+      auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
+      loaded_robots_.emplace(load_robot_srvc.response.trr.resource_id, loaded_robot);
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {
@@ -271,15 +271,11 @@ for (const auto& r : loaded_robots_)
 }
 
   // search for the robot based on its resource id, remove from map,
-  // and clear active_robot_ if the unloaded robot was active.
+  // and clear loaded_robot if the unloaded robot was active.
   auto it = loaded_robots_.find(res.trr.resource_id);
   if (it != loaded_robots_.end())
   {
     TEMOTO_WARN("REMOVING ROBOT");
-    if (active_robot_ == it->second)
-    {
-      active_robot_ = NULL;
-    }
     loaded_robots_.erase(it);
   }
   TEMOTO_DEBUG("ROBOT '%s' unloaded.", req.robot_name.c_str());
@@ -481,120 +477,88 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
 }
 
 bool RobotManager::planManipulationPathCb(temoto_robot_manager::RobotPlanManipulation::Request& req, temoto_robot_manager::RobotPlanManipulation::Response& res)
-{  
-  TEMOTO_DEBUG_STREAM("ACTIVE ROBOT...");
-  TEMOTO_DEBUG_STREAM(active_robot_->getName().c_str());
-  if (active_robot_->getName().c_str() != req.robot_name)
+{
+  try
   {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  return p.second->getName() == req.robot_name;
-                                 });  
-    active_robot_ = robot_it->second;
-  }    
-  TEMOTO_DEBUG_STREAM(active_robot_->getName().c_str());
-
-  TEMOTO_DEBUG_STREAM("PLANNING...");
-  if (!active_robot_)
-  {
-    res.error_stack = CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL, "Unable to plan, because no robot "
-                                                                 "is loaded.");
-    res.code = temoto_core::trr::status_codes::FAILED;
-    return true;
-  }
-  
-  if (active_robot_->isLocal())
-  {
-    geometry_msgs::PoseStamped pose;
-    if (req.use_default_target)
+    RobotPtr loaded_robot;
+    loaded_robot = findLoadedRobot(req.robot_name);
+    TEMOTO_DEBUG_STREAM(loaded_robot->getName().c_str());
+    
+    if (loaded_robot->isLocal())
     {
-      default_pose_mutex_.lock();
-      pose = default_target_pose_;
-      default_pose_mutex_.unlock();
-    }
-    else
-    {
-      pose = req.target_pose;
-    }
+      TEMOTO_DEBUG_STREAM("Creating a manipulation path for robot '" << loaded_robot->getName() 
+        << " with goal pose: " << req.target_pose <<std::endl);
 
-    TEMOTO_DEBUG_STREAM("Planning goal: " << pose <<std::endl);
-
-    try
-    {
       if (req.use_named_target)
       {
-        active_robot_->planManipulationPath(req.planning_group, req.named_target);
+        loaded_robot->planManipulationPath(req.planning_group, req.named_target);
       }
       else
       {
-        active_robot_->planManipulationPath(req.planning_group, pose);        
+        loaded_robot->planManipulationPath(req.planning_group, req.target_pose);        
       }      
-    }
-    catch (temoto_core::error::ErrorStack(e))
-    {
-      res.error_stack = FORWARD_ERROR(e);
-      res.code = temoto_core::trr::status_codes::OK;
-      return true;
-    }
 
-    TEMOTO_DEBUG("DONE PLANNING...");
-    res.code = temoto_core::trr::status_codes::OK;
-  }
-  else
-  {
-    // This robot is present in a remote robot manager, forward the planning command to there.
-    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_PLAN;
-    ros::ServiceClient client_plan = nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(topic);
-    temoto_robot_manager::RobotPlanManipulation fwd_plan_srvc;
-    fwd_plan_srvc.request = req;
-    fwd_plan_srvc.response = res;
-    if (client_plan.call(fwd_plan_srvc))
-    {
-      res = fwd_plan_srvc.response;
+      TEMOTO_DEBUG("Done planning.");
     }
     else
     {
-      res.code = temoto_core::trr::status_codes::FAILED;
-      res.error_stack = CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager "
-                                                                    "service failed.");
-      return true;
-    }
-  }
+      // This robot is present in a remote robot manager, forward the planning command to there.
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/" 
+        + robot_manager::srv_name::SERVER_PLAN;
+      TEMOTO_DEBUG_STREAM("Forwarding the planning request to remote robot manager at '" << topic << "'.");
 
-  return true;
+      ros::ServiceClient client_plan = nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(topic);
+      temoto_robot_manager::RobotPlanManipulation fwd_plan_srvc;
+      fwd_plan_srvc.request = req;
+      fwd_plan_srvc.response = res;
+
+      if (client_plan.call(fwd_plan_srvc))
+      {
+        res = fwd_plan_srvc.response;
+      }
+      else
+      {
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
+      }
+    }
+
+    return true;
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
 }
 
 bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecutePlan::Request& req,
                           temoto_robot_manager::RobotExecutePlan::Response& res)
 {
-  TEMOTO_INFO("EXECUTING...");
-  if (active_robot_->getName().c_str() != req.robot_name)
+  try
   {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  return p.second->getName() == req.robot_name;
-                                 });  
-    active_robot_ = robot_it->second;
-  }    
-  if (active_robot_)
-  {
-    if (active_robot_->isLocal())
+    RobotPtr loaded_robot;
+    loaded_robot = findLoadedRobot(req.robot_name);
+
+    if (loaded_robot->isLocal())
     {
-      active_robot_->executeManipulationPath();
-      TEMOTO_DEBUG("DONE EXECUTING...");
+      TEMOTO_DEBUG_STREAM("Executing a manipulation path for robot '" << loaded_robot->getName() << " ...");
+      loaded_robot->executeManipulationPath();
+      TEMOTO_DEBUG("Done executing.");
+
       res.message = "Execute command sent to MoveIt";
       res.code = temoto_core::trr::status_codes::OK;
     }
     else
     {
       // This robot is present in a remote robotmanager, forward the command to there.
-      std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                          robot_manager::srv_name::SERVER_EXECUTE;
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+        + robot_manager::srv_name::SERVER_EXECUTE;
+      TEMOTO_DEBUG_STREAM("Forwarding the execution request to remote robot manager at '" << topic << "'.");
+
       ros::ServiceClient client_exec = nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(topic);
       temoto_robot_manager::RobotExecutePlan fwd_exec_srvc;
       fwd_exec_srvc.request = req;
       fwd_exec_srvc.response = res;
+
       if (client_exec.call(fwd_exec_srvc))
       {
         TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
@@ -602,146 +566,111 @@ bool RobotManager::execManipulationPathCb(temoto_robot_manager::RobotExecutePlan
       }
       else
       {
-        TEMOTO_ERROR("Call to remote RobotManager service failed.");
-        res.message = "Call to remote RobotManager service failed.";
-        res.code = temoto_core::trr::status_codes::FAILED;
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
       }
     }
+    return true;
   }
-  else
+  catch(temoto_core::error::ErrorStack& error_stack)
   {
-    TEMOTO_ERROR("Unable to execute, because the robot is not loaded.");
+    throw FORWARD_ERROR(error_stack);
   }
-  return true;
 }
 
 bool RobotManager::getVizInfoCb(temoto_robot_manager::RobotGetVizInfo::Request& req,
                                 temoto_robot_manager::RobotGetVizInfo::Response& res)
 {
-  TEMOTO_INFO("GETTING visualization info...");
-  // Search for the loaded robot, when its name is specified.
-  if (req.robot_name != "")
+  try
   {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                   return p.second->getName() == req.robot_name;
-                                 });
-    if (robot_it != loaded_robots_.end())
-    {
-      res.info = robot_it->second->getVizInfo();
-    }
-    else
-    {
-      res.error_stack = CREATE_ERROR(temoto_core::error::Code::ROBOT_NOT_LOADED,
-                                     "The requested robot '%s' is not loaded.", req.robot_name);
-      res.code == temoto_core::trr::status_codes::FAILED;
-      return true;
-    }
+    TEMOTO_DEBUG_STREAM("Getting the visualization information of '" << req.robot_name << " ...");
+    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+    res.info = loaded_robot->getVizInfo();
+    return true;
   }
-  else
+  catch(temoto_core::error::ErrorStack& error_stack)
   {
-    // Robot name is not specified, try to use the active robot.
-    if (active_robot_)
-    {
-      res.info = active_robot_->getVizInfo();
-    }
-    else
-    {
-      res.error_stack =
-          CREATE_ERROR(temoto_core::error::Code::ROBOT_NOT_LOADED, "No loaded robots found.", req.robot_name);
-      res.code == temoto_core::trr::status_codes::FAILED;
-      return true;
-    }
+    throw FORWARD_ERROR(error_stack);
   }
-  res.code = temoto_core::trr::status_codes::OK;
-  return true;
 }
 
 bool RobotManager::getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req,
                                           temoto_robot_manager::RobotGetTarget::Response& res)
 {
-  if (active_robot_->getName().c_str() != req.robot_name)
+  try
   {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  return p.second->getName() == req.robot_name;
-                                 });  
-    active_robot_ = robot_it->second;
-  }
+    TEMOTO_DEBUG_STREAM("Getting the manipulation target of '" << req.robot_name << " ...");
+    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
-  if (active_robot_->isLocal())
-  {    
-    res.pose = active_robot_->getManipulationTarget();
-  }
-  else
-  {
-    TEMOTO_INFO("robot is not local");
-    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET;
-    ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(topic);
-    temoto_robot_manager::RobotGetTarget fwd_get_target_srvc;
-    fwd_get_target_srvc.request = req;
-    fwd_get_target_srvc.response = res;
-    if (client_mode.call(fwd_get_target_srvc))
-    {
-      TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
-      res = fwd_get_target_srvc.response;
+    if (loaded_robot->isLocal())
+    {    
+      res.pose = loaded_robot->getManipulationTarget();
     }
     else
     {
-      TEMOTO_ERROR("Call to remote RobotManager service failed.");      
-    }    
-  }  
-  return true;
-}
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/" 
+        + robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET;
+      TEMOTO_DEBUG_STREAM("Forwarding the request to remote robot manager at '" << topic << "'.");
 
-bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotGoal::Request& req, 
-                                    temoto_robot_manager::RobotGoal::Response& res)
-{
-  if (active_robot_->getName().c_str() != req.robot_name)
-  {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  return p.second->getName() == req.robot_name;
-                                 });  
-    active_robot_ = robot_it->second;
-  }
-  TEMOTO_DEBUG("GOAL NAVIGATION...");
-  if (!active_robot_)
-  {
-    //TODO: Add the correspondig error, for now using the plan code
-    res.error_stack = CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL, "Unable to navigate, because no robot "
-                                                                 "is loaded.");                                                              
-    res.code = temoto_core::trr::status_codes::FAILED;
+      ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(topic);
+      temoto_robot_manager::RobotGetTarget fwd_get_target_srvc;
+      fwd_get_target_srvc.request = req;
+      fwd_get_target_srvc.response = res;
+      if (client_mode.call(fwd_get_target_srvc))
+      {
+        TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
+        res = fwd_get_target_srvc.response;
+      }
+      else
+      {
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");      
+      }    
+    }  
     return true;
   }
-
-  if (active_robot_->isLocal())
+  catch(temoto_core::error::ErrorStack& error_stack)
   {
-    active_robot_->goalNavigation("map", req.target_pose);  // The robot would move with respect to this coordinate frame
-    TEMOTO_DEBUG("DONE NAVIGATION TO THE GOAL...");        
+    throw FORWARD_ERROR(error_stack);
   }
-  else
+}
+
+bool RobotManager::goalNavigationCb(temoto_robot_manager::RobotNavigationGoal::Request& req, 
+                                    temoto_robot_manager::RobotNavigationGoal::Response& res)
+{
+  try
   {
-    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_NAVIGATION_GOAL;
-    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<temoto_robot_manager::RobotGoal>(topic);
-    temoto_robot_manager::RobotGoal fwd_goal_srvc;
-    fwd_goal_srvc.request = req;
-    fwd_goal_srvc.response = res;
-    if (client_navigation_goal_.call(fwd_goal_srvc))
+    TEMOTO_DEBUG_STREAM("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
+    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
+    if (loaded_robot->isLocal())
     {
-      res = fwd_goal_srvc.response;
+      loaded_robot->goalNavigation(req.reference_frame, req.target_pose);  // The robot would move with respect to this coordinate frame
+      TEMOTO_DEBUG_STREAM("'" << req.robot_name << " finished navigating.");        
     }
     else
     {
-      res.code = temoto_core::trr::status_codes::FAILED;
-      res.error_stack = CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager "
-                                                                    "service failed.");
-      return true;
-    }
-  }  
-  return true;  
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+        + robot_manager::srv_name::SERVER_NAVIGATION_GOAL;
+      TEMOTO_DEBUG_STREAM("Forwarding the request to remote robot manager at '" << topic << "'.");
+
+      ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<temoto_robot_manager::RobotNavigationGoal>(topic);
+      temoto_robot_manager::RobotNavigationGoal fwd_goal_srvc;
+      fwd_goal_srvc.request = req;
+      fwd_goal_srvc.response = res;
+      if (client_navigation_goal_.call(fwd_goal_srvc))
+      {
+        res = fwd_goal_srvc.response;
+      }
+      else
+      {
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
+      }
+    }  
+    return true;  
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
 }
 
 bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
@@ -756,10 +685,10 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
     res.code = temoto_core::trr::status_codes::FAILED;
     return true;
   }
-
-  if (active_robot_)
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  if (loaded_robot)
   {
-    if (active_robot_->isLocal())
+    if (loaded_robot->isLocal())
     {
       mode_ = req.mode;
       TEMOTO_DEBUG("Robot mode set to: %s...", mode_.c_str());
@@ -769,7 +698,7 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
     else
     {
       // This robot is present in a remote robotmanager, forward the command to there.
-      std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/" +
                           robot_manager::srv_name::SERVER_SET_MODE;
       ros::ServiceClient client_mode = nh_.serviceClient<temoto_robot_manager::RobotSetMode>(topic);
       temoto_robot_manager::RobotSetMode fwd_mode_srvc;
@@ -782,9 +711,7 @@ bool RobotManager::setModeCb(temoto_robot_manager::RobotSetMode::Request& req,
       }
       else
       {
-        TEMOTO_ERROR("Call to remote RobotManager service failed.");
-        res.message = "Call to remote RobotManager service failed.";
-        res.code = temoto_core::trr::status_codes::FAILED;
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
       }
     }
   }
@@ -898,45 +825,41 @@ RobotConfigPtr RobotManager::findRobot(const std::string& robot_name, const Robo
 bool RobotManager::gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, 
                                     temoto_robot_manager::RobotGripperControlPosition::Response& res)
 {
-  if (active_robot_->getName().c_str() != req.gripper_name)
+  try
   {
-    auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
-                                 [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool {
-                                  return p.second->getName() == req.gripper_name;
-                                 });  
-    active_robot_ = robot_it->second;
-  }
-  
-  if (!active_robot_)
-  {    
-    //TODO: Add the correspondig error, for now using the plan code
-    TEMOTO_INFO_STREAM("Unable to control because gripper is not loaded");
-    return true;
-  }
+    TEMOTO_DEBUG_STREAM("Commanding the gripper of '" << req.robot_name << " ...");
+    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+    TEMOTO_INFO_STREAM("GRIPPER CONTROL...");
 
-  if (active_robot_->isLocal())
-  {
-    active_robot_->controlGripper(req.gripper_name,req.control);
-  }
-  else
-  {
-    std::string topic = "/" + active_robot_->getConfig()->getTemotoNamespace() + "/" +
-                        robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION;
-    ros::ServiceClient client_gripper_control_position_ = nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(topic);
-    temoto_robot_manager::RobotGripperControlPosition fwd_gripper_srvc;
-    fwd_gripper_srvc.request = req;
-    fwd_gripper_srvc.response = res;
-    if (client_gripper_control_position_.call(fwd_gripper_srvc))
+    if (loaded_robot->isLocal())
     {
-      res = fwd_gripper_srvc.response;
+      loaded_robot->controlGripper(req.robot_name,req.control);
     }
     else
-    {      
-      TEMOTO_INFO_STREAM("Call to remote RobotManager / gripper - service failed.");
-      return true;
-    }
-  }  
-  return true; 
+    {
+      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+        + robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION;
+      TEMOTO_DEBUG_STREAM("Forwarding the execution request to remote robot manager at '" << topic << "'.");
+
+      ros::ServiceClient client_gripper_control_position_ = nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(topic);
+      temoto_robot_manager::RobotGripperControlPosition fwd_gripper_srvc;
+      fwd_gripper_srvc.request = req;
+      fwd_gripper_srvc.response = res;
+      if (client_gripper_control_position_.call(fwd_gripper_srvc))
+      {
+        res = fwd_gripper_srvc.response;
+      }
+      else
+      {      
+        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Call to remote RobotManager service failed.");
+      }
+    }  
+    return true;
+  }
+  catch(temoto_core::error::ErrorStack& error_stack)
+  {
+    throw FORWARD_ERROR(error_stack);
+  }
 }
 
 bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Request& req,
@@ -984,7 +907,30 @@ bool RobotManager::getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Reques
   //TODO: Add the correspondig error, for now using the plan code
   TEMOTO_INFO_STREAM("Could not find robot '" << req.robot_name << "'");
 
-  return true; 
+  return true;
+}
+
+RobotManager::RobotPtr RobotManager::findLoadedRobot(const std::string& robot_name)
+{
+  auto robot_it = std::find_if(loaded_robots_.begin(), loaded_robots_.end(),
+    [&](const std::pair<temoto_core::temoto_id::ID, RobotPtr> p) -> bool
+    {
+      return p.second->getName() == robot_name;
+    });  
+  
+  if (robot_it == loaded_robots_.end())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::NULL_PTR, "Robot '" + robot_name + "' is not loaded.");
+  }
+  else if (robot_it->second == nullptr)
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::NULL_PTR, "Robot '" + robot_name 
+      + "' is loaded but its configuration is invalid (nullptr).");
+  }
+  else
+  {
+    return robot_it->second;
+  }
 }
 
 }  // namespace robot_manager

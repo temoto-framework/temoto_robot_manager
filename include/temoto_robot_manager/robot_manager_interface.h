@@ -67,7 +67,7 @@ public:
     client_get_manipulation_target_ =
       nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
     client_navigation_goal_ =
-      nh_.serviceClient<temoto_robot_manager::RobotGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
+      nh_.serviceClient<temoto_robot_manager::RobotNavigationGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
     client_gripper_control_position_ =
       nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
     client_get_robot_config_ =
@@ -177,8 +177,8 @@ public:
     }
   }
 
-  void execute(const std::string& robot_name)
-  {   
+  void executePlan(const std::string& robot_name)
+  {
     temoto_robot_manager::RobotExecutePlan msg;
     msg.request.robot_name = robot_name;
     if (!client_exec_.call(msg))
@@ -231,10 +231,10 @@ public:
     return pose;
   }
 
-  void navigationGoal(const std::string& robot_name, const std::string& object_name, const geometry_msgs::PoseStamped& pose)
+  void navigationGoal(const std::string& robot_name, const std::string& reference_frame, const geometry_msgs::PoseStamped& pose)
   {
-    temoto_robot_manager::RobotGoal msg; 
-    msg.request.move_base_frame = object_name;
+    temoto_robot_manager::RobotNavigationGoal msg; 
+    msg.request.reference_frame = reference_frame;
     msg.request.target_pose = pose;
     msg.request.robot_name = robot_name;
     if (client_navigation_goal_.call(msg))
@@ -247,10 +247,10 @@ public:
     }  
   }
 
-  void controlGripperPosition(const std::string& gripper_name,const float& position)
+  void controlGripperPosition(const std::string& robot_name,const float& position)
   {
     temoto_robot_manager::RobotGripperControlPosition msg;    
-    msg.request.gripper_name = gripper_name;
+    msg.request.robot_name = robot_name;
     msg.request.control = position;
 
     if (client_gripper_control_position_.call(msg))
