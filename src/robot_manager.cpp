@@ -721,67 +721,36 @@ void RobotManager::statusInfoCb(temoto_core::ResourceStatus& srv)
 {
   TEMOTO_DEBUG("status info was received");
   TEMOTO_DEBUG_STREAM(srv.request);
-  // if any resource should fail, just unload it and try again
-  // there is a chance that sensor manager gives us better sensor this time
-  // if (srv.request.status_code == temoto_core::trr::status_codes::FAILED &&
-  //     srv.request.resource_id == hand_srv_msg_.response.trr.resource_id)
-  // {
-  //   TEMOTO_WARN("Robot manager detected a hand sensor failure. Unloading and "
-  //               "trying again");
-  //   try
-  //   {
-  //     resource_registrar_.unloadClientResource(hand_srv_msg_.response.trr.resource_id);
-  //   }
-  //   catch (temoto_core::error::ErrorStack& error_stack)
-  //   {
-  //     TEMOTO_ERROR_STREAM(error_stack);
-  //   }
-
-  //   // retry with previous request
-  //   try
-  //   {
-  //     resource_registrar_.call<temoto_robot_manager::LoadGesture>(temoto_context_manager::srv_name::MANAGER,
-  //                                                   temoto_context_manager::srv_name::GESTURE_SERVER,
-  //                                                   hand_srv_msg_, temoto_core::trr::FailureBehavior::NONE);
-  //     TEMOTO_DEBUG("Subscribing to '%s'", hand_srv_msg_.response.topic.c_str());
-  //     target_pose_sub_ =
-  //         nh_.subscribe(hand_srv_msg_.response.topic, 1, &RobotManager::targetPoseCb, this);
-  //   }
-  //   catch (temoto_core::error::ErrorStack& error_stack)
-  //   {
-  //     throw FORWARD_ERROR(error_stack);
-  //   }
-  // }
 
   // Check if any of the allocated robots has failed
   // Currently we simply remove the loaded robot if it failed
   if (srv.request.status_code == temoto_core::trr::status_codes::FAILED)
   {
     // was it a remote robot
-    if (loaded_robots_.erase(srv.request.resource_id))
-    {
-      TEMOTO_DEBUG("Removed remote robot, because its status failed.");
-      return;
-    }
+    // if (loaded_robots_.erase(srv.request.resource_id))
+    // {
+    //   TEMOTO_DEBUG("Removed remote robot, because its status failed.");
+    //   return;
+    // }
 
-    // check if it was a resource related to a robot feature has failed.
-    // unload the robot
-    for (auto it = loaded_robots_.begin(); it != loaded_robots_.end(); ++it)
-    {
-      if (it->second->hasResource(srv.request.resource_id))
-      {
-        RobotConfigPtr config = it->second->getConfig();
-        config->adjustReliability(0.0);
-        YAML::Node yaml_config;
-        yaml_config["Robots"].push_back(config->getYAMLConfig());
-        PayloadType payload;
-        payload.data = YAML::Dump(yaml_config);
-        std::cout << payload << std::endl;
-        config_syncer_.advertise(payload);
-        loaded_robots_.erase(it);
-        break;
-      }
-    }
+    // // check if it was a resource related to a robot feature has failed.
+    // // unload the robot
+    // for (auto it = loaded_robots_.begin(); it != loaded_robots_.end(); ++it)
+    // {
+    //   if (it->second->hasResource(srv.request.resource_id))
+    //   {
+    //     RobotConfigPtr config = it->second->getConfig();
+    //     config->adjustReliability(0.0);
+    //     YAML::Node yaml_config;
+    //     yaml_config["Robots"].push_back(config->getYAMLConfig());
+    //     PayloadType payload;
+    //     payload.data = YAML::Dump(yaml_config);
+    //     std::cout << payload << std::endl;
+    //     config_syncer_.advertise(payload);
+    //     loaded_robots_.erase(it);
+    //     break;
+    //   }
+    // }
   }
 }
 

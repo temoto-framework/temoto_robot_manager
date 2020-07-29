@@ -54,7 +54,7 @@ public:
     validateInterface();
 
     // register status callback function
-    // resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
+    resource_registrar_->registerStatusCb(&RobotManagerInterface::statusInfoCb);
 
     client_plan_ =
       nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(robot_manager::srv_name::SERVER_PLAN);
@@ -280,6 +280,48 @@ public:
     return subsystem_name_;
   }
 
+  void statusInfoCb(temoto_core::ResourceStatus& srv)
+  {
+    try
+    {
+      validateInterface();
+
+      TEMOTO_DEBUG_STREAM("status info was received");
+      TEMOTO_DEBUG_STREAM(srv.request);
+
+      auto robot_it = std::find_if(
+        allocated_robots_.begin(),
+        allocated_robots_.end(),
+        [&](const temoto_robot_manager::RobotLoad& robot) -> bool {
+          return robot.response.trr.resource_id == srv.request.resource_id;
+        });
+
+      if (robot_it != allocated_robots_.end())
+      {
+        if (srv.request.status_code == temoto_core::trr::status_codes::FAILED)
+        {
+          TEMOTO_WARN("The status info reported a resource failure.");
+
+          TEMOTO_WARN_STREAM("Sending a request to unload the failed robot ...");
+          resource_registrar_->unloadClientResource(robot_it->response.trr.resource_id);
+
+          TEMOTO_DEBUG("Asking the same component again");
+
+          // this call automatically updates the response in allocated robots vec
+          resource_registrar_->template call<temoto_robot_manager::RobotLoad>(robot_manager::srv_name::MANAGER
+          , robot_manager::srv_name::SERVER_LOAD
+          , *robot_it);
+
+          return;
+        }
+      }
+    }
+    catch (temoto_core::error::ErrorStack& error_stack)
+    {
+      throw FORWARD_ERROR(error_stack);
+    }
+  }
+
   ~RobotManagerInterface()
   {
     // Shutdown robot manager clients.
@@ -296,6 +338,8 @@ public:
   }
 
 private:
+
+  std::vector<temoto_robot_manager::RobotLoad> allocated_robots_;
 
   ros::NodeHandle nh_;
   ros::ServiceClient client_load_;
