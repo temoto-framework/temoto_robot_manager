@@ -113,6 +113,8 @@ public:
     {
       resource_registrar_->template call<temoto_robot_manager::RobotLoad>(
           robot_manager::srv_name::MANAGER, robot_manager::srv_name::SERVER_LOAD, load_srvc);
+      
+      allocated_robots_.push_back(load_srvc);
     }
     catch(temoto_core::error::ErrorStack& error_stack)
     {
@@ -314,6 +316,10 @@ public:
 
           return;
         }
+      }
+      else
+      {
+        TEMOTO_WARN("The status info regards a resource that was not allocated from this interface.");
       }
     }
     catch (temoto_core::error::ErrorStack& error_stack)
