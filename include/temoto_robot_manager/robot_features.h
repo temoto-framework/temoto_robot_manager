@@ -25,7 +25,7 @@
 #include <vector>
 #include <yaml-cpp/yaml.h>
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 
   // Base class for all features

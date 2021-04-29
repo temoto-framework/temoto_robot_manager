@@ -34,7 +34,7 @@
 #include <map>
 #include <vector>
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 
 // Forward declaration

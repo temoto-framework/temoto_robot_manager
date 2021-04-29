@@ -31,7 +31,7 @@
 #include <ctype.h>
 #include <memory>  // shared_ptr
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 
 class RobotConfig : temoto_core::BaseSubsystem

@@ -32,7 +32,7 @@
 
 #include <string>
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 namespace srv_name
 {

@@ -11,14 +11,13 @@
   <depend>cmake_modules</depend>
   <depend>message_generation</depend>
   <depend>std_msgs</depend>
-  <depend>visualization_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>move_base_msgs</depend>
   <depend>temoto_core</depend>
-  <depend>temoto_action_engine</depend>
+  <depend>temoto_resource_registrar</depend>
   <depend>temoto_er_manager</depend>
 
 </package>

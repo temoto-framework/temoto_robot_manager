@@ -14,14 +14,12 @@
  * limitations under the License.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Author: Veiko Vunder */
-
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_H
 
+#include "rr/ros1_resource_registrar.h"
 #include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/base_subsystem.h"
-#include "temoto_core/trr/resource_registrar.h"
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
 #include "temoto_er_manager/temoto_er_manager_services.h"
@@ -38,7 +36,7 @@
 #include <map>
 #include <boost/filesystem/operations.hpp>
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 // Forward declaration
 class Robot;
@@ -62,14 +60,14 @@ private:
    * @param Request that specifies the robot's parameters
    * @param Returns which robot got loaded
    */
-  void loadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_robot_manager::RobotLoad::Response& res);
+  void loadCb(RobotLoad::Request& req, RobotLoad::Response& res);
 
   /**
    * @brief Callback for unloading a robot
    * @param Request that specifies which robot to unload
    * @param Returns status information
    */
-  void unloadCb(temoto_robot_manager::RobotLoad::Request& req, temoto_robot_manager::RobotLoad::Response& res);
+  void unloadCb(RobotLoad::Request& req, RobotLoad::Response& res);
 
   /**
    * @brief Service callback that plans using moveit
@@ -78,7 +76,7 @@ private:
    * are going to be published
    * @return
    */
-  bool planManipulationPathCb(temoto_robot_manager::RobotPlanManipulation::Request& req, temoto_robot_manager::RobotPlanManipulation::Response& res);
+  bool planManipulationPathCb(RobotPlanManipulation::Request& req, RobotPlanManipulation::Response& res);
 
   /**
    * @brief Service that executes the moveit plan
@@ -87,17 +85,17 @@ private:
    * @return
    */
 
-  bool execManipulationPathCb(temoto_robot_manager::RobotExecutePlan::Request& req, temoto_robot_manager::RobotExecutePlan::Response& res);
+  bool execManipulationPathCb(RobotExecutePlan::Request& req, RobotExecutePlan::Response& res);
 
-  bool getManipulationTargetCb(temoto_robot_manager::RobotGetTarget::Request& req, temoto_robot_manager::RobotGetTarget::Response& res);
+  bool getManipulationTargetCb(RobotGetTarget::Request& req, RobotGetTarget::Response& res);
 
-  bool goalNavigationCb(temoto_robot_manager::RobotNavigationGoal::Request& req, temoto_robot_manager::RobotNavigationGoal::Response& res);
+  bool goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res);
 
-  bool gripperControlPositionCb(temoto_robot_manager::RobotGripperControlPosition::Request& req, temoto_robot_manager::RobotGripperControlPosition::Response& res);
+  bool gripperControlPositionCb(RobotGripperControlPosition::Request& req, RobotGripperControlPosition::Response& res);
 
-  bool getRobotConfigCb(temoto_robot_manager::RobotGetConfig::Request& req, temoto_robot_manager::RobotGetConfig::Response& res);
+  bool getRobotConfigCb(RobotGetConfig::Request& req, RobotGetConfig::Response& res);
   
-  bool setModeCb(temoto_robot_manager::RobotSetMode::Request& req, temoto_robot_manager::RobotSetMode::Response& res);
+  bool setModeCb(RobotSetMode::Request& req, RobotSetMode::Response& res);
 
   void syncCb(const temoto_core::ConfigSync& msg, const PayloadType& payload);
 
@@ -111,8 +109,8 @@ private:
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
 
-  bool getVizInfoCb(temoto_robot_manager::RobotGetVizInfo::Request& req,
-                    temoto_robot_manager::RobotGetVizInfo::Response& res);
+  bool getVizInfoCb(RobotGetVizInfo::Request& req,
+                    RobotGetVizInfo::Response& res);
 
   void statusInfoCb(temoto_core::ResourceStatus& srv);
 
@@ -124,14 +122,12 @@ private:
 
   std::shared_ptr<Robot> findLoadedRobot(const std::string& robot_name);
 
-  typedef std::shared_ptr<Robot> RobotPtr;
-  typedef std::map<temoto_core::temoto_id::ID, RobotPtr> Robots;  
+  typedef std::shared_ptr<Robot> RobotPtr;  
   
-  Robots loaded_robots_;
+  std::vector<RobotPtr> loaded_robots_;
   RobotConfigs local_configs_;
   RobotConfigs remote_configs_;
 
-  std::string mode_;
   geometry_msgs::PoseStamped default_target_pose_;
 
   ros::NodeHandle nh_;
@@ -153,21 +149,15 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
-
-  ros::Subscriber target_pose_sub_;
-  // temoto_robot_manager::LoadGesture hand_srv_msg_;
   
   // Keeps robot_infos in sync with other managers
   temoto_core::trr::ConfigSynchronizer<RobotManager, PayloadType> config_syncer_;
 
-  // Resource manager for contacting process manager
-  temoto_core::trr::ResourceRegistrar<RobotManager> resource_registrar_;
-  std::mutex default_pose_mutex_;
+  temoto_resource_registrar::ResourceRegistrarRos1 resource_registrar_;
+  temoto_resource_registrar::Configuration rr_catalog_config_;
 
   tf2_ros::TransformListener tf2_listener;
   tf2_ros::Buffer tf2_buffer;
-
-  ros::Publisher marker_publisher_;
 };
 }
 

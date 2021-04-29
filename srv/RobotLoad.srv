@@ -1,10 +1,8 @@
-# Remote Management Request
-temoto_core/RMPRequest trr
-
 # The name of the robot to load 
 string robot_name
 
+temoto_resource_registrar/TemotoRequestMetadata temotoMetadata
+
 ---
 
-# Remote Management Response
-temoto_core/RMPResponse trr
+temoto_resource_registrar/TemotoResponseMetadata temotoMetadata

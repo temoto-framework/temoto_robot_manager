@@ -21,7 +21,7 @@
 
 // ALL OF THESE CLASSES MAY THROW YAML EXCEPTIONS
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 RobotFeature::RobotFeature(const std::string& name) : name_(name), feature_loaded_(false), feature_enabled_(false)
 {

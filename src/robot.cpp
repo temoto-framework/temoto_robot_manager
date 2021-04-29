@@ -20,7 +20,7 @@
 #include "temoto_core/temoto_error/temoto_error.h"
 #include "ros/package.h"
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 Robot::Robot(RobotConfigPtr config, temoto_core::trr::ResourceRegistrar<RobotManager>& resource_registrar, temoto_core::BaseSubsystem& b)
   : config_(config), resource_registrar_(resource_registrar), is_plan_valid_(false), temoto_core::BaseSubsystem(b)

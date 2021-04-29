@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace robot_manager
+namespace temoto_robot_manager
 {
 RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
 : yaml_config_(yaml_config)

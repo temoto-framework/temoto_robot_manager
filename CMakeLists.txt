@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(temoto_robot_manager)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 option(TEMOTO_ENABLE_TRACING "Use tracer" OFF)
 
 if(TEMOTO_ENABLE_TRACING)
@@ -15,13 +15,12 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
   move_base_msgs
   geometry_msgs
-  visualization_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
   temoto_core
-  temoto_action_engine
   temoto_er_manager
+  temoto_resource_registrar
 )
 
 add_service_files(
@@ -45,6 +44,7 @@ generate_messages(
   std_msgs
   geometry_msgs
   temoto_core
+  temoto_resource_registrar
 )
 
 catkin_package(
@@ -54,9 +54,7 @@ catkin_package(
     roscpp
     std_msgs 
     geometry_msgs
-    visualization_msgs
     temoto_core
-    temoto_action_engine
     temoto_er_manager
   DEPENDS 
 )
