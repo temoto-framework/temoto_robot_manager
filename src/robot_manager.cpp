@@ -66,7 +66,7 @@ RobotManager::RobotManager()
     // }
   }
 
-  // resource_registrar_.registerStatusCb(&RobotManager::statusInfoCb);
+  // resource_registrar_.registerStatusCb(&RobotManager::resourceStatusCb);
 
   // Ask remote robot managers to send their robot config
   config_syncer_.requestRemoteConfigs();
@@ -163,9 +163,9 @@ void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir
   }
 }
 
-void RobotManager::readRobotDescription(const std::string& path_file_rob_description)
+void RobotManager::readRobotDescription(const std::string& path_to_rob_description)
 {
-  std::ifstream in(path_file_rob_description);
+  std::ifstream in(path_to_rob_description);
   YAML::Node yaml_config = YAML::Load(in);  
   // Parse the Robots section
   if (yaml_config["Robots"])
@@ -206,7 +206,7 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
     {
       config->adjustReliability(0.0);
       advertiseConfig(config);
-      throw TEMOTO_ERROR_STACK("Failed to load robot '" + req.robot_name + "'");
+      throw TEMOTO_ERRSTACK("Failed to load robot '" + req.robot_name + "'");
     }
     return;
   }
@@ -226,7 +226,6 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
       , load_robot_srvc);
 
       TEMOTO_DEBUG("Call to remote RobotManager was sucessful.");
-      res.trr = load_robot_srvc.response.trr;
       auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
       loaded_robots_.push_back(loaded_robot);
     }
@@ -258,17 +257,17 @@ void RobotManager::unloadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   , loaded_robots_.end()
   , [&](const RobotManager::RobotPtr p) -> bool
     {
-      return p.second->getName() == req.robot_name;
+      return p->getName() == req.robot_name;
     });
   
   if (robot_it != loaded_robots_.end())
   {
-    loaded_robots_.erase(it);
+    loaded_robots_.erase(robot_it);
     TEMOTO_DEBUG("ROBOT '%s' unloaded.", req.robot_name.c_str());
   }
   else
   {
-    throw TEMOTO_ERROR_STACK("Unable to unload the robot '" + req.robot_name + "'");
+    throw TEMOTO_ERRSTACK("Unable to unload the robot '" + req.robot_name + "'");
   }
 }
 
@@ -658,14 +657,14 @@ bool RobotManager::goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavi
   }
 }
 
-void RobotManager::statusInfoCb(temoto_core::ResourceStatus& srv)
+void RobotManager::resourceStatusCb(RobotLoad srv_msg, temoto_resource_registrar::Status status_msg)
 {
   TEMOTO_DEBUG("status info was received");
-  TEMOTO_DEBUG_STREAM(srv.request);
+  TEMOTO_DEBUG_STREAM(srv_msg.request);
 
   // Check if any of the allocated robots has failed
   // Currently we simply remove the loaded robot if it failed
-  if (srv.request.status_code == temoto_core::trr::status_codes::FAILED)
+  if (true)
   {
     // was it a remote robot
     // if (loaded_robots_.erase(srv.request.resource_id))
@@ -708,8 +707,10 @@ RobotConfigPtr RobotManager::findRobot(const std::string& robot_name, const Robo
   else
   {
     // Find the robot that matches the "name" criteria
-    auto it = std::copy_if(configs.begin(), configs.end(), std::back_inserter(candidates),
-                           [&](const RobotConfigPtr& s) { return s->getName() == robot_name; });
+    auto it = std::copy_if(configs.begin()
+    , configs.end()
+    , std::back_inserter(candidates)
+    , [&](const RobotConfigPtr& s) { return s->getName() == robot_name; });
   }
 
   // If the list is empty, leave the req empty
@@ -767,8 +768,7 @@ bool RobotManager::gripperControlPositionCb(RobotGripperControlPosition::Request
   }
 }
 
-bool RobotManager::getRobotConfigCb(RobotGetConfig::Request& req,
-                                    RobotGetConfig::Response& res)
+bool RobotManager::getRobotConfigCb(RobotGetConfig::Request& req, RobotGetConfig::Response& res)
 {
   TEMOTO_DEBUG_STREAM("Received a request to send the config of '" << req.robot_name << "'.");
   /*
@@ -821,21 +821,21 @@ RobotManager::RobotPtr RobotManager::findLoadedRobot(const std::string& robot_na
   , loaded_robots_.end()
   , [&](const RobotManager::RobotPtr p) -> bool
     {
-      return p.second->getName() == robot_name;
+      return p->getName() == robot_name;
     });  
   
   if (robot_it == loaded_robots_.end())
   {
     throw CREATE_ERROR(temoto_core::error::Code::NULL_PTR, "Robot '" + robot_name + "' is not loaded.");
   }
-  else if (robot_it->second == nullptr)
+  else if (*robot_it == nullptr)
   {
     throw CREATE_ERROR(temoto_core::error::Code::NULL_PTR, "Robot '" + robot_name 
       + "' is loaded but its configuration is invalid (nullptr).");
   }
   else
   {
-    return robot_it->second;
+    return *robot_it;
   }
 }
 

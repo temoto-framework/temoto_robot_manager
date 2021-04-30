@@ -18,7 +18,6 @@
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_H
 
 #include "rr/ros1_resource_registrar.h"
-#include "temoto_core/common/temoto_id.h"
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
@@ -112,9 +111,7 @@ private:
   bool getVizInfoCb(RobotGetVizInfo::Request& req,
                     RobotGetVizInfo::Response& res);
 
-  void statusInfoCb(temoto_core::ResourceStatus& srv);
-
-  void loadLocalRobot(RobotConfigPtr info_ptr, temoto_core::temoto_id::ID resource_id);
+  void resourceStatusCb(RobotLoad srv_msg, temoto_resource_registrar::Status status_msg);
 
   void readRobotDescription(const std::string& path_file_rob_description);
 
