@@ -14,8 +14,6 @@
  * limitations under the License.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Author: Veiko Vunder */
-
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_FEATURES_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_FEATURES_H
 
@@ -61,7 +59,7 @@ public:
     return feature_loaded_;
   }
 
-  bool setLoaded(bool loaded)
+  void setLoaded(bool loaded)
   {
     feature_loaded_ = loaded;
   }
@@ -71,7 +69,7 @@ public:
     return feature_enabled_;
   }
 
-  bool setEnabled(bool enabled)
+  void setEnabled(bool enabled)
   {
     feature_enabled_ = enabled;
   }
@@ -112,7 +110,7 @@ public:
     return driver_loaded_;
   }
 
-  bool setDriverLoaded(bool loaded)
+  void setDriverLoaded(bool loaded)
   {
     driver_loaded_ = loaded;
   }
@@ -122,7 +120,7 @@ public:
     return driver_enabled_;
   }
 
-  bool setDriverEnabled(bool enabled)
+  void setDriverEnabled(bool enabled)
   {
     driver_enabled_ = enabled;
   }
@@ -187,7 +185,7 @@ public:
     return active_planning_group_;
   }
 
-  std::string setActivePlanningGroup(std::string planning_group_name)
+  void setActivePlanningGroup(std::string planning_group_name)
   {
     //TODO: check if group exists
     active_planning_group_ = planning_group_name;

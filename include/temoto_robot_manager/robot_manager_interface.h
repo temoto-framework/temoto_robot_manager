@@ -17,18 +17,16 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 
+#include "temoto_core/common/base_subsystem.h"
 #include "rr/ros1_resource_registrar.h"
-#include "temoto_core/common/temoto_id.h"
-#include "temoto_core/common/console_colors.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "yaml-cpp/yaml.h"
 #include <vector>
 #include <string>
+#include <ctime>
 
 namespace temoto_robot_manager
 {
-
-template <class ParentSubsystem>
 class RobotManagerInterface : public temoto_core::BaseSubsystem
 {
 public:
@@ -44,6 +42,12 @@ public:
     }
   }
 
+  unsigned int createID()
+  {
+    std::srand(std::time(nullptr));
+    return std::rand();
+  }
+
   void initialize(const BaseSubsystem& owner)
   {
     if (!initialized_)
@@ -56,7 +60,7 @@ public:
     }
     else
     {
-      TEMOTO_WARN_STREAM("The Robot Manager interface is already initialized");
+      TEMOTO_WARN_STREAM_("The Robot Manager interface is already initialized");
     }
   }
 
@@ -72,27 +76,27 @@ public:
       resource_registrar_->init();
 
       client_plan_ =
-        nh_.serviceClient<temoto_robot_manager::RobotPlanManipulation>(robot_manager::srv_name::SERVER_PLAN);
+        nh_.serviceClient<RobotPlanManipulation>(srv_name::SERVER_PLAN);
       client_exec_ =
-        nh_.serviceClient<temoto_robot_manager::RobotExecutePlan>(robot_manager::srv_name::SERVER_EXECUTE);
+        nh_.serviceClient<RobotExecutePlan>(srv_name::SERVER_EXECUTE);
       client_viz_info_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetVizInfo>(robot_manager::srv_name::SERVER_GET_VIZ_INFO);
+        nh_.serviceClient<RobotGetVizInfo>(srv_name::SERVER_GET_VIZ_INFO);
       client_set_manipulation_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotSetTarget>(robot_manager::srv_name::SERVER_SET_MANIPULATION_TARGET);
+        nh_.serviceClient<RobotSetTarget>(srv_name::SERVER_SET_MANIPULATION_TARGET);
       client_get_manipulation_target_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetTarget>(robot_manager::srv_name::SERVER_GET_MANIPULATION_TARGET);
+        nh_.serviceClient<RobotGetTarget>(srv_name::SERVER_GET_MANIPULATION_TARGET);
       client_navigation_goal_ =
-        nh_.serviceClient<temoto_robot_manager::RobotNavigationGoal>(robot_manager::srv_name::SERVER_NAVIGATION_GOAL);
+        nh_.serviceClient<RobotNavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
       client_gripper_control_position_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGripperControlPosition>(robot_manager::srv_name::SERVER_GRIPPER_CONTROL_POSITION);
+        nh_.serviceClient<RobotGripperControlPosition>(srv_name::SERVER_GRIPPER_CONTROL_POSITION);
       client_get_robot_config_ =
-        nh_.serviceClient<temoto_robot_manager::RobotGetConfig>(robot_manager::srv_name::SERVER_GET_CONFIG);
+        nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
 
       initialized_ = true;
     }
     else
     {
-      TEMOTO_WARN_STREAM("The Robot Manager interface is already initialized");
+      TEMOTO_WARN_STREAM_("The Robot Manager interface is already initialized");
     }
   }
 
@@ -132,7 +136,7 @@ public:
     resource_registrar_->call<RobotLoad>(srv_name::MANAGER
     , srv_name::SERVER_LOAD
     , load_robot_msg
-    , std::bind(&ERManagerInterface::statusInfoCb, this, std::placeholders::_1, std::placeholders::_2));
+    , std::bind(&RobotManagerInterface::statusInfoCb, this, std::placeholders::_1, std::placeholders::_2));
 
     allocated_robots_.push_back(load_robot_msg);
   }
@@ -159,7 +163,7 @@ public:
     }
   }
 
-  void planManipulation(const std::string& robot_name,
+  void planManipulation(const std::string& robot_name
   , const std::string& planning_group
   , const geometry_msgs::PoseStamped& pose)
   {
@@ -264,7 +268,7 @@ public:
     msg.request.robot_name = robot_name;
     if (client_navigation_goal_.call(msg))
     {
-      TEMOTO_DEBUG("The goal was set successfully");
+      TEMOTO_DEBUG_("The goal was set successfully");
     }
     else
     {
@@ -280,7 +284,7 @@ public:
 
     if (client_gripper_control_position_.call(msg))
     {
-      TEMOTO_DEBUG("Call to move the gripper was successful");
+      TEMOTO_DEBUG_("Call to move the gripper was successful");
     }
     else
     {
@@ -296,8 +300,8 @@ public:
   void statusInfoCb(RobotLoad srv_msg, temoto_resource_registrar::Status status_msg)
   try
   {
-    TEMOTO_DEBUG_STREAM("status info was received");
-    TEMOTO_DEBUG_STREAM(srv_msg.request);
+    TEMOTO_DEBUG_STREAM_("status info was received");
+    TEMOTO_DEBUG_STREAM_(srv_msg.request);
 
     auto robot_it = std::find_if(
       allocated_robots_.begin(),
@@ -308,20 +312,21 @@ public:
 
     if (robot_it != allocated_robots_.end())
     {
-      TEMOTO_WARN_STREAM("Sending a request to unload the failed robot ...");
+      TEMOTO_WARN_STREAM_("Sending a request to unload the failed robot ...");
       resource_registrar_->unload(srv_name::MANAGER
       , robot_it->response.temotoMetadata.requestId);
 
-      TEMOTO_DEBUG("Requesting to load the same robot again ...");
+      TEMOTO_DEBUG_("Requesting to load the same robot again ...");
 
       // this call automatically updates the response in allocated robots vec
       resource_registrar_->call<RobotLoad>(srv_name::MANAGER
       , srv_name::SERVER_LOAD
       , *robot_it
+      , std::bind(&RobotManagerInterface::statusInfoCb, this, std::placeholders::_1, std::placeholders::_2));
     }
     else
     {
-      TEMOTO_WARN("The status info regards a resource that was not allocated from this interface.");
+      TEMOTO_WARN_("The status info regards a resource that was not allocated from this interface.");
     }
   }
   catch (temoto_core::error::ErrorStack& error_stack)
@@ -341,7 +346,7 @@ public:
     client_navigation_goal_.shutdown();
     client_gripper_control_position_.shutdown();
 
-    TEMOTO_DEBUG("RobotManagerInterface destroyed.");
+    TEMOTO_DEBUG_("RobotManagerInterface destroyed.");
   }
 
 private:
@@ -350,7 +355,7 @@ private:
   std::string unique_suffix_;
   bool has_owner_;
   bool initialized_;
-  std::vector<temoto_robot_manager::RobotLoad> allocated_robots_;
+  std::vector<RobotLoad> allocated_robots_;
 
   ros::NodeHandle nh_;
   ros::ServiceClient client_load_;
@@ -363,9 +368,8 @@ private:
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_get_robot_config_; 
 
-  std::unique_ptr<temoto_core::trr::ResourceRegistrar<RobotManagerInterface>> resource_registrar_;
+  std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;
 };
-
 } // namespace
 #endif
 

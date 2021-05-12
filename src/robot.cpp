@@ -14,8 +14,6 @@
  * limitations under the License.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Author: Veiko Vunder */
-
 #include "temoto_robot_manager/robot.h"
 #include "temoto_core/temoto_error/temoto_error.h"
 #include "ros/package.h"

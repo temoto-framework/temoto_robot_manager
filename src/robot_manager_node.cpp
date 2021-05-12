@@ -15,15 +15,39 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "temoto_robot_manager/robot_manager.h"
+#include <boost/program_options.hpp>
+#include "temoto_resource_registrar/temoto_logging.h"
 
 using namespace temoto_robot_manager;
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "robot_manager");
+  namespace po = boost::program_options;
+  po::variables_map vm;
+  po::options_description desc("Allowed options");
+  desc.add_options()
+    ("config-base-path", po::value<std::string>(), "Base path to robot_description.yaml config file.");
+
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+
+  // Get the config path
+  std::string config_base_path;
+  if (vm.count("config-base-path"))
+  {
+    config_base_path = vm["config-base-path"].as<std::string>();
+  }
+  else
+  {
+    std::cout << "Missing Component Manager config base path\n" << desc;
+    return 1;
+  }
+
+  TEMOTO_LOG_ATTR.initialize("robot_manager");
+  ros::init(argc, argv, TEMOTO_LOG_ATTR.getSubsystemName());
 
   // Create a SensorManager object
-  RobotManager rm;
+  RobotManager rm(config_base_path);
 
   ros::AsyncSpinner spinner(4);
   spinner.start();

@@ -3,11 +3,15 @@
 import rospy
 import xacro
 import sys
-from cStringIO import StringIO
+
+try:
+    from cStringIO import StringIO ## for Python 2
+except ImportError:
+    from io import StringIO ## for Python 3
 
 def myhook():
-      print("Removing robot_description from parameter server")
-      if rospy.has_param("robot_description"):
+    print("Removing robot_description from parameter server")
+    if rospy.has_param("robot_description"):
         rospy.delete_param("robot_description")
 
 rospy.on_shutdown(myhook)

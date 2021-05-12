@@ -14,8 +14,6 @@
  * limitations under the License.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Author: Veiko Vunder */
-
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_H
 

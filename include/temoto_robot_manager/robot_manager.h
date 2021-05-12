@@ -45,7 +45,7 @@ typedef std_msgs::String PayloadType;
 class RobotManager : public temoto_core::BaseSubsystem
 {
 public:
-  RobotManager();
+  RobotManager(const std::string& config_base_path);
 
   const std::string& getName() const
   {
