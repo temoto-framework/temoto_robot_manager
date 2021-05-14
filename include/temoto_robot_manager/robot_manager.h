@@ -55,6 +55,12 @@ public:
 private:
 
   /**
+   * @brief Restores the state of the Robot Manager via RR Catalog
+   * 
+   */
+  void restoreState();
+
+  /**
    * @brief Callback for loading a robot
    * @param Request that specifies the robot's parameters
    * @param Returns which robot got loaded
@@ -76,13 +82,6 @@ private:
    * @return
    */
   bool planManipulationPathCb(RobotPlanManipulation::Request& req, RobotPlanManipulation::Response& res);
-
-  /**
-   * @brief Service that executes the moveit plan
-   * @param LoadGesture request message
-   * @param LoadGesture response message
-   * @return
-   */
 
   bool execManipulationPathCb(RobotExecutePlan::Request& req, RobotExecutePlan::Response& res);
 

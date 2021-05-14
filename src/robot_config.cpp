@@ -110,6 +110,7 @@ void RobotConfig::parseUrdf()
   try
   {
     feature_urdf_ = FeatureURDF(yaml_config_["urdf"]);
+    enabled_features_.push_back(&feature_urdf_);
   }
   catch (...)
   {
@@ -127,6 +128,7 @@ void RobotConfig::parseManipulation()
   try
   {
     feature_manipulation_ = FeatureManipulation(yaml_config_["manipulation"]);
+    enabled_features_.push_back(&feature_manipulation_);
   }
   catch (YAML::Exception& e)
   {
@@ -144,6 +146,7 @@ void RobotConfig::parseNavigation()
   try
   {
     feature_navigation_ = FeatureNavigation(yaml_config_["navigation"]);
+    enabled_features_.push_back(&feature_navigation_);
   }
   catch (YAML::Exception e)
   {
@@ -161,7 +164,7 @@ void RobotConfig::parseGripper()
   try
   {
     feature_gripper_ = FeatureGripper(yaml_config_["gripper"]);
-    TEMOTO_INFO_STREAM("PARSING GRIPPER ...");
+    enabled_features_.push_back(&feature_gripper_);
   }
   catch (YAML::Exception& e)
   {

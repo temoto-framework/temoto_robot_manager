@@ -224,11 +224,17 @@ public:
     return cmd_vel_topic_;
   }
 
+  const std::string& getPoseTopic() const
+  {
+    return pose_topic_;
+  }
+
 private:
   std::string global_planner_;
   std::string local_planner_;
   std::string odom_topic_;
   std::string cmd_vel_topic_;
+  std::string pose_topic_;
 };
 
 class FeatureGripper : public FeatureWithDriver

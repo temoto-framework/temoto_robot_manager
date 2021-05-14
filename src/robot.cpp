@@ -30,10 +30,6 @@ Robot::Robot(RobotConfigPtr config
 , temoto_core::BaseSubsystem(b)
 {
   class_name_ = __func__;
-  if (isLocal())
-  {
-    load();
-  }
 }
 
 Robot::~Robot()
@@ -105,6 +101,11 @@ Robot::~Robot()
 
 void Robot::load()
 {
+  if (!isLocal())
+  {
+    return;
+  }
+
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled())
   {
@@ -299,6 +300,16 @@ void Robot::loadNavigationController()
     // wait for command velocity to be published
     std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
     waitForTopic(cmd_vel_topic);
+
+     // Subscribe to the pose messages
+    if (!ftr.getPoseTopic().empty())
+    {
+      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
+      , 1
+      , &Robot::robotPoseCallback
+      , this);
+    }
+
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Navigation Controller' loaded.");
@@ -403,8 +414,6 @@ catch(temoto_core::error::ErrorStack& error_stack)
 {
   throw FORWARD_ERROR(error_stack);
 }
-
-
 
 void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
 , temoto_resource_registrar::Status status_msg)
@@ -550,37 +559,37 @@ geometry_msgs::Pose Robot::getManipulationTarget()
 
 void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
 {
-    FeatureNavigation& ftr = config_->getFeatureNavigation();
-    std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
-    
-    MoveBaseClient_ ac(act_rob_ns, true);    
-    
-    if (!ac.waitForServer(ros::Duration(5.0)))
-    {
-      ROS_INFO("The move_base action server did not come up");
-    }
-       
-    move_base_msgs::MoveBaseGoal goal;
-    
-    goal.target_pose.pose = target_pose.pose;
-    TEMOTO_INFO_STREAM(goal.target_pose); 
-    //goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
-    goal.target_pose.header.frame_id = reference_frame;         
-    goal.target_pose.header.stamp = ros::Time::now();  
+  FeatureNavigation& ftr = config_->getFeatureNavigation();
+  std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
   
-    TEMOTO_INFO_STREAM(goal.target_pose); 
+  MoveBaseClient_ ac(act_rob_ns, true);    
+  
+  if (!ac.waitForServer(ros::Duration(5.0)))
+  {
+    ROS_INFO("The move_base action server did not come up");
+  }
+      
+  move_base_msgs::MoveBaseGoal goal;
+  
+  goal.target_pose.pose = target_pose.pose;
+  TEMOTO_INFO_STREAM(goal.target_pose); 
+  //goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
+  goal.target_pose.header.frame_id = reference_frame;         
+  goal.target_pose.header.stamp = ros::Time::now();  
 
-    ac.sendGoal(goal);
-    ac.waitForResult();
+  TEMOTO_INFO_STREAM(goal.target_pose); 
 
-    if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-    {
-      ROS_INFO("The base moved , SUCCEEDED");
-    }
-    else
-    {
-      ROS_INFO("The base failed to move");
-    }
+  ac.sendGoal(goal);
+  ac.waitForResult();
+
+  if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+  {
+    ROS_INFO("The base moved , SUCCEEDED");
+  }
+  else
+  {
+    ROS_INFO("The base failed to move");
+  }
 }
 
 void Robot::controlGripper(const std::string& robot_name,const float position)
@@ -668,16 +677,33 @@ void Robot::setRobotOperational(bool robot_operational)
   robot_operational_ = robot_operational;
 }
 
-// bool Robot::hasResource(temoto_core::temoto_id::ID resource_id)
-// {
-//   return (config_->getFeatureURDF().getResourceId() == resource_id ||
-//           config_->getFeatureManipulation().getResourceId() == resource_id ||
-//           config_->getFeatureManipulation().getDriverResourceId() == resource_id ||
-//           config_->getFeatureNavigation().getResourceId() == resource_id ||
-//           config_->getFeatureNavigation().getDriverResourceId() == resource_id ||
-//           config_->getFeatureGripper().getResourceId() == resource_id ||
-//           config_->getFeatureGripper().getDriverResourceId() == resource_id);
-// }
+void Robot::robotPoseCallback(const geometry_msgs::PoseWithCovarianceStamped& msg)
+{
+  current_pose_navigation_ = msg;
+}
+
+void Robot::recover(const std::string& parent_query_id)
+{
+  /*
+   * 1) Register a LoadExtResource client to RR
+   * 2) get the sub-resource queries (LoadExtResource)
+   * 3) Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
+   */
+
+  // TODO: Register erm client
+
+  auto erm_queries = resource_registrar_.getRosChildQueries<temoto_er_manager::LoadExtResource>(parent_query_id
+  , temoto_er_manager::srv_name::SERVER);
+
+  TEMOTO_DEBUG_STREAM_("size of erm_queries: " << erm_queries.size());
+  for (const auto& erm_query : erm_queries)
+  {
+    TEMOTO_DEBUG_STREAM("ERM query: " << erm_query.second.request);
+    erm_query.second.response.temotoMetadata.requestId;
+
+    // TODO: register the resource dependency and the associated callback
+  }
+}
 }
 
 

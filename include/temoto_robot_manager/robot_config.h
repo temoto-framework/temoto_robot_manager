@@ -133,7 +133,6 @@ public:
     temoto_namespace_ = temoto_namespace;
   }
 
-
 private:
 
   std::string log_class_ = "RobotConfig";
@@ -147,6 +146,7 @@ private:
   FeatureManipulation feature_manipulation_;
   FeatureNavigation feature_navigation_;
   FeatureGripper feature_gripper_;
+  std::vector<RobotFeature*> enabled_features_;
   
   std::string name_;
   std::string description_;

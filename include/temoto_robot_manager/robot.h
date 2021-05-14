@@ -27,6 +27,7 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <string>
 #include <map>
 #include <vector>
@@ -45,6 +46,8 @@ public:
   , temoto_core::BaseSubsystem& b);
 
   virtual ~Robot();
+  void load();
+  void recover(const std::string& parent_query_id);
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
   void planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
@@ -77,7 +80,6 @@ public:
 
 private:
   void waitForHardware();
-  void load();
   void loadHardware();
   void loadUrdf();
   void loadManipulationController();
@@ -93,6 +95,8 @@ private:
 
   void resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
   , temoto_resource_registrar::Status status_msg);
+
+  void robotPoseCallback(const geometry_msgs::PoseWithCovarianceStamped& msg);
 
   void waitForParam(const std::string& param);
   void waitForTopic(const std::string& topic);
@@ -110,7 +114,10 @@ private:
   moveit::planning_interface::MoveGroupInterface::Plan last_plan;
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>> planning_groups_;
 
+  // Navigation related
   typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient_;
+  ros::Subscriber localized_pose_sub_;
+  geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
 
   ros::ServiceClient client_gripper_control_;
 };

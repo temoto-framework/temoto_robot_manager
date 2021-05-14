@@ -106,6 +106,7 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
       setFromConfig(nav_conf["controller"]["args"], this->args_);
       setFromConfig(nav_conf["controller"]["global_planner"], this->global_planner_);
       setFromConfig(nav_conf["controller"]["local_planner"], this->local_planner_);
+      setFromConfig(nav_conf["controller"]["pose_topic"], this->pose_topic_);
     }
   }
 

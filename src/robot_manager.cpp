@@ -62,13 +62,7 @@ RobotManager::RobotManager(const std::string& config_base_path)
    */
   if (boost::filesystem::exists(rr_catalog_backup_path))
   {
-    resource_registrar_.loadCatalog();
-    // for (const auto& query : resource_registrar_.getServerQueries<LoadExtResource>(srv_name::MANAGER + "_" + srv_name::SERVER))
-    // {
-    //   running_processes_.insert({query.response.pid, query});
-    //   ROS_INFO_STREAM(query.request);
-    //   ROS_INFO_STREAM(query.response);
-    // }
+    restoreState();
   }
 
   // resource_registrar_.registerStatusCb(&RobotManager::resourceStatusCb);
@@ -159,6 +153,7 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
     try
     {
       auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
+      loaded_robot.load();
       loaded_robots_.push_back(loaded_robot);
       TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());
     }
@@ -406,8 +401,9 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
         }
       }    
       
-      if (std::count_if(configs.begin(), configs.end(),
-                        [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
+      if (std::count_if(configs.begin()
+      , configs.end()
+      , [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
       {
         // OK, this is unique config, add it to the configs.
         TEMOTO_INFO_("unique '%s'.", config.getName().c_str());
@@ -798,6 +794,34 @@ RobotManager::RobotPtr RobotManager::findLoadedRobot(const std::string& robot_na
   else
   {
     return *robot_it;
+  }
+}
+
+void RobotManager::restoreState()
+{
+  /*
+   * 1) Read the restored RR catalog
+   * 2) Extract all LoadRobot queries
+   * 3) Per each LoadRobot query, find its according robot_config (extracted from robot_description.yaml)
+   * 4) Instantiate the Robot object via its robot_config
+   * 5) Per each Robot, invoke the "recover" method that accepts the ID of the LoadRobot query (parent ID)
+   * 5.1) Robot::recover: Register a LoadExtResource client to RR
+   * 5.2) Robot::recover: get the sub-resource queries (LoadExtResource)
+   * 5.3) Robot::recover: Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
+   */
+
+  resource_registrar_.loadCatalog();
+  for (const auto& query : resource_registrar_.getServerQueries<RobotLoad>(srv_name::SERVER))
+  {
+    auto robot_config = findRobot(query.request.robot_name, local_configs_);
+    if (!robot_config)
+    {
+      // TODO: error this robot is not described in robot_description.yaml
+      continue;
+    }
+    auto robot = std::make_shared<Robot>(robot_config, resource_registrar_, *this);
+    robot.recover(query.response.temotoMetadata.requestId);
+    loaded_robots_.push_back(robot);
   }
 }
 
