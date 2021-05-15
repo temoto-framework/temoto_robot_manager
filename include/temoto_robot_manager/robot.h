@@ -42,6 +42,7 @@ class Robot : public temoto_core::BaseSubsystem
 {
 public:
   Robot(RobotConfigPtr config_
+  , const std::string& resource_id
   , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
   , temoto_core::BaseSubsystem& b);
 
@@ -73,10 +74,12 @@ public:
 
   bool isRobotOperational() const;
 
+  bool isInError() const;
+
   // return all the information required to visualize this robot
   std::string getVizInfo();
 
-  //bool hasResource(temoto_core::temoto_id::ID resource_id);
+  void setResourceId(const std::string& resource_id);
 
 private:
   void waitForHardware();
@@ -102,10 +105,15 @@ private:
   void waitForTopic(const std::string& topic);
   bool isTopicAvailable(const std::string& topic);
   void setRobotOperational(bool robot_operational);
+  void setInError(bool state_in_error);
 
   ros::NodeHandle nh_;
+  std::string robot_resource_id_;
   bool robot_operational_;
+  bool robot_loaded_;
+  bool state_in_error_;
   mutable std::recursive_mutex robot_operational_mutex_;
+  mutable std::recursive_mutex robot_state_in_error_mutex_;
   RobotConfigPtr config_;
   temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar_;
 
@@ -115,7 +123,7 @@ private:
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>> planning_groups_;
 
   // Navigation related
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient_;
+  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
   ros::Subscriber localized_pose_sub_;
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
 

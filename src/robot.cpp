@@ -21,12 +21,16 @@
 namespace temoto_robot_manager
 {
 Robot::Robot(RobotConfigPtr config
+, const std::string& resource_id
 , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
 , temoto_core::BaseSubsystem& b)
 : config_(config)
+, robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
 , is_plan_valid_(false)
 , robot_operational_(true)
+, state_in_error_(false)
+, robot_loaded_(false)
 , temoto_core::BaseSubsystem(b)
 {
   class_name_ = __func__;
@@ -157,7 +161,9 @@ void Robot::load()
   if (config_->getFeatureGripper().isEnabled())
   {
     loadGripperController();
-  }  
+  }
+
+  robot_loaded_ = true;
 }
 
 void Robot::waitForParam(const std::string& param)
@@ -166,7 +172,7 @@ void Robot::waitForParam(const std::string& param)
   while (!nh_.hasParam(param))
   {
     TEMOTO_DEBUG("Waiting for %s ...", param.c_str());
-    if (!isRobotOperational())
+    if (isInError())
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. The robot is in a failed state.");
     }
@@ -181,7 +187,7 @@ void Robot::waitForTopic(const std::string& topic)
   while (!isTopicAvailable(topic))
   {
     TEMOTO_DEBUG("Waiting for %s ...", topic.c_str());
-    if (!isRobotOperational())
+    if (isInError())
     {
       throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. The robot is in a failed state.");
     }
@@ -301,7 +307,7 @@ void Robot::loadNavigationController()
     std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
     waitForTopic(cmd_vel_topic);
 
-     // Subscribe to the pose messages
+    // Subscribe to the pose messages
     if (!ftr.getPoseTopic().empty())
     {
       localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
@@ -420,7 +426,57 @@ void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
 {
   if (true /* TODO: check the type of the status message */)
   {
+    setInError(true);
     setRobotOperational(false);
+  }
+
+  /* 
+   * If the status message arrived while the robot was being loaded, then do not
+   * run the recovery procedure
+   */ 
+  if (!robot_loaded_)
+  {
+    return;
+  }
+  else
+  {
+    setInError(false);
+    resource_registrar_.unload(temoto_er_manager::srv_name::MANAGER
+    , srv_msg.response.temoto_metadata.request_id);
+
+    auto load_er_query = rosExecute(srv_msg.request.package_name
+    , srv_msg.request.executable
+    , srv_msg.request.args);
+
+    resource_registrar_.registerDependency(temoto_er_manager::srv_name::MANAGER
+    , load_er_query.response.temoto_metadata.request_id
+    , robot_resource_id_);
+
+    // TODO: make sure that the feature is actually properly loaded
+    FeatureNavigation& ftr = config_->getFeatureNavigation();
+    if (ftr.getPackageName() == srv_msg.request.package_name &&
+        ftr.getExecutable()  == srv_msg.request.executable)
+    {
+      // wait for command velocity to be published
+      std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
+      waitForTopic(cmd_vel_topic);
+
+      // Send the initial pose
+      ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
+      while(pub.getNumSubscribers() < 1)
+      {
+        ros::Duration(0.5).sleep();
+      }
+      
+      // TODO: the inital pose subscriber sometimes ignores the message, hence the message is sent multiple times ...
+      pub.publish(current_pose_navigation_);
+      ros::Duration(1).sleep();
+      pub.publish(current_pose_navigation_);
+      ros::Duration(1).sleep();
+      pub.publish(current_pose_navigation_);
+    }
+
+    setRobotOperational(true);
   }
 }
 
@@ -559,36 +615,31 @@ geometry_msgs::Pose Robot::getManipulationTarget()
 
 void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
 {
+  if (!isRobotOperational())
+  {
+    throw TEMOTO_ERRSTACK("Could not navigate the robot because robot is not operational");
+  }
+
   FeatureNavigation& ftr = config_->getFeatureNavigation();
   std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
-  
-  MoveBaseClient_ ac(act_rob_ns, true);    
+  MoveBaseClient ac(act_rob_ns, true);    
   
   if (!ac.waitForServer(ros::Duration(5.0)))
   {
-    ROS_INFO("The move_base action server did not come up");
+    TEMOTO_ERRSTACK("The move_base action server did not come up");
   }
-      
-  move_base_msgs::MoveBaseGoal goal;
-  
+
+  move_base_msgs::MoveBaseGoal goal;  
   goal.target_pose.pose = target_pose.pose;
-  TEMOTO_INFO_STREAM(goal.target_pose); 
-  //goal.target_pose.header.frame_id = "map";         // The robot would move with respect to this coordinate frame
   goal.target_pose.header.frame_id = reference_frame;         
   goal.target_pose.header.stamp = ros::Time::now();  
-
-  TEMOTO_INFO_STREAM(goal.target_pose); 
 
   ac.sendGoal(goal);
   ac.waitForResult();
 
-  if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+  if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
   {
-    ROS_INFO("The base moved , SUCCEEDED");
-  }
-  else
-  {
-    ROS_INFO("The base failed to move");
+    throw TEMOTO_ERRSTACK("The base failed to move");
   }
 }
 
@@ -679,18 +730,19 @@ void Robot::setRobotOperational(bool robot_operational)
 
 void Robot::robotPoseCallback(const geometry_msgs::PoseWithCovarianceStamped& msg)
 {
-  current_pose_navigation_ = msg;
+  if (isRobotOperational())
+  {
+    current_pose_navigation_ = msg;
+  }
 }
 
 void Robot::recover(const std::string& parent_query_id)
 {
   /*
-   * 1) Register a LoadExtResource client to RR
-   * 2) get the sub-resource queries (LoadExtResource)
-   * 3) Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
+   * 1) get the sub-resource queries (LoadExtResource)
+   * 2) Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
+   * TODO: this method needs data race protection via mutexes
    */
-
-  // TODO: Register erm client
 
   auto erm_queries = resource_registrar_.getRosChildQueries<temoto_er_manager::LoadExtResource>(parent_query_id
   , temoto_er_manager::srv_name::SERVER);
@@ -699,10 +751,61 @@ void Robot::recover(const std::string& parent_query_id)
   for (const auto& erm_query : erm_queries)
   {
     TEMOTO_DEBUG_STREAM("ERM query: " << erm_query.second.request);
-    erm_query.second.response.temotoMetadata.requestId;
-
-    // TODO: register the resource dependency and the associated callback
+    resource_registrar_.registerClientCallback<temoto_er_manager::LoadExtResource>(temoto_er_manager::srv_name::MANAGER
+    , temoto_er_manager::srv_name::SERVER
+    , erm_query.second.response.temoto_metadata.request_id
+    , std::bind(&Robot::resourceStatusCb, this, std::placeholders::_1, std::placeholders::_2));
   }
+
+  /*
+   * TODO: each erm query has to be check against the enabled features
+   */
+
+  // Recover URDF feature
+  if (config_->getFeatureURDF().isEnabled())
+  {
+    config_->getFeatureURDF().setLoaded(true);
+  }
+  
+  // Recover the navigation driver
+  if (config_->getFeatureNavigation().isDriverEnabled())
+  {
+    config_->getFeatureNavigation().setDriverLoaded(true);
+  }
+
+  // Recover the navigation controller
+  if (config_->getFeatureNavigation().isEnabled())
+  {
+    // Subscribe to the pose messages
+    if (!config_->getFeatureNavigation().getPoseTopic().empty())
+    {
+      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + config_->getFeatureNavigation().getPoseTopic()
+      , 1
+      , &Robot::robotPoseCallback
+      , this);
+    }
+    config_->getFeatureNavigation().setLoaded(true);
+  }
+
+  robot_loaded_ = true;
+  setRobotOperational(true);
+}
+
+void Robot::setResourceId(const std::string& resource_id)
+{
+  robot_resource_id_ = resource_id;
+}
+
+void Robot::setInError(bool state_in_error)
+{
+  std::lock_guard<std::recursive_mutex> lock(robot_state_in_error_mutex_);
+  state_in_error_ = state_in_error;
+}
+
+bool Robot::isInError() const
+{
+  std::lock_guard<std::recursive_mutex> lock(robot_state_in_error_mutex_);
+  return state_in_error_;
 }
 }
 

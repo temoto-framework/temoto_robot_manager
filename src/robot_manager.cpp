@@ -152,8 +152,8 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   {
     try
     {
-      auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
-      loaded_robot.load();
+      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_, *this);
+      loaded_robot->load();
       loaded_robots_.push_back(loaded_robot);
       TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());
     }
@@ -185,7 +185,7 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
       , load_robot_srvc);
 
       TEMOTO_DEBUG_("Call to remote RobotManager was sucessful.");
-      auto loaded_robot = std::make_shared<Robot>(config, resource_registrar_, *this);
+      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_, *this);
       loaded_robots_.push_back(loaded_robot);
     }
     catch(temoto_core::error::ErrorStack& error_stack)
@@ -578,42 +578,46 @@ bool RobotManager::getManipulationTargetCb(RobotGetTarget::Request& req, RobotGe
 }
 
 bool RobotManager::goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res)
+try
 {
-  try
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  if (loaded_robot->isLocal())
   {
-    TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
-    RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+    TEMOTO_INFO_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
+    loaded_robot->goalNavigation(req.reference_frame, req.target_pose);  // The robot would move with respect to this coordinate frame
+    res.success = true;   
+  }
+  else
+  {
+    std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+      + srv_name::SERVER_NAVIGATION_GOAL;
+    TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
 
-    if (loaded_robot->isLocal())
+    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<RobotNavigationGoal>(topic);
+    RobotNavigationGoal fwd_goal_srvc;
+    fwd_goal_srvc.request = req;
+    fwd_goal_srvc.response = res;
+    if (client_navigation_goal_.call(fwd_goal_srvc))
     {
-      loaded_robot->goalNavigation(req.reference_frame, req.target_pose);  // The robot would move with respect to this coordinate frame
-      TEMOTO_DEBUG_STREAM_("'" << req.robot_name << " finished navigating.");        
+      res = fwd_goal_srvc.response;
     }
     else
     {
-      std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
-        + srv_name::SERVER_NAVIGATION_GOAL;
-      TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
-
-      ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<RobotNavigationGoal>(topic);
-      RobotNavigationGoal fwd_goal_srvc;
-      fwd_goal_srvc.request = req;
-      fwd_goal_srvc.response = res;
-      if (client_navigation_goal_.call(fwd_goal_srvc))
-      {
-        res = fwd_goal_srvc.response;
-      }
-      else
-      {
-        throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
-      }
-    }  
-    return true;  
-  }
-  catch(temoto_core::error::ErrorStack& error_stack)
-  {
-    throw FORWARD_ERROR(error_stack);
-  }
+      throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
+    }
+  }  
+  return true;  
+}
+catch(temoto_core::error::ErrorStack& error_stack)
+{
+  res.success = false;
+  return true;
+}
+catch(const resource_registrar::TemotoErrorStack &e)
+{
+  TEMOTO_ERROR_STREAM(e.what());
+  res.success = false;
+  return true;
 }
 
 void RobotManager::resourceStatusCb(RobotLoad srv_msg, temoto_resource_registrar::Status status_msg)
@@ -811,7 +815,7 @@ void RobotManager::restoreState()
    */
 
   resource_registrar_.loadCatalog();
-  for (const auto& query : resource_registrar_.getServerQueries<RobotLoad>(srv_name::SERVER))
+  for (const auto& query : resource_registrar_.getServerQueries<RobotLoad>(srv_name::SERVER_LOAD))
   {
     auto robot_config = findRobot(query.request.robot_name, local_configs_);
     if (!robot_config)
@@ -819,8 +823,8 @@ void RobotManager::restoreState()
       // TODO: error this robot is not described in robot_description.yaml
       continue;
     }
-    auto robot = std::make_shared<Robot>(robot_config, resource_registrar_, *this);
-    robot.recover(query.response.temotoMetadata.requestId);
+    auto robot = std::make_shared<Robot>(robot_config, query.response.temoto_metadata.request_id, resource_registrar_, *this);
+    robot->recover(query.response.temoto_metadata.request_id);
     loaded_robots_.push_back(robot);
   }
 }

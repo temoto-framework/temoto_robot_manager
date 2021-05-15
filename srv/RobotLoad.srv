@@ -1,8 +1,8 @@
 # The name of the robot to load 
 string robot_name
 
-temoto_resource_registrar/TemotoRequestMetadata temotoMetadata
+temoto_resource_registrar/TemotoRequestMetadata temoto_metadata
 
 ---
 
-temoto_resource_registrar/TemotoResponseMetadata temotoMetadata
+temoto_resource_registrar/TemotoResponseMetadata temoto_metadata

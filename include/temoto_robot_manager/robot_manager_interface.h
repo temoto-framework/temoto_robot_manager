@@ -258,7 +258,7 @@ public:
     return pose;
   }
 
-  void navigationGoal(const std::string& robot_name
+  bool navigationGoal(const std::string& robot_name
   , const std::string& reference_frame
   , const geometry_msgs::PoseStamped& pose)
   {
@@ -268,12 +268,15 @@ public:
     msg.request.robot_name = robot_name;
     if (client_navigation_goal_.call(msg))
     {
-      TEMOTO_DEBUG_("The goal was set successfully");
+      TEMOTO_DEBUG_("The server was reached");
+      return msg.response.success;
     }
     else
     {
-      TEMOTO_ERROR("Failed to reach the server"); 
-    }  
+      TEMOTO_ERROR("Failed to reach the server");
+      return false;
+    }
+
   }
 
   void controlGripperPosition(const std::string& robot_name, const float& position)
@@ -303,31 +306,31 @@ public:
     TEMOTO_DEBUG_STREAM_("status info was received");
     TEMOTO_DEBUG_STREAM_(srv_msg.request);
 
-    auto robot_it = std::find_if(
-      allocated_robots_.begin(),
-      allocated_robots_.end(),
-      [&](const RobotLoad& loaded_robot) -> bool {
-        return loaded_robot.response.temotoMetadata.requestId == srv_msg.response.temotoMetadata.requestId;
-      });
+    // auto robot_it = std::find_if(
+    //   allocated_robots_.begin(),
+    //   allocated_robots_.end(),
+    //   [&](const RobotLoad& loaded_robot) -> bool {
+    //     return loaded_robot.response.temoto_metadata.request_id == srv_msg.response.temoto_metadata.request_id;
+    //   });
 
-    if (robot_it != allocated_robots_.end())
-    {
-      TEMOTO_WARN_STREAM_("Sending a request to unload the failed robot ...");
-      resource_registrar_->unload(srv_name::MANAGER
-      , robot_it->response.temotoMetadata.requestId);
+    // if (robot_it != allocated_robots_.end())
+    // {
+    //   TEMOTO_WARN_STREAM_("Sending a request to unload the failed robot ...");
+    //   resource_registrar_->unload(srv_name::MANAGER
+    //   , robot_it->response.temoto_metadata.request_id);
 
-      TEMOTO_DEBUG_("Requesting to load the same robot again ...");
+    //   TEMOTO_DEBUG_("Requesting to load the same robot again ...");
 
-      // this call automatically updates the response in allocated robots vec
-      resource_registrar_->call<RobotLoad>(srv_name::MANAGER
-      , srv_name::SERVER_LOAD
-      , *robot_it
-      , std::bind(&RobotManagerInterface::statusInfoCb, this, std::placeholders::_1, std::placeholders::_2));
-    }
-    else
-    {
-      TEMOTO_WARN_("The status info regards a resource that was not allocated from this interface.");
-    }
+    //   // this call automatically updates the response in allocated robots vec
+    //   resource_registrar_->call<RobotLoad>(srv_name::MANAGER
+    //   , srv_name::SERVER_LOAD
+    //   , *robot_it
+    //   , std::bind(&RobotManagerInterface::statusInfoCb, this, std::placeholders::_1, std::placeholders::_2));
+    // }
+    // else
+    // {
+    //   TEMOTO_WARN_("The status info regards a resource that was not allocated from this interface.");
+    // }
   }
   catch (temoto_core::error::ErrorStack& error_stack)
   {

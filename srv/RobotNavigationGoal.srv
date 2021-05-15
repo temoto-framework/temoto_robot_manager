@@ -4,6 +4,4 @@ geometry_msgs/PoseStamped target_pose
 
 ---
 
-int64 code
-string message
-temoto_core/Error[] error_stack
+bool success
