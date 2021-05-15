@@ -17,8 +17,6 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_FEATURES_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_FEATURES_H
 
-#include "temoto_core/common/temoto_id.h"
-
 #include <string>
 #include <vector>
 #include <yaml-cpp/yaml.h>
@@ -94,7 +92,6 @@ protected:
   std::string package_name_;
   std::string executable_;
   std::string args_;
-  temoto_core::temoto_id::ID resource_id_;
   bool feature_enabled_;
   bool feature_loaded_;
 };
@@ -156,7 +153,6 @@ protected:
   std::string driver_package_name_;
   std::string driver_executable_;
   std::string driver_args_;
-  temoto_core::temoto_id::ID driver_resource_id_;
 };
 
 // URDF feature
