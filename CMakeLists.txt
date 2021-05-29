@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   temoto_core
   temoto_er_manager
   temoto_resource_registrar
+  yaml-cpp
 )
 
 add_service_files(
@@ -49,13 +50,13 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES yaml-cpp
   CATKIN_DEPENDS 
     roscpp
     std_msgs 
     geometry_msgs
     temoto_core
     temoto_er_manager
+    yaml-cpp
   DEPENDS 
 )
 
@@ -72,4 +73,4 @@ add_executable(temoto_robot_manager
   src/robot_features.cpp
 )
 add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(temoto_robot_manager ${catkin_LIBRARIES} yaml-cpp)
+target_link_libraries(temoto_robot_manager ${catkin_LIBRARIES})

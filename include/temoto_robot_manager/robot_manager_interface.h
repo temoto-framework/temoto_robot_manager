@@ -116,9 +116,7 @@ public:
     {
       try
       {
-        YAML::Node robot_config = YAML::Load(msg.response.robot_config);
-        robot_config["robot_absolute_namespace"] = msg.response.robot_absolute_namespace;
-        return robot_config;
+        return YAML::Load(msg.response.robot_config);
       }
       catch(const std::exception& e)
       {

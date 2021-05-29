@@ -41,7 +41,7 @@ RobotManager::RobotManager(const std::string& config_base_path)
   rr_catalog_config_.setSaveOnModify(true);
   rr_catalog_config_.setEraseOnDestruct(true);
   resource_registrar_.updateConfiguration(rr_catalog_config_);
-
+  
   /*
    * Add the LoadRobot server to the resource registrar
    */

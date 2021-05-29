@@ -131,6 +131,7 @@ public:
   void setTemotoNamespace(std::string temoto_namespace)
   {
     temoto_namespace_ = temoto_namespace;
+    yaml_config_["robot_absolute_namespace"] = getAbsRobotNamespace();
   }
 
 private:

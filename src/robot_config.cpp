@@ -67,12 +67,12 @@ void RobotConfig::parseTemotoNamespace()
 {
   try
   {
-    temoto_namespace_ = yaml_config_["temoto_namespace"].as<std::string>();
+    setTemotoNamespace(yaml_config_["temoto_namespace"].as<std::string>());
   }
   catch (...)
   {
     // Assign local namespace, when not available in yaml
-    temoto_namespace_ = temoto_core::common::getTemotoNamespace();
+    setTemotoNamespace(temoto_core::common::getTemotoNamespace());
   }
 }
 
