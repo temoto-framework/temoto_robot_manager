@@ -424,6 +424,7 @@ catch(temoto_core::error::ErrorStack& error_stack)
 void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
 , temoto_resource_registrar::Status status_msg)
 {
+  TEMOTO_WARN_STREAM_("Received a status message: " << status_msg.message_);
   if (true /* TODO: check the type of the status message */)
   {
     setInError(true);
@@ -452,29 +453,54 @@ void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
     , load_er_query.response.temoto_metadata.request_id
     , robot_resource_id_);
 
-    // TODO: make sure that the feature is actually properly loaded
+    // TODO: make sure that the feature is actually properly loaded and obviously all of that
+    // has to be completely restructured
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     if (ftr.getPackageName() == srv_msg.request.package_name &&
         ftr.getExecutable()  == srv_msg.request.executable)
     {
+      TEMOTO_WARN_STREAM_("The controller of " << config_->getName() << " crashed, restarting it ...");
       // wait for command velocity to be published
       std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
       waitForTopic(cmd_vel_topic);
-
-      // Send the initial pose
-      ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
-      while(pub.getNumSubscribers() < 1)
-      {
-        ros::Duration(0.5).sleep();
-      }
-      
-      // TODO: the inital pose subscriber sometimes ignores the message, hence the message is sent multiple times ...
-      pub.publish(current_pose_navigation_);
-      ros::Duration(1).sleep();
-      pub.publish(current_pose_navigation_);
-      ros::Duration(1).sleep();
-      pub.publish(current_pose_navigation_);
     }
+    else if (ftr.getDriverPackageName() == srv_msg.request.package_name &&
+             ftr.getDriverExecutable()  == srv_msg.request.executable)
+    {
+      TEMOTO_WARN_STREAM_("The driver of " << config_->getName() << " crashed, restarting it ...");
+      // wait for command velocity to be published
+      std::string odom_topic = config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
+      waitForTopic(odom_topic);
+      ftr.setDriverLoaded(true);
+    }
+
+     // Send the initial pose
+    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
+    while(pub.getNumSubscribers() < 1)
+    {
+      ros::Duration(0.5).sleep();
+    }
+      
+    // TODO: the inital pose subscriber sometimes ignores the message, hence the message is sent multiple times ...
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
+    ros::Duration(1).sleep();
+    pub.publish(current_pose_navigation_);
 
     setRobotOperational(true);
   }
@@ -633,11 +659,21 @@ void Robot::goalNavigation(const std::string& reference_frame, const geometry_ms
   goal.target_pose.pose = target_pose.pose;
   goal.target_pose.header.frame_id = reference_frame;         
   goal.target_pose.header.stamp = ros::Time::now();  
-
   ac.sendGoal(goal);
-  ac.waitForResult();
 
-  if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
+  // Wait until either the goal is finished or robot has encountered a system issue
+  while((ac.getState() == actionlib::SimpleClientGoalState::PENDING || ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
+     && isRobotOperational())
+  {
+    ros::Duration(1).sleep();
+  }
+
+  if (!isRobotOperational())
+  {
+    ac.cancelGoal();
+    throw TEMOTO_ERRSTACK("Could not finish the navigation goal because the robot is not operational");
+  }
+  else if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
   {
     throw TEMOTO_ERRSTACK("The base failed to move");
   }
