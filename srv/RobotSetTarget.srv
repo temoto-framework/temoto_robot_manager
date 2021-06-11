@@ -2,6 +2,5 @@ string object_name
 
 ---
 
-int64 code
-string message
-temoto_core/Error[] error_stack
+bool success
+

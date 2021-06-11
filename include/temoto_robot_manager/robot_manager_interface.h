@@ -17,7 +17,6 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 
-#include "temoto_core/common/base_subsystem.h"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "yaml-cpp/yaml.h"
@@ -32,35 +31,11 @@ class RobotManagerInterface : public temoto_core::BaseSubsystem
 public:
   RobotManagerInterface(bool initialize_interface = false)
   : unique_suffix_(std::to_string(createID()))
-  , has_owner_(false)
   , initialized_(false)
   {
-    class_name_ = __func__;
     if (initialize_interface)
     {
       initialize();
-    }
-  }
-
-  unsigned int createID()
-  {
-    std::srand(std::time(nullptr));
-    return std::rand();
-  }
-
-  void initialize(const BaseSubsystem& owner)
-  {
-    if (!initialized_)
-    {
-      initializeBase(owner);
-      log_group_ = "interfaces." + owner.subsystem_name_;
-      rr_name_ = owner.class_name_ + "/" + class_name_ + "_" + unique_suffix_;
-      has_owner_ = true;
-      initialize();
-    }
-    else
-    {
-      TEMOTO_WARN_STREAM_("The Robot Manager interface is already initialized");
     }
   }
 
@@ -68,10 +43,7 @@ public:
   {
     if (!initialized_)
     {
-      if (!has_owner_)
-      {
-        rr_name_ = class_name_ + "_" + unique_suffix_;
-      }
+      rr_name_ = TEMOTO_LOG_ATTR.getSubsystemNameWithSlash() + GET_CLASS_NAME + "_" + unique_suffix_;
       resource_registrar_ = std::make_unique<temoto_resource_registrar::ResourceRegistrarRos1>(rr_name_);
       resource_registrar_->init();
 
@@ -100,29 +72,33 @@ public:
     }
   }
 
+  unsigned int createID()
+  {
+    std::srand(std::time(nullptr));
+    return std::rand();
+  }
+
   YAML::Node getRobotConfig(const std::string& robot_name)
+  try
   {
     temoto_robot_manager::RobotGetConfig msg;
     msg.request.robot_name = robot_name;
-    if (!client_get_robot_config_.call(msg))
+    if (client_get_robot_config_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
-    }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
-    {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      if (!msg.response.success)
+      {
+        throw TEMOTO_ERRSTACK("Could not get the config of robot '" + robot_name + "'");
+      }
+      return YAML::Load(msg.response.robot_config);
     }
     else
     {
-      try
-      {
-        return YAML::Load(msg.response.robot_config);
-      }
-      catch(const std::exception& e)
-      {
-        throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, e.what());
-      }
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
+  }
+  catch(const std::exception& e)
+  {
+    throw TEMOTO_ERRSTACK(e.what());
   }
 
   void loadRobot(const std::string& robot_name)
@@ -138,9 +114,9 @@ public:
 
     allocated_robots_.push_back(load_robot_msg);
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack e)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(e);
   }
 
 
@@ -153,11 +129,12 @@ public:
     msg.request.robot_name = robot_name;
     if (!client_plan_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+    
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'planManipulation'");
     }
   }
 
@@ -174,11 +151,12 @@ public:
     
     if (!client_plan_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to 'planManipulation'");
     }
   }
 
@@ -195,11 +173,12 @@ public:
     
     if (!client_plan_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+    
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'planManipulation'");
     }
   }
 
@@ -209,11 +188,12 @@ public:
     msg.request.robot_name = robot_name;
     if (!client_exec_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'executePlan'");
     }
   }
 
@@ -222,12 +202,14 @@ public:
     temoto_robot_manager::RobotGetVizInfo msg;
     if (!client_viz_info_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getMoveitRvizConfig'");
     }
+
     return msg.response.info;
   }
 
@@ -237,11 +219,12 @@ public:
     msg.request.object_name = object_name;
     if (!client_set_manipulation_target_.call(msg))
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_REQ_FAIL, "Service call returned false.");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else if (msg.response.code == temoto_core::trr::status_codes::FAILED)
+
+    if (!msg.response.success)
     {
-      throw FORWARD_ERROR(msg.response.error_stack);
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'setTarget'");
     }
   }
 
@@ -250,13 +233,21 @@ public:
     geometry_msgs::Pose pose;
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.robot_name = robot_name;
-    client_get_manipulation_target_.call(msg);
+    if (!client_get_manipulation_target_.call(msg))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
+    }
+
+    if (!msg.response.success)
+    {
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getEndEffPose'");
+    }
+
     pose = msg.response.pose;
-    
     return pose;
   }
 
-  bool navigationGoal(const std::string& robot_name
+  void navigationGoal(const std::string& robot_name
   , const std::string& reference_frame
   , const geometry_msgs::PoseStamped& pose)
   {
@@ -264,17 +255,15 @@ public:
     msg.request.reference_frame = reference_frame;
     msg.request.target_pose = pose;
     msg.request.robot_name = robot_name;
-    if (client_navigation_goal_.call(msg))
+    if (!client_navigation_goal_.call(msg))
     {
-      TEMOTO_DEBUG_("The server was reached");
-      return msg.response.success;
-    }
-    else
-    {
-      TEMOTO_ERROR("Failed to reach the server");
-      return false;
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
 
+    if (!msg.response.success)
+    {
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
+    }
   }
 
   void controlGripperPosition(const std::string& robot_name, const float& position)
@@ -283,13 +272,14 @@ public:
     msg.request.robot_name = robot_name;
     msg.request.control = position;
 
-    if (client_gripper_control_position_.call(msg))
+    if (!client_gripper_control_position_.call(msg))
     {
-      TEMOTO_DEBUG_("Call to move the gripper was successful");
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-    else
+
+    if (!msg.response.success)
     {
-      TEMOTO_ERROR("Failed to reach the server for gripper control"); 
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'controlGripperPosition'");
     }
   }
 
@@ -330,9 +320,9 @@ public:
     //   TEMOTO_WARN_("The status info regards a resource that was not allocated from this interface.");
     // }
   }
-  catch (temoto_core::error::ErrorStack& error_stack)
+  catch (resource_registrar::TemotoErrorStack e)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(e);
   }
 
   ~RobotManagerInterface()
@@ -354,7 +344,6 @@ private:
 
   std::string rr_name_;
   std::string unique_suffix_;
-  bool has_owner_;
   bool initialized_;
   std::vector<RobotLoad> allocated_robots_;
 
@@ -373,4 +362,3 @@ private:
 };
 } // namespace
 #endif
-

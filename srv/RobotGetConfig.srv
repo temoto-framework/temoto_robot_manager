@@ -5,9 +5,5 @@ string robot_name
 
 # YAML info string
 string robot_config
-
 string robot_absolute_namespace
-
-int64 code
-string message
-temoto_core/Error[] error_stack
+bool success

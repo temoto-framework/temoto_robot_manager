@@ -3,5 +3,5 @@ string robot_name
 
 ---
 
-int64 code
-string message
+bool success
+
