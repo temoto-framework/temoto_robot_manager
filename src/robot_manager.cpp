@@ -582,7 +582,7 @@ try
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())
   {
-    TEMOTO_INFO_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
+    TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
     loaded_robot->goalNavigation(req.reference_frame, req.target_pose);  // The robot would move with respect to this coordinate frame
     res.success = true;   
   }
