@@ -123,6 +123,19 @@ void Robot::load()
   {
     loadUrdf();
   }
+ 
+  /*
+   * Load navigation
+   */ 
+  if (config_->getFeatureNavigation().isDriverEnabled())
+  {
+    loadNavigationDriver();
+  }
+
+  if (config_->getFeatureNavigation().isEnabled())
+  {
+    loadNavigationController();
+  }
 
   /*
    * Load manipulation
@@ -135,19 +148,6 @@ void Robot::load()
   if (config_->getFeatureManipulation().isEnabled())
   {
     loadManipulationController();
-  }
-  
-  /*
-   * Load navigation
-   */ 
-  if (config_->getFeatureNavigation().isDriverEnabled())
-  {
-    loadNavigationDriver();
-  }
-
-  if (config_->getFeatureNavigation().isEnabled())
-  {
-    loadNavigationController();
   }
 
   /*
