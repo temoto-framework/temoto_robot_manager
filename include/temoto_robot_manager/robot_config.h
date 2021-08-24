@@ -67,8 +67,8 @@ public:
   void parseReliability();
 
   void parseUrdf();
-  void parseManipulation();
   void parseNavigation();
+  void parseManipulation();
   void parseGripper();
 
   std::string getName() const

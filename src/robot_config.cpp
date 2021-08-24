@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright 2019 TeMoto Telerobotics
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,8 +44,8 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
 
   // Parse robot features
   parseUrdf();
-  parseManipulation();
   parseNavigation();
+  parseManipulation();
   parseGripper();
 }
 
@@ -92,7 +92,7 @@ void RobotConfig::parseReliability()
 {
   try
   {
-    description_ = yaml_config_["description"].as<std::string>();
+    resetReliability(yaml_config_["reliability"].as<float>());
   }
   catch (YAML::InvalidNode e)
   {
