@@ -92,7 +92,7 @@ void RobotConfig::parseReliability()
 {
   try
   {
-    description_ = yaml_config_["reliability"].as<std::string>();
+    resetReliability(yaml_config_["reliability"].as<float>());
   }
   catch (YAML::InvalidNode e)
   {
