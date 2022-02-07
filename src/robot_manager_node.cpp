@@ -39,14 +39,12 @@ int main(int argc, char** argv)
   }
   else
   {
-    std::cout << "Missing Component Manager config base path\n" << desc;
+    std::cout << "Missing robot_description.yaml base path\n" << desc;
     return 1;
   }
 
   TEMOTO_LOG_ATTR.initialize("robot_manager");
   ros::init(argc, argv, TEMOTO_LOG_ATTR.getSubsystemName());
-
-  // Create a SensorManager object
   RobotManager rm(config_base_path);
 
   ros::AsyncSpinner spinner(4);

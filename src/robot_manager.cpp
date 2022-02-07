@@ -106,7 +106,13 @@ RobotManager::RobotManager(const std::string& config_base_path)
 }
 
 void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir)
-{ 
+{
+  if (std::string(current_dir.c_str()).empty())
+  {
+    TEMOTO_WARN_STREAM_("robot_description.yaml base path is empty");
+    return;
+  }
+
   boost::filesystem::directory_iterator end_itr;
   for ( boost::filesystem::directory_iterator itr( current_dir ); itr != end_itr; ++itr )
   {
@@ -178,9 +184,9 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
     {
       RobotLoad load_robot_srvc;
       load_robot_srvc.request.robot_name = req.robot_name;
-      TEMOTO_INFO_("RobotManager is forwarding request: '%s'", req.robot_name.c_str());
+      TEMOTO_INFO_("RobotManager is forwarding request to load '%s' to '%s'", req.robot_name.c_str(), config->getTemotoNamespace().c_str());
 
-      resource_registrar_.call<RobotLoad>(config->getTemotoNamespace() + "/" + srv_name::MANAGER
+      resource_registrar_.call<RobotLoad>("/" + config->getTemotoNamespace() + "/" + srv_name::MANAGER
       , srv_name::SERVER_LOAD
       , load_robot_srvc);
 
