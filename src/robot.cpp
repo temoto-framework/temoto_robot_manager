@@ -555,7 +555,7 @@ void Robot::planManipulationPath(std::string& planning_group_name, const geometr
   group_it->second->setStartStateToCurrentState();
 
   // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
-  group_it->second->setPoseTarget(target_pose.pose);
+  group_it->second->setPoseTarget(target_pose);
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
@@ -583,7 +583,12 @@ void Robot::planManipulationPath(std::string& planning_group_name, const std::st
   }
   ftr.setActivePlanningGroup(planning_group_name);
   group_it->second->setStartStateToCurrentState();
-  group_it->second->setNamedTarget(named_target);
+  if (!group_it->second->setNamedTarget(named_target))
+  {
+    is_plan_valid_ = false;
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning to named target pose '%s' failed.", named_target);
+  }
+  
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
