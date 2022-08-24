@@ -549,13 +549,10 @@ void Robot::planManipulationPath(std::string& planning_group_name, const geometr
     throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
                        planning_group_name.c_str());
   }
-
   ftr.setActivePlanningGroup(planning_group_name);
-
   group_it->second->setStartStateToCurrentState();
-
-  // NOTE: Using Pose instead of PoseStamped because in that case it would replace the frame id of the header with empty "" 
   group_it->second->setPoseTarget(target_pose);
+  
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
