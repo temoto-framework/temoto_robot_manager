@@ -613,10 +613,16 @@ void Robot::executeManipulationPath()
     group_it->second->setRandomTarget();
     success = static_cast<bool>(group_it->second->execute(last_plan));
     TEMOTO_DEBUG("Execution %s",  success ? "SUCCESSFUL" : "FAILED");
+    if(!success)
+    {
+      throw CREATE_ERROR(temoto_core::error::Code::ROBOT_EXEC_FAIL,"Execute plan with group '%s' failed.", planning_group_name.c_str());
+    }
   }
   else
   {
     TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
   }
 }
 
@@ -639,6 +645,28 @@ geometry_msgs::Pose Robot::getManipulationTarget()
     TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
   } 
   return current_pose;  
+}
+
+std::vector<std::string> Robot::getNamedTargetPoses(std::string& planning_group_name)
+{
+  if (!planning_groups_.size())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+  }
+
+  FeatureManipulation& ftr = config_->getFeatureManipulation();
+
+  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group_name);
+  if (group_it == planning_groups_.end())
+  {
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
+  }
+  //ftr.setActivePlanningGroup(planning_group_name);
+
+  return group_it->second->getNamedTargets();
+
 }
 
 void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)

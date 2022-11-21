@@ -89,6 +89,10 @@ RobotManager::RobotManager(const std::string& config_base_path)
     srv_name::SERVER_GET_MANIPULATION_TARGET,
     &RobotManager::getManipulationTargetCb,
     this);
+  server_get_manipulation_named_targets_ = nh_.advertiseService(
+    srv_name::SERVER_GET_MANIPULATION_NAMED_TARGETS,
+    &RobotManager::getManipulationNamedTargetsCb,
+    this);
   server_navigation_goal_ = nh_.advertiseService(
     srv_name::SERVER_NAVIGATION_GOAL, 
     &RobotManager::goalNavigationCb,
@@ -567,6 +571,45 @@ try
     {
       TEMOTO_DEBUG_("Call to remote RobotManager was sucessful.");
       res = fwd_get_target_srvc.response;
+    }
+    else
+    {
+      throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");      
+    }    
+  }
+  res.success = true;
+  return true;
+}
+catch(temoto_core::error::ErrorStack& error_stack)
+{
+  res.success = false;
+  return true;
+}
+
+bool RobotManager::getManipulationNamedTargetsCb(RobotGetNamedTargets::Request& req, RobotGetNamedTargets::Response& res)
+try
+{
+  TEMOTO_DEBUG_STREAM_("Getting the named targets of '" << req.robot_name << " ... with planning group " << req.planning_group );
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
+  if (loaded_robot->isLocal())
+  {    
+    res.named_target_poses = loaded_robot->getNamedTargetPoses(req.planning_group);
+  }
+  else
+  {
+    std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/" 
+      + srv_name::SERVER_GET_MANIPULATION_NAMED_TARGETS;
+    TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
+
+    ros::ServiceClient client_mode = nh_.serviceClient<RobotGetNamedTargets>(topic);
+    RobotGetNamedTargets fwd_get_named_targets_srvc;
+    fwd_get_named_targets_srvc.request = req;
+    fwd_get_named_targets_srvc.response = res;
+    if (client_mode.call(fwd_get_named_targets_srvc))
+    {
+      TEMOTO_DEBUG_("Call to remote RobotManager was sucessful.");
+      res = fwd_get_named_targets_srvc.response;
     }
     else
     {

@@ -87,6 +87,8 @@ private:
 
   bool getManipulationTargetCb(RobotGetTarget::Request& req, RobotGetTarget::Response& res);
 
+  bool getManipulationNamedTargetsCb(RobotGetNamedTargets::Request& req, RobotGetNamedTargets::Response& res);
+
   bool goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res);
 
   bool gripperControlPositionCb(RobotGripperControlPosition::Request& req, RobotGripperControlPosition::Response& res);
@@ -132,6 +134,7 @@ private:
   ros::ServiceServer server_get_viz_cfg_;
   ros::ServiceServer server_set_manipulation_target_;
   ros::ServiceServer server_get_manipulation_target_;
+  ros::ServiceServer server_get_manipulation_named_targets_;
   ros::ServiceServer server_set_mode_;
   ros::ServiceServer server_navigation_goal_;
   ros::ServiceServer server_gripper_control_position_;
@@ -142,6 +145,7 @@ private:
   ros::ServiceClient client_get_viz_cfg_;
   ros::ServiceClient client_set_manipulation_target_;
   ros::ServiceClient client_get_manipulation_target_;
+  ros::ServiceClient client_get_manipulation_named_targets_;
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;

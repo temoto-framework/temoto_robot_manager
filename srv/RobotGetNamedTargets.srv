@@ -1,0 +1,7 @@
+string robot_name
+string planning_group
+
+---
+
+string[] named_target_poses
+bool success

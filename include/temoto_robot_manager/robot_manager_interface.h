@@ -57,6 +57,8 @@ public:
         nh_.serviceClient<RobotSetTarget>(srv_name::SERVER_SET_MANIPULATION_TARGET);
       client_get_manipulation_target_ =
         nh_.serviceClient<RobotGetTarget>(srv_name::SERVER_GET_MANIPULATION_TARGET);
+      client_get_manipulation_named_targets_ =
+        nh_.serviceClient<RobotGetNamedTargets>(srv_name::SERVER_GET_MANIPULATION_NAMED_TARGETS);
       client_navigation_goal_ =
         nh_.serviceClient<RobotNavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
       client_gripper_control_position_ =
@@ -247,6 +249,24 @@ public:
     return pose;
   }
 
+ std::vector<std::string> getNamedTargets(const std::string& robot_name, const std::string& planning_group)
+ {
+    std::vector<std::string> named_target_poses;
+    temoto_robot_manager::RobotGetNamedTargets msg; 
+    msg.request.robot_name = robot_name;
+    msg.request.planning_group = planning_group;
+    if (!client_get_manipulation_named_targets_.call(msg))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
+    }
+    if (!msg.response.success)
+    {
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getEndEffPose'");
+    }
+    named_target_poses = msg.response.named_target_poses;
+    return named_target_poses;
+  }
+
   void navigationGoal(const std::string& robot_name
   , const std::string& reference_frame
   , const geometry_msgs::PoseStamped& pose)
@@ -354,6 +374,7 @@ private:
   ros::ServiceClient client_viz_info_;
   ros::ServiceClient client_set_manipulation_target_;  
   ros::ServiceClient client_get_manipulation_target_;
+  ros::ServiceClient client_get_manipulation_named_targets_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_get_robot_config_; 

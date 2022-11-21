@@ -34,6 +34,7 @@ add_service_files(
   RobotSetMode.srv
   RobotGetVizInfo.srv
   RobotGetTarget.srv
+  RobotGetNamedTargets.srv
   RobotGetConfig.srv
   RobotNavigationGoal.srv
   RobotGripperControlPosition.srv

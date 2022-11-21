@@ -57,6 +57,9 @@ public:
   void executeManipulationPath();
   
   geometry_msgs::Pose getManipulationTarget();
+
+  std::vector<std::string> getNamedTargetPoses(std::string& planning_group_name);
+  
   void goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose);
   void controlGripper(const std::string& robot_name, const float position);
   
