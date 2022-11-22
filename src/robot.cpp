@@ -608,10 +608,18 @@ void Robot::executeManipulationPath()
       planning_groups_.find(planning_group_name);  ///< Will throw if group does not exist
   if (group_it != planning_groups_.end())
   {
-    bool success;
+    bool success = false;
     group_it->second->setStartStateToCurrentState();
     group_it->second->setRandomTarget();
-    success = static_cast<bool>(group_it->second->execute(last_plan));
+    //success = static_cast<bool>(group_it->second->execute(last_plan));
+    size_t i=0;
+    while (!success && i<3) 
+    {
+      TEMOTO_INFO_STREAM("Attempt = " << i+1);
+      ++i;
+      success = static_cast<bool>(group_it->second->execute(last_plan));
+    }
+
     TEMOTO_DEBUG("Execution %s",  success ? "SUCCESSFUL" : "FAILED");
     if(!success)
     {
