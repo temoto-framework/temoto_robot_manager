@@ -542,7 +542,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const g
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
-  std::string planning_group = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  std::string planning_group = (planning_group_name.empty()) ? ftr.getActivePlanningGroup() : planning_group_name;
   auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
@@ -571,7 +571,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
-  std::string planning_group = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  std::string planning_group = (planning_group_name.empty()) ? ftr.getActivePlanningGroup() : planning_group_name;
   auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
