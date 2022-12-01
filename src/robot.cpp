@@ -533,7 +533,7 @@ void Robot::removePlanningGroup(const std::string& planning_group_name)
   planning_groups_.erase(planning_group_name);
 }
 
-void Robot::planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
+void Robot::planManipulationPath(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose)
 {
   if (!planning_groups_.size())
   {
@@ -542,14 +542,14 @@ void Robot::planManipulationPath(std::string& planning_group_name, const geometr
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
-  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
-  auto group_it = planning_groups_.find(planning_group_name);
+  std::string planning_group = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
     throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
+                       planning_group.c_str());
   }
-  ftr.setActivePlanningGroup(planning_group_name);
+  ftr.setActivePlanningGroup(planning_group);
   group_it->second->setStartStateToCurrentState();
   group_it->second->setPoseTarget(target_pose);
   
@@ -562,7 +562,7 @@ void Robot::planManipulationPath(std::string& planning_group_name, const geometr
   }
 }
 
-void Robot::planManipulationPath(std::string& planning_group_name, const std::string& named_target)
+void Robot::planManipulationPath(const std::string& planning_group_name, const std::string& named_target)
 {
   if (!planning_groups_.size())
   {
@@ -571,14 +571,14 @@ void Robot::planManipulationPath(std::string& planning_group_name, const std::st
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
-  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
-  auto group_it = planning_groups_.find(planning_group_name);
+  std::string planning_group = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
     throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
                        planning_group_name.c_str());
   }
-  ftr.setActivePlanningGroup(planning_group_name);
+  ftr.setActivePlanningGroup(planning_group);
   group_it->second->setStartStateToCurrentState();
   if (!group_it->second->setNamedTarget(named_target))
   {
@@ -611,12 +611,10 @@ void Robot::executeManipulationPath()
     bool success = false;
     group_it->second->setStartStateToCurrentState();
     group_it->second->setRandomTarget();
-    //success = static_cast<bool>(group_it->second->execute(last_plan));
-    size_t i=0;
-    while (!success && i<3) 
+    
+    for (size_t i=0; !success || i<3; i++)
     {
       TEMOTO_INFO_STREAM("Attempt = " << i+1);
-      ++i;
       success = static_cast<bool>(group_it->second->execute(last_plan));
     }
 
@@ -655,7 +653,7 @@ geometry_msgs::Pose Robot::getManipulationTarget()
   return current_pose;  
 }
 
-std::vector<std::string> Robot::getNamedTargetPoses(std::string& planning_group_name)
+std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_group_name)
 {
   if (!planning_groups_.size())
   {
@@ -664,17 +662,15 @@ std::vector<std::string> Robot::getNamedTargetPoses(std::string& planning_group_
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
-  planning_group_name = (planning_group_name == "") ? ftr.getActivePlanningGroup() : planning_group_name;
-  auto group_it = planning_groups_.find(planning_group_name);
+  std::string planning_group = (planning_group_name.empty()) ? ftr.getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
     throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
+                       planning_group.c_str());
   }
-  //ftr.setActivePlanningGroup(planning_group_name);
 
   return group_it->second->getNamedTargets();
-
 }
 
 void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
