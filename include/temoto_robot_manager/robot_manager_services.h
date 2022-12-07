@@ -24,6 +24,7 @@
 #include "temoto_robot_manager/RobotSetMode.h"
 #include "temoto_robot_manager/RobotGetVizInfo.h"
 #include "temoto_robot_manager/RobotGetTarget.h"
+#include "temoto_robot_manager/RobotGetNamedTargets.h"
 #include "temoto_robot_manager/RobotNavigationGoal.h"
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
@@ -44,6 +45,7 @@ const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
 const std::string SERVER_GET_CONFIG = "get_config";
 const std::string SERVER_SET_MANIPULATION_TARGET = "set_manipulation_target";
 const std::string SERVER_GET_MANIPULATION_TARGET = "get_manipulation_target";
+const std::string SERVER_GET_MANIPULATION_NAMED_TARGETS = "get_manipulation_named_targets";
 const std::string SERVER_NAVIGATION_GOAL = "navigation_goal";
 const std::string SERVER_SET_MODE = "set_mode";
 const std::string SERVER_GRIPPER_CONTROL_POSITION = "gripper_control_position";

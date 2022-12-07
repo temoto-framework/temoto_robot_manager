@@ -51,12 +51,15 @@ public:
   void recover(const std::string& parent_query_id);
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
-  void planManipulationPath(std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
-  void planManipulationPath(std::string& planning_group_name, const std::string& named_target);  
+  void planManipulationPath(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
+  void planManipulationPath(const std::string& planning_group_name, const std::string& named_target);  
 
   void executeManipulationPath();
   
   geometry_msgs::Pose getManipulationTarget();
+
+  std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
+  
   void goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose);
   void controlGripper(const std::string& robot_name, const float position);
   
