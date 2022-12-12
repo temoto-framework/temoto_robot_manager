@@ -17,6 +17,7 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_INTERFACE_H
 
+#include "temoto_core/common/base_subsystem.h"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "yaml-cpp/yaml.h"
