@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_geometry_msgs
   temoto_core
-  temoto_er_manager
+  temoto_process_manager
   temoto_resource_registrar
   yaml-cpp
 )
@@ -56,7 +56,7 @@ catkin_package(
     std_msgs 
     geometry_msgs
     temoto_core
-    temoto_er_manager
+    temoto_process_manager
     yaml-cpp
   DEPENDS 
 )

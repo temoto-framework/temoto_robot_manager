@@ -18,7 +18,7 @@
 #define TEMOTO_ROBOT_MANAGER__ROBOT_H
 
 #include "temoto_core/common/base_subsystem.h"
-#include "temoto_er_manager/temoto_er_manager_services.h"
+#include "temoto_process_manager/process_manager_services.hpp"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_manager.h"
@@ -95,11 +95,11 @@ private:
   void loadGripperController();
   void loadGripperDriver();
 
-  temoto_er_manager::LoadExtResource rosExecute(const std::string& package_name
+  temoto_process_manager::LoadProcess rosExecute(const std::string& package_name
   , const std::string& executable
   , const std::string& args = "");
 
-  void resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
+  void resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
   , temoto_resource_registrar::Status status_msg);
 
   void robotPoseCallback(const geometry_msgs::PoseWithCovarianceStamped& msg);
