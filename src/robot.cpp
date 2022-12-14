@@ -397,20 +397,20 @@ void Robot::loadGripperDriver()
   }
 }
 
-temoto_er_manager::LoadExtResource Robot::rosExecute(const std::string& package_name
+temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name
 , const std::string& executable
 , const std::string& args)
 try
 {
-  temoto_er_manager::LoadExtResource load_proc_srvc;
+  temoto_process_manager::LoadProcess load_proc_srvc;
   load_proc_srvc.request.package_name = package_name;
   load_proc_srvc.request.ros_namespace = config_->getAbsRobotNamespace(); //Execute in robot namespace
-  load_proc_srvc.request.action = temoto_er_manager::action::ROS_EXECUTE;
+  load_proc_srvc.request.action = temoto_process_manager::action::ROS_EXECUTE;
   load_proc_srvc.request.executable = executable;
   load_proc_srvc.request.args = args;
 
-  resource_registrar_.call<temoto_er_manager::LoadExtResource>(temoto_er_manager::srv_name::MANAGER
-  , temoto_er_manager::srv_name::SERVER
+  resource_registrar_.call<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
+  , temoto_process_manager::srv_name::SERVER
   , load_proc_srvc
   , std::bind(&Robot::resourceStatusCb, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -421,7 +421,7 @@ catch(temoto_core::error::ErrorStack& error_stack)
   throw FORWARD_ERROR(error_stack);
 }
 
-void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
+void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
 , temoto_resource_registrar::Status status_msg)
 {
   TEMOTO_WARN_STREAM_("Received a status message: " << status_msg.message_);
@@ -442,14 +442,14 @@ void Robot::resourceStatusCb(temoto_er_manager::LoadExtResource srv_msg
   else
   {
     setInError(false);
-    resource_registrar_.unload(temoto_er_manager::srv_name::MANAGER
+    resource_registrar_.unload(temoto_process_manager::srv_name::MANAGER
     , srv_msg.response.temoto_metadata.request_id);
 
     auto load_er_query = rosExecute(srv_msg.request.package_name
     , srv_msg.request.executable
     , srv_msg.request.args);
 
-    resource_registrar_.registerDependency(temoto_er_manager::srv_name::MANAGER
+    resource_registrar_.registerDependency(temoto_process_manager::srv_name::MANAGER
     , load_er_query.response.temoto_metadata.request_id
     , robot_resource_id_);
 
@@ -809,20 +809,20 @@ void Robot::robotPoseCallback(const geometry_msgs::PoseWithCovarianceStamped& ms
 void Robot::recover(const std::string& parent_query_id)
 {
   /*
-   * 1) get the sub-resource queries (LoadExtResource)
+   * 1) get the sub-resource queries (LoadProcess)
    * 2) Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
    * TODO: this method needs data race protection via mutexes
    */
 
-  auto erm_queries = resource_registrar_.getRosChildQueries<temoto_er_manager::LoadExtResource>(parent_query_id
-  , temoto_er_manager::srv_name::SERVER);
+  auto erm_queries = resource_registrar_.getRosChildQueries<temoto_process_manager::LoadProcess>(parent_query_id
+  , temoto_process_manager::srv_name::SERVER);
 
   TEMOTO_DEBUG_STREAM_("size of erm_queries: " << erm_queries.size());
   for (const auto& erm_query : erm_queries)
   {
     TEMOTO_DEBUG_STREAM("ERM query: " << erm_query.second.request);
-    resource_registrar_.registerClientCallback<temoto_er_manager::LoadExtResource>(temoto_er_manager::srv_name::MANAGER
-    , temoto_er_manager::srv_name::SERVER
+    resource_registrar_.registerClientCallback<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
+    , temoto_process_manager::srv_name::SERVER
     , erm_query.second.response.temoto_metadata.request_id
     , std::bind(&Robot::resourceStatusCb, this, std::placeholders::_1, std::placeholders::_2));
   }

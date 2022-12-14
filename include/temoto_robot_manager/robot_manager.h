@@ -21,7 +21,7 @@
 #include "temoto_core/common/base_subsystem.h"
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
-#include "temoto_er_manager/temoto_er_manager_services.h"
+#include "temoto_process_manager/process_manager_services.hpp"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"

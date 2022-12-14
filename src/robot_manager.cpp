@@ -17,7 +17,7 @@
 #include "ros/package.h"
 #include "temoto_core/temoto_error/temoto_error.h"
 #include "temoto_robot_manager/robot_manager.h"
-#include "temoto_er_manager/temoto_er_manager_services.h"
+#include "temoto_process_manager/process_manager_services.hpp"
 #include <boost/filesystem/operations.hpp>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
@@ -861,8 +861,8 @@ void RobotManager::restoreState()
    * 3) Per each LoadRobot query, find its according robot_config (extracted from robot_description.yaml)
    * 4) Instantiate the Robot object via its robot_config
    * 5) Per each Robot, invoke the "recover" method that accepts the ID of the LoadRobot query (parent ID)
-   * 5.1) Robot::recover: Register a LoadExtResource client to RR
-   * 5.2) Robot::recover: get the sub-resource queries (LoadExtResource)
+   * 5.1) Robot::recover: Register a LoadProcess client to RR
+   * 5.2) Robot::recover: get the sub-resource queries (LoadProcess)
    * 5.3) Robot::recover: Recover each robotic feature based on subresource, including assigning status callbacks per resource ID
    */
 
