@@ -673,7 +673,7 @@ std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_
   return group_it->second->getNamedTargets();
 }
 
-void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 {
   if (!isRobotOperational())
   {
@@ -682,17 +682,16 @@ void Robot::goalNavigation(const std::string& reference_frame, const geometry_ms
 
   FeatureNavigation& ftr = config_->getFeatureNavigation();
   std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
-  MoveBaseClient ac(act_rob_ns, true);    
+  MoveBaseClient ac(act_rob_ns, true);
   
   if (!ac.waitForServer(ros::Duration(5.0)))
   {
     TEMOTO_ERRSTACK("The move_base action server did not come up");
   }
 
-  move_base_msgs::MoveBaseGoal goal;  
-  goal.target_pose.pose = target_pose.pose;
-  goal.target_pose.header.frame_id = reference_frame;         
-  goal.target_pose.header.stamp = ros::Time::now();  
+  move_base_msgs::MoveBaseGoal goal;
+  goal.target_pose = target_pose;
+  goal.target_pose.header.stamp = ros::Time::now();
   ac.sendGoal(goal);
 
   // Wait until either the goal is finished or robot has encountered a system issue

@@ -269,12 +269,11 @@ public:
   }
 
   void navigationGoal(const std::string& robot_name
-  , const std::string& reference_frame
   , const geometry_msgs::PoseStamped& pose)
   {
-    temoto_robot_manager::RobotNavigationGoal msg; 
-    msg.request.reference_frame = reference_frame;
+    temoto_robot_manager::RobotNavigationGoal msg;
     msg.request.target_pose = pose;
+    msg.request.target_pose.header.frame_id = (pose.header.frame_id.empty()) ? "map" : pose.header.frame_id;
     msg.request.robot_name = robot_name;
     if (!client_navigation_goal_.call(msg))
     {
