@@ -555,7 +555,7 @@ try
 
   if (loaded_robot->isLocal())
   {    
-    res.pose = loaded_robot->getManipulationTarget();
+    res.pose = loaded_robot->getManipulationTarget(req.planning_group);
   }
   else
   {

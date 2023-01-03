@@ -56,7 +56,7 @@ public:
 
   void executeManipulationPath();
   
-  geometry_msgs::Pose getManipulationTarget();
+  geometry_msgs::PoseStamped getManipulationTarget(const std::string& planning_group_name);
 
   std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
   

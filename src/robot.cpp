@@ -612,7 +612,7 @@ void Robot::executeManipulationPath()
     group_it->second->setStartStateToCurrentState();
     group_it->second->setRandomTarget();
     
-    for (size_t i=0; !success || i<3; i++)
+    for (size_t i=0; !success && i<3; i++)
     {
       TEMOTO_INFO_STREAM("Attempt = " << i+1);
       success = static_cast<bool>(group_it->second->execute(last_plan));
@@ -632,23 +632,22 @@ void Robot::executeManipulationPath()
   }
 }
 
-geometry_msgs::Pose Robot::getManipulationTarget()
+geometry_msgs::PoseStamped Robot::getManipulationTarget(const std::string& planning_group_name)
 {
-  std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
-  
-  auto group_it = planning_groups_.find(planning_group_name);
-  TEMOTO_INFO_STREAM(planning_group_name.c_str());
+  std::string planning_group = (planning_group_name.empty()) ? config_->getFeatureManipulation().getActivePlanningGroup() : planning_group_name;
+  auto group_it = planning_groups_.find(planning_group);
+  TEMOTO_INFO_STREAM(planning_group.c_str());
 
-  geometry_msgs::Pose current_pose;
+  geometry_msgs::PoseStamped current_pose;
   
   if (group_it != planning_groups_.end())
   {    
-    current_pose = group_it->second->getCurrentPose().pose;    
+    current_pose = group_it->second->getCurrentPose();    
   }
   else 
   {
     //TODO: This section has to utilize temoto error management system
-    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group.c_str());
   } 
   return current_pose;  
 }
