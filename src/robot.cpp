@@ -612,6 +612,8 @@ void Robot::executeManipulationPath()
     group_it->second->setStartStateToCurrentState();
     group_it->second->setRandomTarget();
     
+    // Sometimes the arm doesn't execute the trajectory even when the plan is valid, Most probably a moveit issue. 
+    // Re send path - max 3 Attempts
     for (size_t i=0; !success && i<3; i++)
     {
       TEMOTO_INFO_STREAM("Attempt = " << i+1);
@@ -634,10 +636,7 @@ void Robot::executeManipulationPath()
 
 geometry_msgs::PoseStamped Robot::getManipulationTarget(const std::string& planning_group_name)
 {
-  std::string planning_group = (planning_group_name.empty()) ? config_->getFeatureManipulation().getActivePlanningGroup() : planning_group_name;
-  auto group_it = planning_groups_.find(planning_group);
-  TEMOTO_INFO_STREAM(planning_group.c_str());
-
+  auto group_it = planning_groups_.find(planning_group_name);
   geometry_msgs::PoseStamped current_pose;
   
   if (group_it != planning_groups_.end())
@@ -646,8 +645,9 @@ geometry_msgs::PoseStamped Robot::getManipulationTarget(const std::string& plann
   }
   else 
   {
-    //TODO: This section has to utilize temoto error management system
-    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group.c_str());
+    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
   } 
   return current_pose;  
 }
