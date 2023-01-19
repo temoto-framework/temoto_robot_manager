@@ -231,11 +231,12 @@ public:
     }
   }
 
- geometry_msgs::Pose getEndEffPose(const std::string& robot_name)
+ geometry_msgs::PoseStamped getEndEffPose(const std::string& robot_name, const std::string& planning_group)
  {
-    geometry_msgs::Pose pose;
+    geometry_msgs::PoseStamped pose;
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.robot_name = robot_name;
+    msg.request.planning_group = planning_group;
     if (!client_get_manipulation_target_.call(msg))
     {
       throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
@@ -269,12 +270,17 @@ public:
   }
 
   void navigationGoal(const std::string& robot_name
-  , const std::string& reference_frame
   , const geometry_msgs::PoseStamped& pose)
   {
-    temoto_robot_manager::RobotNavigationGoal msg; 
-    msg.request.reference_frame = reference_frame;
+    temoto_robot_manager::RobotNavigationGoal msg;
     msg.request.target_pose = pose;
+    
+    if (pose.header.frame_id.empty())
+    {
+      throw TEMOTO_ERRSTACK("Reference frame is not defined");
+    }
+
+    msg.request.target_pose.header.frame_id = pose.header.frame_id;
     msg.request.robot_name = robot_name;
     if (!client_navigation_goal_.call(msg))
     {

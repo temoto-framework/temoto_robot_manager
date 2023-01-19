@@ -1,6 +1,7 @@
 string robot_name
+string planning_group
 
 ---
 
-geometry_msgs/Pose pose
+geometry_msgs/PoseStamped pose
 bool success

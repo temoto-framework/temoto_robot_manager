@@ -612,7 +612,9 @@ void Robot::executeManipulationPath()
     group_it->second->setStartStateToCurrentState();
     group_it->second->setRandomTarget();
     
-    for (size_t i=0; !success || i<3; i++)
+    // Sometimes the arm doesn't execute the trajectory even when the plan is valid, Most probably a moveit issue. 
+    // Re send path - max 3 Attempts
+    for (size_t i=0; !success && i<3; i++)
     {
       TEMOTO_INFO_STREAM("Attempt = " << i+1);
       success = static_cast<bool>(group_it->second->execute(last_plan));
@@ -632,23 +634,20 @@ void Robot::executeManipulationPath()
   }
 }
 
-geometry_msgs::Pose Robot::getManipulationTarget()
+geometry_msgs::PoseStamped Robot::getManipulationTarget(const std::string& planning_group_name)
 {
-  std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
-  
   auto group_it = planning_groups_.find(planning_group_name);
-  TEMOTO_INFO_STREAM(planning_group_name.c_str());
-
-  geometry_msgs::Pose current_pose;
+  geometry_msgs::PoseStamped current_pose;
   
   if (group_it != planning_groups_.end())
   {    
-    current_pose = group_it->second->getCurrentPose().pose;    
+    current_pose = group_it->second->getCurrentPose();    
   }
   else 
   {
-    //TODO: This section has to utilize temoto error management system
     TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
+    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
+                       planning_group_name.c_str());
   } 
   return current_pose;  
 }
@@ -673,7 +672,7 @@ std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_
   return group_it->second->getNamedTargets();
 }
 
-void Robot::goalNavigation(const std::string& reference_frame, const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 {
   if (!isRobotOperational())
   {
@@ -682,17 +681,16 @@ void Robot::goalNavigation(const std::string& reference_frame, const geometry_ms
 
   FeatureNavigation& ftr = config_->getFeatureNavigation();
   std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
-  MoveBaseClient ac(act_rob_ns, true);    
+  MoveBaseClient ac(act_rob_ns, true);
   
   if (!ac.waitForServer(ros::Duration(5.0)))
   {
     TEMOTO_ERRSTACK("The move_base action server did not come up");
   }
 
-  move_base_msgs::MoveBaseGoal goal;  
-  goal.target_pose.pose = target_pose.pose;
-  goal.target_pose.header.frame_id = reference_frame;         
-  goal.target_pose.header.stamp = ros::Time::now();  
+  move_base_msgs::MoveBaseGoal goal;
+  goal.target_pose = target_pose;
+  goal.target_pose.header.stamp = ros::Time::now();
   ac.sendGoal(goal);
 
   // Wait until either the goal is finished or robot has encountered a system issue

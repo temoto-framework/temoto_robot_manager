@@ -555,7 +555,7 @@ try
 
   if (loaded_robot->isLocal())
   {    
-    res.pose = loaded_robot->getManipulationTarget();
+    res.pose = loaded_robot->getManipulationTarget(req.planning_group);
   }
   else
   {
@@ -632,7 +632,7 @@ try
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
-    loaded_robot->goalNavigation(req.reference_frame, req.target_pose);  // The robot would move with respect to this coordinate frame
+    loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
     res.success = true;   
   }
   else
