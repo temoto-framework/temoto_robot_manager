@@ -639,8 +639,7 @@ void Robot::executeManipulationPath()
   {
     bool success = false;
     group_it->second->setStartStateToCurrentState();
-    //group_it->second->setRandomTarget();
-    
+
     // Sometimes the arm doesn't execute the trajectory even when the plan is valid, Most probably a moveit issue. 
     // Re send path - max 3 Attempts
     for (size_t i=0; !success && i<3; i++)

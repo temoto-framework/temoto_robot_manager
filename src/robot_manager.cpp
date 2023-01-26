@@ -22,6 +22,7 @@
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <sstream>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace temoto_robot_manager
 {
@@ -447,27 +448,25 @@ try
     TEMOTO_DEBUG_STREAM_("Creating a manipulation path for robot '" << loaded_robot->getName() 
       << " with goal pose: " << req.goal_target <<std::endl);
 
-    temoto_robot_manager::RobotPlanManipulation rpm_msg;
-
+    Eigen::Quaterniond quat;
     switch (req.goal_target)
     {
-      case rpm_msg.request.DEFAULT_TARGET:
-        // There is not default target - need to remove?
-        break;
-
-      case rpm_msg.request.POSE_STAMPED:
+      case RobotPlanManipulation::Request::POSE_STAMPED:
+        tf2::fromMsg(req.target_pose.pose.orientation, quat);
+        req.target_pose.pose.orientation = tf2::toMsg(quat.normalized());
         loaded_robot->planManipulationPath(req.planning_group, req.target_pose);
         break;
 
-      case rpm_msg.request.NAMED_TARGET_POSE:
+      case RobotPlanManipulation::Request::NAMED_TARGET_POSE:
         loaded_robot->planManipulationPath(req.planning_group, req.named_target);
         break;
 
-      case rpm_msg.request.JOINT_STATE:
+      case RobotPlanManipulation::Request::JOINT_STATE:
         loaded_robot->planManipulationPath(req.planning_group, req.joint_state_target);
         break;
+
       default:
-        TEMOTO_INFO_STREAM("Goal_target_unknown: ");
+        throw TEMOTO_ERRSTACK("Unable to plan because the Goal_target is unknown.");
     }
 
     TEMOTO_DEBUG_("Done planning.");
@@ -567,21 +566,20 @@ try
   TEMOTO_DEBUG_STREAM_("Getting the manipulation target of '" << req.robot_name << " ...");
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
-  temoto_robot_manager::RobotGetTarget rgt_msg;
   if (loaded_robot->isLocal())
   {
     switch (req.get_current_state)
     {
-      case rgt_msg.request.END_EFFECTOR:
+      case RobotGetTarget::Request::END_EFFECTOR:
         res.pose = loaded_robot->getManipulationTarget(req.planning_group);
         break;
 
-      case rgt_msg.request.JOINT_STATE:
+      case RobotGetTarget::Request::JOINT_STATE:
         res.joint_values = loaded_robot->getCurrentJointValues(req.planning_group);
         break;
 
       default:
-        TEMOTO_INFO_STREAM("current state not defined: ");
+        throw TEMOTO_ERRSTACK("Unable to get manipulation target because the get_current_state is unknown");
     }
   }
   else

@@ -122,24 +122,6 @@ public:
     throw FWD_TEMOTO_ERRSTACK(e);
   }
 
-
-  void planManipulation(const std::string& robot_name, std::string planning_group = "")
-  {
-    temoto_robot_manager::RobotPlanManipulation msg;
-    msg.request.goal_target = msg.request.DEFAULT_TARGET;
-    msg.request.planning_group = planning_group;
-    msg.request.robot_name = robot_name;
-    if (!client_plan_.call(msg))
-    {
-      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
-    }
-    
-    if (!msg.response.success)
-    {
-      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'planManipulation'");
-    }
-  }
-
   void planManipulation(const std::string& robot_name
   , const std::string& planning_group
   , const geometry_msgs::PoseStamped& pose)
@@ -251,7 +233,6 @@ public:
 
  geometry_msgs::PoseStamped getEndEffPose(const std::string& robot_name, const std::string& planning_group)
  {
-    geometry_msgs::PoseStamped pose;
     temoto_robot_manager::RobotGetTarget msg; 
     msg.request.robot_name = robot_name;
     msg.request.planning_group = planning_group;
@@ -265,14 +246,11 @@ public:
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getEndEffPose'");
     }
-
-    pose = msg.response.pose;
-    return pose;
+    return msg.response.pose;
   }
 
   std::vector<double> getCurrentJointValues(const std::string& robot_name, const std::string& planning_group)
  {
-    std::vector<double> joints;
     temoto_robot_manager::RobotGetTarget msg;
     msg.request.robot_name = robot_name;
     msg.request.planning_group = planning_group;
@@ -286,14 +264,11 @@ public:
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getEndEffPose'");
     }
-
-    joints = msg.response.joint_values;
-    return joints;
+    return msg.response.joint_values;
   }
 
  std::vector<std::string> getNamedTargets(const std::string& robot_name, const std::string& planning_group)
  {
-    std::vector<std::string> named_target_poses;
     temoto_robot_manager::RobotGetNamedTargets msg; 
     msg.request.robot_name = robot_name;
     msg.request.planning_group = planning_group;
@@ -304,9 +279,8 @@ public:
     if (!msg.response.success)
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'getEndEffPose'");
-    }
-    named_target_poses = msg.response.named_target_poses;
-    return named_target_poses;
+    }    
+    return msg.response.named_target_poses;
   }
 
   void navigationGoal(const std::string& robot_name
