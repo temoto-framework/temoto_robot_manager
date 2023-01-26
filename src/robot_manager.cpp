@@ -22,7 +22,6 @@
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <sstream>
-#include <tf2_eigen/tf2_eigen.h>
 
 namespace temoto_robot_manager
 {
@@ -448,12 +447,9 @@ try
     TEMOTO_DEBUG_STREAM_("Creating a manipulation path for robot '" << loaded_robot->getName() 
       << " with goal pose: " << req.goal_target <<std::endl);
 
-    Eigen::Quaterniond quat;
     switch (req.goal_target)
     {
       case RobotPlanManipulation::Request::POSE_STAMPED:
-        tf2::fromMsg(req.target_pose.pose.orientation, quat);
-        req.target_pose.pose.orientation = tf2::toMsg(quat.normalized());
         loaded_robot->planManipulationPath(req.planning_group, req.target_pose);
         break;
 
