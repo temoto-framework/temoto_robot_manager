@@ -1,7 +1,12 @@
 string robot_name
 string planning_group
 
+uint8 END_EFFECTOR=0
+uint8 JOINT_STATE=1
+
+uint8 get_current_state
 ---
 
 geometry_msgs/PoseStamped pose
+float64[] joint_values
 bool success

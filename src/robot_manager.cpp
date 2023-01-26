@@ -445,16 +445,30 @@ try
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Creating a manipulation path for robot '" << loaded_robot->getName() 
-      << " with goal pose: " << req.target_pose <<std::endl);
+      << " with goal pose: " << req.goal_target <<std::endl);
 
-    if (req.use_named_target)
+    temoto_robot_manager::RobotPlanManipulation rpm_msg;
+
+    switch (req.goal_target)
     {
-      loaded_robot->planManipulationPath(req.planning_group, req.named_target);
+      case rpm_msg.request.DEFAULT_TARGET:
+        // There is not default target - need to remove?
+        break;
+
+      case rpm_msg.request.POSE_STAMPED:
+        loaded_robot->planManipulationPath(req.planning_group, req.target_pose);
+        break;
+
+      case rpm_msg.request.NAMED_TARGET_POSE:
+        loaded_robot->planManipulationPath(req.planning_group, req.named_target);
+        break;
+
+      case rpm_msg.request.JOINT_STATE:
+        loaded_robot->planManipulationPath(req.planning_group, req.joint_state_target);
+        break;
+      default:
+        TEMOTO_INFO_STREAM("Goal_target_unknown: ");
     }
-    else
-    {
-      loaded_robot->planManipulationPath(req.planning_group, req.target_pose);        
-    }      
 
     TEMOTO_DEBUG_("Done planning.");
   }
@@ -553,9 +567,22 @@ try
   TEMOTO_DEBUG_STREAM_("Getting the manipulation target of '" << req.robot_name << " ...");
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
+  temoto_robot_manager::RobotGetTarget rgt_msg;
   if (loaded_robot->isLocal())
-  {    
-    res.pose = loaded_robot->getManipulationTarget(req.planning_group);
+  {
+    switch (req.get_current_state)
+    {
+      case rgt_msg.request.END_EFFECTOR:
+        res.pose = loaded_robot->getManipulationTarget(req.planning_group);
+        break;
+
+      case rgt_msg.request.JOINT_STATE:
+        res.joint_values = loaded_robot->getCurrentJointValues(req.planning_group);
+        break;
+
+      default:
+        TEMOTO_INFO_STREAM("current state not defined: ");
+    }
   }
   else
   {
