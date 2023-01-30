@@ -52,12 +52,13 @@ public:
   void addPlanningGroup(const std::string& planning_group_name);
   void removePlanningGroup(const std::string& planning_group_name);
   void planManipulationPath(const std::string& planning_group_name, const geometry_msgs::PoseStamped& target_pose);
-  void planManipulationPath(const std::string& planning_group_name, const std::string& named_target);  
+  void planManipulationPath(const std::string& planning_group_name, const std::string& named_target);
+  void planManipulationPath(const std::string& planning_group_name, const std::vector<double> &joint_state_target);
 
   void executeManipulationPath();
   
   geometry_msgs::PoseStamped getManipulationTarget(const std::string& planning_group_name);
-
+  std::vector<double> getCurrentJointValues(const std::string& planning_group_name);
   std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
   
   void goalNavigation(const geometry_msgs::PoseStamped& target_pose);

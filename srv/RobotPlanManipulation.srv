@@ -1,9 +1,14 @@
-bool use_default_target
-bool use_named_target
+uint8 POSE_STAMPED=0
+uint8 NAMED_TARGET_POSE=1
+uint8 JOINT_STATE=2
+
+uint8 goal_target
+
+string robot_name
 string planning_group
 string named_target
-string robot_name
 geometry_msgs/PoseStamped target_pose
+float64[] joint_state_target
 
 ---
 
