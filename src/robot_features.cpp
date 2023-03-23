@@ -46,7 +46,9 @@ FeatureManipulation::FeatureManipulation() : FeatureWithDriver("manipulation")
 }
 
 FeatureManipulation::FeatureManipulation(const YAML::Node& manip_conf)
-  : FeatureWithDriver("manipulation")
+: FeatureWithDriver("manipulation")
+, joint_states_topic_("joint_states")
+, robot_description_semantic_("robot_description_semantic")
 {
   this->package_name_ = manip_conf["controller"]["package_name"].as<std::string>();
   if (manip_conf["controller"]["executable"])
@@ -63,6 +65,24 @@ FeatureManipulation::FeatureManipulation(const YAML::Node& manip_conf)
     this->args_ = manip_conf["controller"]["args"].as<std::string>();
   }
 
+  if (manip_conf["controller"]["joint_states_topic"])
+  {
+    this->joint_states_topic_ = manip_conf["controller"]["joint_states_topic"].as<std::string>();
+  }
+  else
+  {
+    this->joint_states_topic_ = "joint_states";
+  }
+
+  if (manip_conf["controller"]["robot_description_semantic"])
+  {
+    this->robot_description_semantic_ = manip_conf["controller"]["robot_description_semantic"].as<std::string>();
+  }
+  else
+  {
+    this->robot_description_semantic_ = "robot_description_semantic";
+  }
+  
   // parse planning groups
   YAML::Node yaml_groups = manip_conf["controller"]["planning_groups"];
   for (YAML::const_iterator it = yaml_groups.begin(); it != yaml_groups.end(); ++it)

@@ -242,7 +242,8 @@ void Robot::loadManipulationController()
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     //ftr.setResourceId(res_id);
-    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
+    // std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
+    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/" + ftr.getRobotDescriptionParam();
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
 
@@ -277,7 +278,8 @@ void Robot::loadManipulationDriver()
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     //ftr.setDriverResourceId(res_id);
 
-    std::string joint_states_topic = config_->getAbsRobotNamespace() + "/joint_states";
+    std::string joint_states_topic = config_->getAbsRobotNamespace() + "/" + ftr.getJointStatesTopic();
+    // std::string joint_states_topic = config_->getAbsRobotNamespace() + "/joint_states";
     waitForTopic(joint_states_topic);
 
     ftr.setDriverLoaded(true);

@@ -190,10 +190,23 @@ public:
     //TODO: check if group exists
     active_planning_group_ = planning_group_name;
   }
+
+  const std::string& getJointStatesTopic() const
+  {
+    return joint_states_topic_;
+  }
+
+  const std::string& getRobotDescriptionParam() const
+  {
+    return robot_description_semantic_;
+  }
   
 private:
   std::vector<std::string> planning_groups_;
   std::string active_planning_group_;
+  std::string joint_states_topic_;
+  std::string robot_description_semantic_;
+  
 };
 
 
