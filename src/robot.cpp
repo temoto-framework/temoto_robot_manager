@@ -122,6 +122,7 @@ void Robot::load()
   if (config_->getFeatureURDF().isEnabled())
   {
     loadUrdf();
+    TEMOTO_WARN(" ======== End Load URDF ======== ");
   }
  
   /*
@@ -130,11 +131,13 @@ void Robot::load()
   if (config_->getFeatureNavigation().isDriverEnabled())
   {
     loadNavigationDriver();
+    TEMOTO_WARN(" ======== End loadNavigationDriver ======== ");
   }
 
   if (config_->getFeatureNavigation().isEnabled())
   {
     loadNavigationController();
+    TEMOTO_WARN(" ======== End loadNavigationController ======== ");
   }
 
   /*
@@ -143,11 +146,13 @@ void Robot::load()
   if (config_->getFeatureManipulation().isDriverEnabled())
   {
     loadManipulationDriver();
+    TEMOTO_WARN(" ======== End loadManipulationDriver ======== ");
   }
 
   if (config_->getFeatureManipulation().isEnabled())
   {
     loadManipulationController();
+    TEMOTO_WARN(" ======== End loadManipulationController ======== ");
   }
 
   /*
@@ -164,6 +169,7 @@ void Robot::load()
   }
 
   robot_loaded_ = true;
+  TEMOTO_WARN(" ======== End robot_loaded_ True ======== ");
 }
 
 void Robot::waitForParam(const std::string& param)
@@ -219,13 +225,20 @@ try
   std::string urdf_path = '/' + ros::package::getPath(ftr.getPackageName()) + '/' + ftr.getExecutable();
   auto load_er_msg = rosExecute("temoto_robot_manager", "urdf_loader.py", urdf_path);
 
-  std::string robot_desc_param = config_->getAbsRobotNamespace() + "/robot_description";
+  std::string robot_desc_param = config_->getAbsRobotNamespace() + ftr.getRobotDescription();
+  // std::string robot_desc_param = config_->getAbsRobotNamespace() + "/spot_arm/robot_description";
+
+  // TEMOTO_INFO_STREAM("robot_desc_param '%s'.", robot_desc_param.c_str());
+  std::cout << "\033[0;33;42m Robot Description URDF \033[0m" << std::endl;
+  std::cout << robot_desc_param << "   "  << robot_desc_param.c_str() << std::endl;
+
   waitForParam(robot_desc_param);
   ftr.setLoaded(true);
   TEMOTO_DEBUG("Feature 'URDF' loaded.");
 }
 catch(temoto_core::error::ErrorStack& error_stack)
 {
+  TEMOTO_WARN("================ ERROR WITH URDF ================");
   throw FORWARD_ERROR(error_stack);
 }
 
@@ -241,9 +254,18 @@ void Robot::loadManipulationController()
   {
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+
+    TEMOTO_WARN("================ END ROS EXECUTE in Controller ================");
+
     //ftr.setResourceId(res_id);
     // std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
-    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/" + ftr.getRobotDescriptionParam();
+    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/" + ftr.getRobotDescSemanticParam();
+
+    TEMOTO_WARN("================ desc_sem_param ================");
+
+    // TEMOTO_INFO_STREAM("desc_sem_param '%s'.", desc_sem_param.c_str());
+    std::cout << desc_sem_param << "   "  << desc_sem_param.c_str() << std::endl;
+
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
 
@@ -251,6 +273,7 @@ void Robot::loadManipulationController()
     // TODO: read groups from srdf automatically
     for (auto group : ftr.getPlanningGroups())
     {
+      std::cout << "\033[0;33;42m Add Planning group \033[0m" << std::endl;
       TEMOTO_DEBUG("Adding planning group '%s'.", group.c_str());
       addPlanningGroup(group);
     }
@@ -260,6 +283,7 @@ void Robot::loadManipulationController()
   }
   catch(temoto_core::error::ErrorStack& error_stack)
   {
+    TEMOTO_WARN("================ ERROR in Controller ================");
     throw FORWARD_ERROR(error_stack);
   }
 }
@@ -511,9 +535,24 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
   //Prepare robot description path and a nodehandle, which is in robot's namespace
-  std::string rob_desc = config_->getAbsRobotNamespace() + "/robot_description";
-  ros::NodeHandle mg_nh(config_->getAbsRobotNamespace());
+  std::string ns = "/spot_arm";
+  std::string rob_desc = config_->getAbsRobotNamespace() + config_->getFeatureURDF().getRobotDescription();
+
+  TEMOTO_WARN("================ Add planning group function ================");
+  
+  std::cout << config_->getAbsRobotNamespace() + "/" + config_->getFeatureURDF().getRobotDescripNamespace() << std::endl;
+
+  std::string mg_ms = (config_->getFeatureURDF().getRobotDescripNamespace().empty()) ? config_->getAbsRobotNamespace() 
+                      : config_->getAbsRobotNamespace() + "/" + config_->getFeatureURDF().getRobotDescripNamespace();
+
+  ros::NodeHandle mg_nh(mg_ms);
+
+  TEMOTO_WARN("================ After mg_nh ================");
+
   moveit::planning_interface::MoveGroupInterface::Options opts(planning_group_name, rob_desc, mg_nh);
+
+  TEMOTO_WARN("================ After Options ================");
+
   std::unique_ptr<moveit::planning_interface::MoveGroupInterface> group(
       new moveit::planning_interface::MoveGroupInterface(opts));
   group->setPlannerId("RRTConnectkConfigDefault");
@@ -527,6 +566,7 @@ void Robot::addPlanningGroup(const std::string& planning_group_name)
   group->setGoalJointTolerance(0.001);
   TEMOTO_DEBUG("Active end effector link: %s", group->getEndEffectorLink().c_str());
 
+  TEMOTO_WARN("================ Before Emplace ================");
   planning_groups_.emplace(planning_group_name, std::move(group));
 }
 
@@ -803,7 +843,8 @@ std::string Robot::getVizInfo()
 
   if (config_->getFeatureURDF().isEnabled())
   {
-    rviz["urdf"]["robot_description"] = act_rob_ns + "/robot_description";
+    // rviz["urdf"]["robot_description"] = act_rob_ns + "/spot_arm/robot_description";
+    rviz["urdf"]["robot_description"] = act_rob_ns + config_->getFeatureURDF().getRobotDescription();
   }
 
   if (config_->getFeatureManipulation().isEnabled())

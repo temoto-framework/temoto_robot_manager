@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import xacro
@@ -27,7 +27,13 @@ def loader():
     
     sys.stdout = sys.__stdout__
 #    print(xacro_out.getvalue())
-    rospy.set_param('robot_description', xacro_out.getvalue())
+    
+    print(sys.argv[2])              # ns of robot_description
+    print(sys.argv[2]+'/robot_description')
+
+    # rospy.set_param('robot_description', xacro_out.getvalue())
+    rospy.set_param('spot_arm/robot_description', xacro_out.getvalue())
+
 
     rospy.spin()
 

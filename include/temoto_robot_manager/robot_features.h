@@ -162,9 +162,23 @@ protected:
 // URDF feature
 class FeatureURDF : public RobotFeature
 {
-  public:
+public:
   FeatureURDF();
   FeatureURDF(const YAML::Node& urdf_conf);
+
+  const std::string& getRobotDescription() const
+  {
+    return robot_description_;
+  }
+
+  const std::string& getRobotDescripNamespace() const
+  {
+    return namespace_;
+  }
+
+private:
+  std::string namespace_;
+  std::string robot_description_;
 };
 
 
@@ -196,7 +210,7 @@ public:
     return joint_states_topic_;
   }
 
-  const std::string& getRobotDescriptionParam() const
+  const std::string& getRobotDescSemanticParam() const
   {
     return robot_description_semantic_;
   }
@@ -262,4 +276,3 @@ public:
 }
 
 #endif
-

@@ -38,6 +38,16 @@ FeatureURDF::FeatureURDF(const YAML::Node& urdf_conf) : RobotFeature("urdf")
 {
   this->package_name_ = urdf_conf["package_name"].as<std::string>();
   this->executable_ = urdf_conf["executable"].as<std::string>();
+  if (urdf_conf["namespace"])
+  {
+    this->namespace_ = urdf_conf["namespace"].as<std::string>();
+    this->robot_description_ = "/" + urdf_conf["namespace"].as<std::string>() + "/robot_description";
+  }
+  else
+  {
+    this->namespace_ = "";
+    this->robot_description_ = "/robot_description";
+  }
   this->feature_enabled_ = true;
 }
 
