@@ -145,12 +145,14 @@ void Robot::load()
    */ 
   if (config_->getFeatureManipulation().isDriverEnabled())
   {
+    TEMOTO_WARN(" ======== Start loadManipulationDriver ======== ");
     loadManipulationDriver();
     TEMOTO_WARN(" ======== End loadManipulationDriver ======== ");
   }
 
   if (config_->getFeatureManipulation().isEnabled())
   {
+    TEMOTO_WARN(" ======== Start loadManipulationController ======== ");
     loadManipulationController();
     TEMOTO_WARN(" ======== End loadManipulationController ======== ");
   }
@@ -223,9 +225,10 @@ try
 {
   FeatureURDF& ftr = config_->getFeatureURDF();
   std::string urdf_path = '/' + ros::package::getPath(ftr.getPackageName()) + '/' + ftr.getExecutable();
-  auto load_er_msg = rosExecute("temoto_robot_manager", "urdf_loader.py", urdf_path);
-
   std::string robot_desc_param = config_->getAbsRobotNamespace() + ftr.getRobotDescription();
+  std::string args = urdf_path + " " + robot_desc_param;
+  auto load_er_msg = rosExecute("temoto_robot_manager", "urdf_loader.py", args);
+
   // std::string robot_desc_param = config_->getAbsRobotNamespace() + "/spot_arm/robot_description";
 
   // TEMOTO_INFO_STREAM("robot_desc_param '%s'.", robot_desc_param.c_str());
@@ -303,6 +306,9 @@ void Robot::loadManipulationDriver()
     //ftr.setDriverResourceId(res_id);
 
     std::string joint_states_topic = config_->getAbsRobotNamespace() + "/" + ftr.getJointStatesTopic();
+    TEMOTO_WARN("================ Joint State Topic ================");
+    TEMOTO_INFO_STREAM(joint_states_topic);
+
     // std::string joint_states_topic = config_->getAbsRobotNamespace() + "/joint_states";
     waitForTopic(joint_states_topic);
 
