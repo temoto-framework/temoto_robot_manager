@@ -38,17 +38,17 @@ namespace srv_name
 const std::string MANAGER = "robot_manager";
 const std::string SYNC_TOPIC = "/temoto_robot_manager/" + MANAGER + "/sync";
 
-const std::string SERVER_LOAD = "load";
-const std::string SERVER_PLAN = "plan";
-const std::string SERVER_EXECUTE = "execute";
-const std::string SERVER_GET_VIZ_INFO = "get_visualization_info";
-const std::string SERVER_GET_CONFIG = "get_config";
-const std::string SERVER_SET_MANIPULATION_TARGET = "set_manipulation_target";
-const std::string SERVER_GET_MANIPULATION_TARGET = "get_manipulation_target";
-const std::string SERVER_GET_MANIPULATION_NAMED_TARGETS = "get_manipulation_named_targets";
-const std::string SERVER_NAVIGATION_GOAL = "navigation_goal";
-const std::string SERVER_SET_MODE = "set_mode";
-const std::string SERVER_GRIPPER_CONTROL_POSITION = "gripper_control_position";
+const std::string SERVER_LOAD = MANAGER + "/" + "load";
+const std::string SERVER_PLAN = MANAGER + "/" + "plan";
+const std::string SERVER_EXECUTE = MANAGER + "/" + "execute";
+const std::string SERVER_GET_VIZ_INFO = MANAGER + "/" + "get_visualization_info";
+const std::string SERVER_GET_CONFIG = MANAGER + "/" + "get_config";
+const std::string SERVER_SET_MANIPULATION_TARGET = MANAGER + "/" + "set_manipulation_target";
+const std::string SERVER_GET_MANIPULATION_TARGET = MANAGER + "/" + "get_manipulation_target";
+const std::string SERVER_GET_MANIPULATION_NAMED_TARGETS = MANAGER + "/" + "get_manipulation_named_targets";
+const std::string SERVER_NAVIGATION_GOAL = MANAGER + "/" + "navigation_goal";
+const std::string SERVER_SET_MODE = MANAGER + "/" + "set_mode";
+const std::string SERVER_GRIPPER_CONTROL_POSITION = MANAGER + "/" + "gripper_control_position";
 }
 
 namespace modes
