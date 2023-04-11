@@ -16,6 +16,7 @@
 
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_core/common/tools.h"
+#include <boost/algorithm/string/replace.hpp>
 #include <string>
 #include <vector>
 
@@ -110,6 +111,14 @@ void RobotConfig::parseUrdf()
   try
   {
     feature_urdf_ = FeatureURDF(yaml_config_["urdf"]);
+    if (!feature_urdf_.getArgs().empty())
+    {
+      std::string processed_args = feature_urdf_.getArgs();
+      boost::replace_all(processed_args, "__ABS_NAMESPACE__", getAbsRobotNamespace());
+      
+      feature_urdf_.setArgs(processed_args);
+      yaml_config_["urdf"]["args"] = processed_args;
+    }
     enabled_features_.push_back(&feature_urdf_);
   }
   catch (...)

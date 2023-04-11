@@ -54,9 +54,9 @@ public:
   }
 
   // Get the robot's namespace
-  std::string getAbsRobotNamespace() const
+  const std::string& getAbsRobotNamespace() const
   {
-    return "/" + temoto_namespace_ + "/robot_manager/robots/" + name_;
+    return robot_absolute_namespace_;
   }
 
   void parseName();
@@ -131,6 +131,7 @@ public:
   void setTemotoNamespace(std::string temoto_namespace)
   {
     temoto_namespace_ = temoto_namespace;
+    robot_absolute_namespace_ = temoto_namespace_ + "/" + name_;
     yaml_config_["robot_absolute_namespace"] = getAbsRobotNamespace();
   }
 
@@ -141,6 +142,7 @@ private:
   std::string log_group_ = "robot_manager";
 
   std::string temoto_namespace_;
+  std::string robot_absolute_namespace_;
   YAML::Node yaml_config_;
 
   FeatureURDF feature_urdf_;

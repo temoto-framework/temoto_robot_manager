@@ -38,7 +38,13 @@ FeatureURDF::FeatureURDF(const YAML::Node& urdf_conf) : RobotFeature("urdf")
 {
   this->package_name_ = urdf_conf["package_name"].as<std::string>();
   this->executable_ = urdf_conf["executable"].as<std::string>();
+  setFromConfig(urdf_conf["args"], this->args_);
   this->feature_enabled_ = true;
+}
+
+void FeatureURDF::setArgs(const std::string& args)
+{
+  this->args_ = args;
 }
 
 FeatureManipulation::FeatureManipulation() : FeatureWithDriver("manipulation")

@@ -216,10 +216,13 @@ void Robot::loadUrdf()
 try
 {
   FeatureURDF& ftr = config_->getFeatureURDF();
-  std::string urdf_path = '/' + ros::package::getPath(ftr.getPackageName()) + '/' + ftr.getExecutable();
-  auto load_er_msg = rosExecute("temoto_robot_manager", "urdf_loader.py", urdf_path);
+  std::string urdf_path = ros::package::getPath(ftr.getPackageName()) + '/' + ftr.getExecutable();
+  std::string args = ftr.getArgs();
+  std::string cmd = urdf_path + " " + args;
 
-  std::string robot_desc_param = config_->getAbsRobotNamespace() + "/robot_description";
+  auto load_er_msg = rosExecute("temoto_robot_manager", "urdf_loader.py", cmd);
+
+  std::string robot_desc_param = "/" + config_->getAbsRobotNamespace() + "/robot_description";
   waitForParam(robot_desc_param);
   ftr.setLoaded(true);
   TEMOTO_DEBUG("Feature 'URDF' loaded.");
@@ -277,7 +280,7 @@ void Robot::loadManipulationDriver()
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     //ftr.setDriverResourceId(res_id);
 
-    std::string joint_states_topic = config_->getAbsRobotNamespace() + "/joint_states";
+    std::string joint_states_topic = "/" + config_->getAbsRobotNamespace() + "/joint_states";
     waitForTopic(joint_states_topic);
 
     ftr.setDriverLoaded(true);
@@ -304,7 +307,7 @@ void Robot::loadNavigationController()
     //ftr.setResourceId(res_id);
 
     // wait for command velocity to be published
-    std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
+    std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
     waitForTopic(cmd_vel_topic);
 
     // Subscribe to the pose messages
@@ -339,7 +342,7 @@ void Robot::loadNavigationDriver()
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     //ftr.setDriverResourceId(res_id);
-    std::string odom_topic = config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
+    std::string odom_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
     waitForTopic(odom_topic);
     ftr.setDriverLoaded(true);
     TEMOTO_DEBUG("Feature 'Navigation Driver' loaded.");        
@@ -461,7 +464,7 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
     {
       TEMOTO_WARN_STREAM_("The controller of " << config_->getName() << " crashed, restarting it ...");
       // wait for command velocity to be published
-      std::string cmd_vel_topic = config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
+      std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
       waitForTopic(cmd_vel_topic);
     }
     else if (ftr.getDriverPackageName() == srv_msg.request.package_name &&
@@ -469,7 +472,7 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
     {
       TEMOTO_WARN_STREAM_("The driver of " << config_->getName() << " crashed, restarting it ...");
       // wait for command velocity to be published
-      std::string odom_topic = config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
+      std::string odom_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
       waitForTopic(odom_topic);
       ftr.setDriverLoaded(true);
     }
@@ -722,7 +725,7 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
   }
 
   FeatureNavigation& ftr = config_->getFeatureNavigation();
-  std::string act_rob_ns = config_->getAbsRobotNamespace() + "/move_base";
+  std::string act_rob_ns = "/" + config_->getAbsRobotNamespace() + "/move_base";
   MoveBaseClient ac(act_rob_ns, true);
   
   if (!ac.waitForServer(ros::Duration(5.0)))

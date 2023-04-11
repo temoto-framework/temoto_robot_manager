@@ -165,6 +165,7 @@ class FeatureURDF : public RobotFeature
   public:
   FeatureURDF();
   FeatureURDF(const YAML::Node& urdf_conf);
+  void setArgs(const std::string& args);
 };
 
 
