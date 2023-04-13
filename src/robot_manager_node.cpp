@@ -26,7 +26,8 @@ int main(int argc, char** argv)
   po::variables_map vm;
   po::options_description desc("Allowed options");
   desc.add_options()
-    ("config-base-path", po::value<std::string>(), "Base path to robot_description.yaml config file.");
+    ("config-base-path", po::value<std::string>(), "Base path to robot_description.yaml config file.")
+    ("restore-from-catalog", po::value<bool>(), "Restore the state of the manager via RR catalog.");
 
   po::store(po::parse_command_line(argc, argv, desc), vm);
   po::notify(vm);
@@ -43,9 +44,15 @@ int main(int argc, char** argv)
     return 1;
   }
 
+  bool restore_from_catalog{false};
+  if (vm.count("restore-from-catalog"))
+  {
+    restore_from_catalog = vm["restore-from-catalog"].as<bool>();
+  }
+
   TEMOTO_LOG_ATTR.initialize("robot_manager");
   ros::init(argc, argv, TEMOTO_LOG_ATTR.getSubsystemName());
-  RobotManager rm(config_base_path);
+  RobotManager rm(config_base_path, restore_from_catalog);
 
   ros::AsyncSpinner spinner(4);
   spinner.start();

@@ -25,7 +25,7 @@
 
 namespace temoto_robot_manager
 {
-RobotManager::RobotManager(const std::string& config_base_path)
+RobotManager::RobotManager(const std::string& config_base_path, bool restore_from_catalog)
 : temoto_core::BaseSubsystem("robot_manager", temoto_core::error::Subsystem::ROBOT_MANAGER, __func__)
 , resource_registrar_(srv_name::MANAGER)
 , config_syncer_(srv_name::MANAGER, srv_name::SYNC_TOPIC, &RobotManager::syncCb, this)
@@ -60,7 +60,7 @@ RobotManager::RobotManager(const std::string& config_base_path)
   /*
    * Check if this node should be recovered from a previous system failure
    */
-  if (boost::filesystem::exists(rr_catalog_backup_path))
+  if (restore_from_catalog && boost::filesystem::exists(rr_catalog_backup_path))
   {
     restoreState();
   }
