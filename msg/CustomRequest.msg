@@ -1,0 +1,14 @@
+Header header
+string robot_name
+string custom_feature_name
+string request_id
+
+uint8 action
+uint8 START=0
+uint8 PREEMPT=1
+
+string data_str
+string[] data_str_array
+float64 data_num
+float64[] data_num_array
+geometry_msgs/PoseStamped pose

@@ -28,6 +28,8 @@
 #include "temoto_robot_manager/RobotNavigationGoal.h"
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
+#include "temoto_robot_manager/CustomRequest.h"
+#include "temoto_robot_manager/CustomFeedback.h"
 
 #include <string>
 
@@ -49,6 +51,12 @@ const std::string SERVER_GET_MANIPULATION_NAMED_TARGETS = MANAGER + "/" + "get_m
 const std::string SERVER_NAVIGATION_GOAL = MANAGER + "/" + "navigation_goal";
 const std::string SERVER_SET_MODE = MANAGER + "/" + "set_mode";
 const std::string SERVER_GRIPPER_CONTROL_POSITION = MANAGER + "/" + "gripper_control_position";
+}
+
+namespace channel_name
+{
+  const std::string CUSTOM_REQUEST = "custom_request";
+  const std::string CUSTOM_FEEDBACK = "custom_feedback";
 }
 
 namespace modes

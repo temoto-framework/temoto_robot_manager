@@ -67,6 +67,9 @@ public:
       client_get_robot_config_ =
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
 
+      custom_request_  = nh_.advertise<CustomRequest>(channel_name::CUSTOM_REQUEST, 10);
+      custom_feedback_ = nh_.subscribe(channel_name::CUSTOM_FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
+
       initialized_ = true;
     }
     else
@@ -79,6 +82,41 @@ public:
   {
     std::srand(std::time(nullptr));
     return std::rand();
+  }
+
+  void invokeCustomFeature(CustomRequest& custom_request, bool override = false)
+  {
+    const auto& ongoing_query_it = std::find_if(ongoing_custom_queries_.begin()
+    , ongoing_custom_queries_.end()
+    , [&](const auto& ongoing_query)
+    {
+      return ongoing_query.request == custom_request;
+    });
+
+    if (ongoing_query_it != ongoing_custom_queries_.end() && !override)
+    {
+      throw TEMOTO_ERRSTACK("Cannot invoke '" + robot_name + "'");
+    }
+  }
+
+  CustomFeedback getCustomFeatureFeedback(const std::string& request_id)
+  {
+    auto ongoing_query_it = ongoing_custom_queries_.find(request_id);
+
+    if (ongoing_query_it == ongoing_custom_queries_.end())
+    {
+      // throw TEMOTO_ERRSTACK("Could not get the config of robot '" + robot_name + "'");
+    }
+
+    return [&]
+    {
+      for (const auto& ongoing_query : ongoing_custom_queries_)
+    }
+  }
+
+  void customFeedback(const CustomFeedback& msg)
+  {
+    // TODO
   }
 
   YAML::Node getRobotConfig(const std::string& robot_name)
@@ -383,6 +421,12 @@ public:
 
 private:
 
+  struct CustomQuery
+  {
+    CustomRequest request;
+    CustomFeedback feedback;
+  };
+
   std::string rr_name_;
   std::string unique_suffix_;
   bool initialized_;
@@ -398,9 +442,20 @@ private:
   ros::ServiceClient client_get_manipulation_named_targets_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
-  ros::ServiceClient client_get_robot_config_; 
+  ros::ServiceClient client_get_robot_config_;
+
+  ros::Publisher custom_request_;
+  ros::Subscriber custom_feedback_;
+  std::map<std::string, CustomQuery> ongoing_custom_queries_;
 
   std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;
 };
+
+static bool operator==(const CustomRequest& q1, const CustomRequest& q1)
+{
+  return (q1.robot_name == q2.robot_name &&
+          q1.custom_feature_name == q2.custom_feature_name);
+}
+
 } // namespace
 #endif

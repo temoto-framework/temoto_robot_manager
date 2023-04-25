@@ -24,9 +24,12 @@ find_package(catkin REQUIRED COMPONENTS
   yaml-cpp
 )
 
-add_service_files(
-  FILES
-  
+add_message_files(FILES
+  CustomRequest.msg
+  CustomFeedback.msg
+)
+
+add_service_files(FILES
   RobotLoad.srv
   RobotPlanManipulation.srv
   RobotExecutePlan.srv
@@ -41,8 +44,7 @@ add_service_files(
   GripperControl.srv
 )
 
-generate_messages(
-  DEPENDENCIES
+generate_messages(DEPENDENCIES
   std_msgs
   geometry_msgs
   temoto_core
