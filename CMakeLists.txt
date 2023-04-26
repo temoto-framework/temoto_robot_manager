@@ -25,7 +25,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 add_message_files(FILES
-  CustomRequest.msg
   CustomFeedback.msg
 )
 
@@ -42,6 +41,7 @@ add_service_files(FILES
   RobotNavigationGoal.srv
   RobotGripperControlPosition.srv
   GripperControl.srv
+  CustomRequest.srv
 )
 
 generate_messages(DEPENDENCIES

@@ -84,7 +84,7 @@ public:
     return std::rand();
   }
 
-  void invokeCustomFeature(CustomRequest& custom_request, bool override = false)
+  void invokeCustomFeature(CustomRequest& custom_request)
   {
     const auto& ongoing_query_it = std::find_if(ongoing_custom_queries_.begin()
     , ongoing_custom_queries_.end()
@@ -95,7 +95,8 @@ public:
 
     if (ongoing_query_it != ongoing_custom_queries_.end() && !override)
     {
-      throw TEMOTO_ERRSTACK("Cannot invoke '" + robot_name + "'");
+      throw TEMOTO_ERRSTACK("Cannot invoke feature '" + custom_request.custom_feature_name 
+      + "' on robot '" + custom_request.robot_name + "' because its already in use");
     }
   }
 
@@ -450,12 +451,6 @@ private:
 
   std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;
 };
-
-static bool operator==(const CustomRequest& q1, const CustomRequest& q1)
-{
-  return (q1.robot_name == q2.robot_name &&
-          q1.custom_feature_name == q2.custom_feature_name);
-}
 
 } // namespace
 #endif

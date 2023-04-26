@@ -73,5 +73,13 @@ static bool operator==(const temoto_robot_manager::RobotLoad::Request& r1,
 {
   return (r1.robot_name == r2.robot_name);
 }
+
+static bool operator==(const temoto_robot_manager::CustomRequest& q1,
+                       const temoto_robot_manager::CustomRequest& q2)
+{
+  return (q1.robot_name == q2.robot_name &&
+          q1.custom_feature_name == q2.custom_feature_name);
+}
+
 #endif
 
