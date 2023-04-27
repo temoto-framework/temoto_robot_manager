@@ -106,7 +106,25 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     &RobotManager::getRobotConfigCb,
     this);
 
+  /*
+   * Set up the Custom Feature channel
+   */
+  server_custom_feature_ = nh_.advertiseService(
+    channel_name::CUSTOM_REQUEST,
+    &RobotManager::customFeatureCb,
+    this);
+
+  pub_custom_feature_feedback_ = nh_.advertise<CustomFeedback>(channel_name::CUSTOM_FEEDBACK, 10);
+
   TEMOTO_INFO_("Robot manager is ready.");
+}
+
+bool RobotManager::customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res)
+{
+  TEMOTO_INFO_STREAM("Received request: " << req << std::endl);
+  res.accepted = true;
+  res.request_id = "TMP_ID_123";
+  return true;
 }
 
 void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir)

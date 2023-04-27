@@ -103,14 +103,15 @@ private:
 
   void advertiseConfigs(RobotConfigs configs);
 
+  bool customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res);
+
   RobotConfigs parseRobotConfigs(const YAML::Node& config);
   
   RobotConfigs parseRobotConfigs(const YAML::Node& config, RobotConfigs configs);  
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
 
-  bool getVizInfoCb(RobotGetVizInfo::Request& req,
-                    RobotGetVizInfo::Response& res);
+  bool getVizInfoCb(RobotGetVizInfo::Request& req, RobotGetVizInfo::Response& res);
 
   void resourceStatusCb(RobotLoad srv_msg, temoto_resource_registrar::Status status_msg);
 
@@ -139,6 +140,7 @@ private:
   ros::ServiceServer server_navigation_goal_;
   ros::ServiceServer server_gripper_control_position_;
   ros::ServiceServer server_get_robot_config_;
+  ros::ServiceServer server_custom_feature_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -149,6 +151,8 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
+
+  ros::Publisher pub_custom_feature_feedback_;
   
   // Keeps robot_infos in sync with other managers
   temoto_core::trr::ConfigSynchronizer<RobotManager, PayloadType> config_syncer_;

@@ -67,7 +67,8 @@ public:
       client_get_robot_config_ =
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
 
-      custom_request_  = nh_.advertise<CustomRequest>(channel_name::CUSTOM_REQUEST, 10);
+      client_custom_request_ = 
+        nh_.serviceClient<CustomRequest>(channel_name::CUSTOM_REQUEST);
       custom_feedback_ = nh_.subscribe(channel_name::CUSTOM_FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
 
       initialized_ = true;
@@ -84,41 +85,70 @@ public:
     return std::rand();
   }
 
-  void invokeCustomFeature(CustomRequest& custom_request)
+  bool invokeCustomFeature(CustomRequest& custom_request)
   {
-    const auto& ongoing_query_it = std::find_if(ongoing_custom_queries_.begin()
-    , ongoing_custom_queries_.end()
-    , [&](const auto& ongoing_query)
-    {
-      return ongoing_query.request == custom_request;
-    });
+    custom_request.request.action = CustomRequest::Request::START;
+    custom_request.request.client_id = rr_name_;
 
-    if (ongoing_query_it != ongoing_custom_queries_.end() && !override)
+    if (!client_custom_request_.call(custom_request))
     {
-      throw TEMOTO_ERRSTACK("Cannot invoke feature '" + custom_request.custom_feature_name 
-      + "' on robot '" + custom_request.robot_name + "' because its already in use");
+      custom_request.response.accepted = false;
+      custom_request.response.message = "Unable to reach CustomRequest server"; 
+      return false;
     }
+
+    if (custom_request.response.accepted)
+    {
+      custom_request.request.request_id = custom_request.response.request_id;
+      std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+      ongoing_custom_queries_.insert({custom_request.response.request_id, CustomQuery(custom_request)});
+    }
+    
+    return custom_request.response.accepted;
   }
 
   CustomFeedback getCustomFeatureFeedback(const std::string& request_id)
   {
+    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
     auto ongoing_query_it = ongoing_custom_queries_.find(request_id);
 
     if (ongoing_query_it == ongoing_custom_queries_.end())
     {
-      // throw TEMOTO_ERRSTACK("Could not get the config of robot '" + robot_name + "'");
+      throw TEMOTO_ERRSTACK("Could not find the request in ongoing requests");
     }
 
-    return [&]
+    if (ongoing_query_it->second.feedback.status != CustomFeedback::RUNNING)
     {
-      for (const auto& ongoing_query : ongoing_custom_queries_)
+      auto feedback = ongoing_query_it->second.feedback;
+      ongoing_custom_queries_.erase(ongoing_query_it);
+      return feedback;
+    }
+    else
+    {
+      return ongoing_query_it->second.feedback;
     }
   }
 
-  void customFeedback(const CustomFeedback& msg)
+  bool preemptCustomFeature(const std::string& request_id)
   {
-    // TODO
-  }
+    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    auto ongoing_query_it = ongoing_custom_queries_.find(request_id);
+
+    if (ongoing_query_it == ongoing_custom_queries_.end())
+    {
+      throw TEMOTO_ERRSTACK("Could not find the request in ongoing requests");
+    }
+
+    auto custom_request_cpy = ongoing_query_it->second.request;
+    custom_request_cpy.request.action = CustomRequest::Request::PREEMPT;
+
+    if (!client_custom_request_.call(custom_request_cpy))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach CustomRequest server");
+    }
+
+    return custom_request_cpy.response.accepted;
+  } 
 
   YAML::Node getRobotConfig(const std::string& robot_name)
   try
@@ -424,9 +454,23 @@ private:
 
   struct CustomQuery
   {
+    CustomQuery(const CustomRequest& cr) : request{cr}{}
     CustomRequest request;
     CustomFeedback feedback;
   };
+
+  void customFeedback(const CustomFeedback& msg)
+  {
+    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    auto ongoing_query_it = ongoing_custom_queries_.find(msg.request_id);
+
+    if (ongoing_query_it != ongoing_custom_queries_.end())
+    {
+      ongoing_query_it->second.feedback = msg;
+    }
+
+    return;
+  }
 
   std::string rr_name_;
   std::string unique_suffix_;
@@ -445,8 +489,9 @@ private:
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_get_robot_config_;
 
-  ros::Publisher custom_request_;
+  ros::ServiceClient client_custom_request_;
   ros::Subscriber custom_feedback_;
+  std::mutex custom_queries_mutex_;
   std::map<std::string, CustomQuery> ongoing_custom_queries_;
 
   std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;

@@ -55,8 +55,8 @@ const std::string SERVER_GRIPPER_CONTROL_POSITION = MANAGER + "/" + "gripper_con
 
 namespace channel_name
 {
-  const std::string CUSTOM_REQUEST = "custom_request";
-  const std::string CUSTOM_FEEDBACK = "custom_feedback";
+  const std::string CUSTOM_REQUEST = srv_name::MANAGER + "/" + "custom_request";
+  const std::string CUSTOM_FEEDBACK = srv_name::MANAGER + "/" + "custom_feedback";
 }
 
 namespace modes
@@ -74,11 +74,11 @@ static bool operator==(const temoto_robot_manager::RobotLoad::Request& r1,
   return (r1.robot_name == r2.robot_name);
 }
 
-static bool operator==(const temoto_robot_manager::CustomRequest& q1,
-                       const temoto_robot_manager::CustomRequest& q2)
+static bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
+                       const temoto_robot_manager::CustomRequest::Request& r2)
 {
-  return (q1.robot_name == q2.robot_name &&
-          q1.custom_feature_name == q2.custom_feature_name);
+  return (r1.robot_name == r2.robot_name &&
+          r1.custom_feature_name == r2.custom_feature_name);
 }
 
 #endif

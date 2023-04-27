@@ -29,6 +29,8 @@ add_message_files(FILES
 )
 
 add_service_files(FILES
+  CustomRequest.srv
+  GripperControl.srv
   RobotLoad.srv
   RobotPlanManipulation.srv
   RobotExecutePlan.srv
@@ -40,8 +42,6 @@ add_service_files(FILES
   RobotGetConfig.srv
   RobotNavigationGoal.srv
   RobotGripperControlPosition.srv
-  GripperControl.srv
-  CustomRequest.srv
 )
 
 generate_messages(DEPENDENCIES
