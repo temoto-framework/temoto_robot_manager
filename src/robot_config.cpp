@@ -15,6 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "temoto_robot_manager/robot_config.h"
+#include "temoto_resource_registrar/temoto_error.h"
 #include "temoto_core/common/tools.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <string>
@@ -34,8 +35,7 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
   }
   catch (...)
   {
-    CREATE_ERROR(temoto_core::error::Code::ROBOT_CONFIG_FAIL,"Unable to parse robot name.");
-    return; //\TODO: throw and skip the rest when requred info is missing
+    throw TEMOTO_ERRSTACK("Unable to parse robot name.");
   }
 
   // Parse additional information
@@ -51,134 +51,117 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
 }
 
 void RobotConfig::parseName()
+try
 {
-  try
-  {
-    name_ = yaml_config_["robot_name"].as<std::string>();
-  }
-  catch (YAML::InvalidNode e)
-  {
-    TEMOTO_ERROR("CONFIG: robot_name NOT FOUND");
-    name_ = "unnamed_robot";
-    //\TODO: throw std::string
-  }
+  name_ = yaml_config_["robot_name"].as<std::string>();
+}
+catch (YAML::InvalidNode e)
+{
+  name_ = "unnamed_robot";
+  throw TEMOTO_ERRSTACK("CONFIG: robot_name NOT FOUND");
 }
 
 void RobotConfig::parseTemotoNamespace()
+try
 {
-  try
-  {
-    setTemotoNamespace(yaml_config_["temoto_namespace"].as<std::string>());
-  }
-  catch (...)
-  {
-    // Assign local namespace, when not available in yaml
-    setTemotoNamespace(temoto_core::common::getTemotoNamespace());
-  }
+  setTemotoNamespace(yaml_config_["temoto_namespace"].as<std::string>());
+}
+catch (...)
+{
+  // Assign local namespace, when not available in yaml
+  setTemotoNamespace(temoto_core::common::getTemotoNamespace());
 }
 
 void RobotConfig::parseDescription()
+try
 {
-  try
-  {
-    description_ = yaml_config_["description"].as<std::string>();
-  }
-  catch (YAML::InvalidNode e)
-  {
-    TEMOTO_WARN("CONFIG: description NOT FOUND");
-  }
+  description_ = yaml_config_["description"].as<std::string>();
+}
+catch (YAML::InvalidNode e)
+{
+  TEMOTO_WARN("CONFIG: description NOT FOUND");
 }
 
 void RobotConfig::parseReliability()
+try
 {
-  try
-  {
-    resetReliability(yaml_config_["reliability"].as<float>());
-  }
-  catch (YAML::InvalidNode e)
-  {
-    TEMOTO_WARN("CONFIG: reliability NOT FOUND");
-  }
+  resetReliability(yaml_config_["reliability"].as<float>());
+}
+catch (YAML::InvalidNode e)
+{
+  TEMOTO_DEBUG("CONFIG: reliability NOT FOUND");
 }
 
 void RobotConfig::parseUrdf()
+try
 {
   if (!yaml_config_["urdf"].IsDefined())
   {
     return;
   }
 
-  try
+  feature_urdf_ = FeatureURDF(yaml_config_["urdf"]);
+  if (!feature_urdf_.getArgs().empty())
   {
-    feature_urdf_ = FeatureURDF(yaml_config_["urdf"]);
-    if (!feature_urdf_.getArgs().empty())
-    {
-      std::string processed_args = feature_urdf_.getArgs();
-      boost::replace_all(processed_args, "__ABS_NAMESPACE__", getAbsRobotNamespace());
-      
-      feature_urdf_.setArgs(processed_args);
-      yaml_config_["urdf"]["args"] = processed_args;
-    }
-    enabled_features_.push_back(&feature_urdf_);
+    std::string processed_args = feature_urdf_.getArgs();
+    boost::replace_all(processed_args, "__ABS_NAMESPACE__", getAbsRobotNamespace());
+    
+    feature_urdf_.setArgs(processed_args);
+    yaml_config_["urdf"]["args"] = processed_args;
   }
-  catch (...)
-  {
-    TEMOTO_ERROR("CONFIG: urdf:{package_name or executable} NOT FOUND");
-  }
+  enabled_features_.push_back(&feature_urdf_);
+}
+catch (...)
+{
+  throw TEMOTO_ERRSTACK("CONFIG: urdf:{package_name or executable} NOT FOUND");
 }
 
 void RobotConfig::parseManipulation()
+try
 {
   if (!yaml_config_["manipulation"].IsDefined())
   {
     return;
   }
 
-  try
-  {
-    feature_manipulation_ = FeatureManipulation(yaml_config_["manipulation"]);
-    enabled_features_.push_back(&feature_manipulation_);
-  }
-  catch (YAML::Exception& e)
-  {
-    TEMOTO_WARN("CONFIG: error parsing manipulation: %s", e.what());
-  }
+  feature_manipulation_ = FeatureManipulation(yaml_config_["manipulation"]);
+  enabled_features_.push_back(&feature_manipulation_);
+}
+catch (YAML::Exception& e)
+{
+  TEMOTO_WARN("CONFIG: error parsing manipulation: %s", e.what());
 }
 
 void RobotConfig::parseNavigation()
+try
 {
   if (!yaml_config_["navigation"].IsDefined())
   {
     return;
   }
 
-  try
-  {
-    feature_navigation_ = FeatureNavigation(yaml_config_["navigation"]);
-    enabled_features_.push_back(&feature_navigation_);
-  }
-  catch (YAML::Exception e)
-  {
-    TEMOTO_ERROR("CONFIG: error parsing navigation: %s", e.what());
-  }
+  feature_navigation_ = FeatureNavigation(yaml_config_["navigation"]);
+  enabled_features_.push_back(&feature_navigation_);
+}
+catch (YAML::Exception e)
+{
+  throw TEMOTO_ERRSTACK("CONFIG: error parsing navigation: " + std::string(e.what()));
 }
 
 void RobotConfig::parseGripper()
-{  
+try
+{
   if (!yaml_config_["gripper"].IsDefined())
   {
     return;
   }
-
-  try
-  {
-    feature_gripper_ = FeatureGripper(yaml_config_["gripper"]);
-    enabled_features_.push_back(&feature_gripper_);
-  }
-  catch (YAML::Exception& e)
-  {
-    TEMOTO_WARN("CONFIG: error parsing gripper: %s", e.what());
-  }
+  
+  feature_gripper_ = FeatureGripper(yaml_config_["gripper"]);
+  enabled_features_.push_back(&feature_gripper_);
+}
+catch (YAML::Exception& e)
+{
+  TEMOTO_WARN("CONFIG: error parsing gripper: %s", e.what());
 }
 
 std::string RobotConfig::toString() const

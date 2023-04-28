@@ -15,7 +15,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "ros/package.h"
-#include "temoto_core/temoto_error/temoto_error.h"
 #include "temoto_robot_manager/robot_manager.h"
 #include "temoto_process_manager/process_manager_services.hpp"
 #include <boost/filesystem/operations.hpp>
@@ -23,8 +22,18 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 namespace temoto_robot_manager
 {
+
+std::string generateId()
+{
+  return boost::uuids::to_string(boost::uuids::random_generator()());
+}
+
 RobotManager::RobotManager(const std::string& config_base_path, bool restore_from_catalog)
 : temoto_core::BaseSubsystem("robot_manager", temoto_core::error::Subsystem::ROBOT_MANAGER, __func__)
 , resource_registrar_(srv_name::MANAGER)
@@ -120,10 +129,20 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
 }
 
 bool RobotManager::customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res)
+try
 {
   TEMOTO_INFO_STREAM("Received request: " << req << std::endl);
+
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
   res.accepted = true;
-  res.request_id = "TMP_ID_123";
+  res.request_id = generateId();
+  return true;
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  res.accepted = false;
+  res.message = error_stack.getMessage();
   return true;
 }
 
@@ -185,9 +204,9 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
       loaded_robots_.push_back(loaded_robot);
       TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());
     }
-    catch (temoto_core::error::ErrorStack& error_stack)
+    catch (resource_registrar::TemotoErrorStack& error_stack)
     {
-      throw FORWARD_ERROR(error_stack);
+      throw FWD_TEMOTO_ERRSTACK(error_stack);
     }
     catch (...)
     {
@@ -216,9 +235,9 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
       auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_, *this);
       loaded_robots_.push_back(loaded_robot);
     }
-    catch(temoto_core::error::ErrorStack& error_stack)
+    catch(resource_registrar::TemotoErrorStack& error_stack)
     {
-      throw FORWARD_ERROR(error_stack);
+      throw FWD_TEMOTO_ERRSTACK(error_stack);
     }
     catch (...)
     {
@@ -370,8 +389,7 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config)
       }
       else
       {
-        TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());   
-        TEMOTO_INFO_("Ignoring duplicate of robot '%s'.", config.getName().c_str());     
+        TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());       
       }
     }
     catch (...)
@@ -456,10 +474,8 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, Robo
 bool RobotManager::planManipulationPathCb(RobotPlanManipulation::Request& req, RobotPlanManipulation::Response& res)
 try
 {
-  RobotPtr loaded_robot;
-  loaded_robot = findLoadedRobot(req.robot_name);
-  TEMOTO_DEBUG_STREAM_(loaded_robot->getName().c_str());
-  
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Creating a manipulation path for robot '" << loaded_robot->getName() 
@@ -509,7 +525,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;
@@ -519,8 +535,7 @@ catch(temoto_core::error::ErrorStack& error_stack)
 bool RobotManager::execManipulationPathCb(RobotExecutePlan::Request& req, RobotExecutePlan::Response& res)
 try
 {
-  RobotPtr loaded_robot;
-  loaded_robot = findLoadedRobot(req.robot_name);
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
   if (loaded_robot->isLocal())
   {
@@ -553,7 +568,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;
@@ -568,7 +583,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;
@@ -619,7 +634,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;
@@ -658,7 +673,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;
@@ -696,14 +711,8 @@ try
   res.success = true;
   return true;  
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
-  res.success = false;
-  return true;
-}
-catch(const resource_registrar::TemotoErrorStack &e)
-{
-  TEMOTO_ERROR_STREAM(e.what());
   res.success = false;
   return true;
 }
@@ -813,7 +822,7 @@ try
   res.success = true;
   return true;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   res.success = false;
   return true;

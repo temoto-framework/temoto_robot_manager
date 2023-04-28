@@ -15,7 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "temoto_robot_manager/robot.h"
-#include "temoto_core/temoto_error/temoto_error.h"
+#include "temoto_resource_registrar/temoto_error.h"
 #include "ros/package.h"
 
 namespace temoto_robot_manager
@@ -113,9 +113,9 @@ void Robot::load()
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_CONFIG_FAIL, "Robot is missing features. Please specify "
-                                                       "urdf, manipulation, navigation, gripper sections in "
-                                                       "the configuration file.");
+    throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
+                          "urdf, manipulation, navigation, gripper sections in "
+                          "the configuration file.");
   }
 
   // Load URDF
@@ -174,7 +174,7 @@ void Robot::waitForParam(const std::string& param)
     TEMOTO_DEBUG("Waiting for %s ...", param.c_str());
     if (isInError())
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. The robot is in a failed state.");
+      throw TEMOTO_ERRSTACK("Loading interrupted. The robot is in a failed state.");
     }
     ros::Duration(1).sleep();
   }
@@ -189,7 +189,7 @@ void Robot::waitForTopic(const std::string& topic)
     TEMOTO_DEBUG("Waiting for %s ...", topic.c_str());
     if (isInError())
     {
-      throw CREATE_ERROR(temoto_core::error::Code::SERVICE_STATUS_FAIL, "Loading interrupted. The robot is in a failed state.");
+      throw TEMOTO_ERRSTACK("Loading interrupted. The robot is in a failed state.");
     }
     ros::Duration(1).sleep();
   }
@@ -227,9 +227,9 @@ try
   ftr.setLoaded(true);
   TEMOTO_DEBUG("Feature 'URDF' loaded.");
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
-  throw FORWARD_ERROR(error_stack);
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
 }
 
 // Load move group and move group interfaces
@@ -260,9 +260,9 @@ void Robot::loadManipulationController()
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Manipulation Controller' loaded.");
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -286,9 +286,9 @@ void Robot::loadManipulationDriver()
     ftr.setDriverLoaded(true);
     TEMOTO_DEBUG("Feature 'Manipulation Driver' loaded.");
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -323,9 +323,9 @@ void Robot::loadNavigationController()
     ftr.setLoaded(true);
     TEMOTO_DEBUG("Feature 'Navigation Controller' loaded.");
   }
-  catch (temoto_core::error::ErrorStack& error_stack)
+  catch (resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -347,9 +347,9 @@ void Robot::loadNavigationDriver()
     ftr.setDriverLoaded(true);
     TEMOTO_DEBUG("Feature 'Navigation Driver' loaded.");        
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -371,9 +371,9 @@ void Robot::loadGripperController()
     TEMOTO_DEBUG("Feature 'Gripper Controller' loaded.");
     
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -394,9 +394,9 @@ void Robot::loadGripperDriver()
     //
 
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
+  catch(resource_registrar::TemotoErrorStack& error_stack)
   {
-    throw FORWARD_ERROR(error_stack);
+    throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
 }
 
@@ -419,9 +419,9 @@ try
 
   return load_proc_srvc;
 }
-catch(temoto_core::error::ErrorStack& error_stack)
+catch(resource_registrar::TemotoErrorStack& error_stack)
 {
-  throw FORWARD_ERROR(error_stack);
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
 }
 
 void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
@@ -540,7 +540,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const g
 {
   if (!planning_groups_.size())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+    throw TEMOTO_ERRSTACK("Robot has no planning groups.");
   }
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
@@ -549,8 +549,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const g
   auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group + "' was not found.");
   }
   ftr.setActivePlanningGroup(planning_group);
   group_it->second->setStartStateToCurrentState();
@@ -561,7 +560,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const g
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning with group '%s' failed.", group_it->first.c_str());
+    throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first + "' failed.");
   }
 }
 
@@ -569,7 +568,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
 {
   if (!planning_groups_.size())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+    throw TEMOTO_ERRSTACK("Robot has no planning groups.");
   }
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
@@ -578,8 +577,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
   auto group_it = planning_groups_.find(planning_group);
   if (group_it == planning_groups_.end())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group + "' was not found.");
   }
   ftr.setActivePlanningGroup(planning_group);
   group_it->second->setStartStateToCurrentState();
@@ -590,7 +588,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning with group '%s' failed.", group_it->first.c_str());
+    throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first +"' failed.");
   }
 }
 
@@ -598,24 +596,26 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
 {
   if (!planning_groups_.size())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+    throw TEMOTO_ERRSTACK("Robot has no planning groups.");
   }
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
   std::string planning_group = (planning_group_name.empty()) ? ftr.getActivePlanningGroup() : planning_group_name;
   auto group_it = planning_groups_.find(planning_group);
+
   if (group_it == planning_groups_.end())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group_name + "' was not found.");
   }
+
   ftr.setActivePlanningGroup(planning_group);
   group_it->second->setStartStateToCurrentState();
+
   if (!group_it->second->setNamedTarget(named_target))
   {
     is_plan_valid_ = false;
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning to named target pose '%s' failed.", named_target);
+    throw TEMOTO_ERRSTACK("Planning to named target pose '" + named_target + "' failed.");
   }
   
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
@@ -623,7 +623,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
   TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Planning with group '%s' failed.", group_it->first.c_str());
+    throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first + "' failed.");
   }
 }
 
@@ -631,13 +631,14 @@ void Robot::executeManipulationPath()
 {
   std::string planning_group_name = config_->getFeatureManipulation().getActivePlanningGroup();
   moveit::planning_interface::MoveGroupInterface::Plan empty_plan;
+
   if (!is_plan_valid_)
   {
-    TEMOTO_ERROR("Unable to execute group '%s' without a plan.", planning_group_name.c_str());
-    return;
+    throw TEMOTO_ERRSTACK("Unable to execute group '" + planning_group_name + "' without a plan.");
   }
-  auto group_it =
-      planning_groups_.find(planning_group_name);  ///< Will throw if group does not exist
+
+  auto group_it = planning_groups_.find(planning_group_name);  ///< Will throw if group does not exist
+
   if (group_it != planning_groups_.end())
   {
     bool success = false;
@@ -654,14 +655,12 @@ void Robot::executeManipulationPath()
     TEMOTO_DEBUG("Execution %s",  success ? "SUCCESSFUL" : "FAILED");
     if(!success)
     {
-      throw CREATE_ERROR(temoto_core::error::Code::ROBOT_EXEC_FAIL,"Execute plan with group '%s' failed.", planning_group_name.c_str());
+      throw TEMOTO_ERRSTACK("Execute plan with group '" + planning_group_name + "' failed.");
     }
   }
   else
   {
-    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group_name + "' was not found.");
   }
 }
 
@@ -670,17 +669,12 @@ geometry_msgs::PoseStamped Robot::getManipulationTarget(const std::string& plann
   auto group_it = planning_groups_.find(planning_group_name);
   geometry_msgs::PoseStamped current_pose;
 
-  if (group_it != planning_groups_.end())
+  if (group_it == planning_groups_.end())
   {
-    current_pose = group_it->second->getCurrentPose();    
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group_name + "' was not found.");
   }
-  else 
-  {
-    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
-  } 
-  return current_pose;  
+
+  return group_it->second->getCurrentPose();;  
 }
 
 std::vector<double> Robot::getCurrentJointValues(const std::string& planning_group_name)
@@ -689,29 +683,28 @@ std::vector<double> Robot::getCurrentJointValues(const std::string& planning_gro
 
   if (group_it == planning_groups_.end())
   {
-    TEMOTO_ERROR("Planning group '%s' was not found.", planning_group_name.c_str());
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group_name.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group_name + "' was not found.");
   }
+
   return group_it->second->getCurrentJointValues();
 }
 
 
 std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_group_name)
 {
-  if (!planning_groups_.size())
+  if (planning_groups_.empty())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::ROBOT_PLAN_FAIL,"Robot has no planning groups.");
+    throw TEMOTO_ERRSTACK("Robot has no planning groups.");
   }
 
   FeatureManipulation& ftr = config_->getFeatureManipulation();
 
   std::string planning_group = (planning_group_name.empty()) ? ftr.getActivePlanningGroup() : planning_group_name;
   auto group_it = planning_groups_.find(planning_group);
+
   if (group_it == planning_groups_.end())
   {
-    throw CREATE_ERROR(temoto_core::error::Code::PLANNING_GROUP_NOT_FOUND, "Planning group '%s' was not found.",
-                       planning_group.c_str());
+    throw TEMOTO_ERRSTACK("Planning group '" + planning_group_name + "' was not found.");
   }
 
   return group_it->second->getNamedTargets();
@@ -757,31 +750,28 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 }
 
 void Robot::controlGripper(const std::string& robot_name,const float position)
+try
 {
-  try
+  FeatureGripper& ftr = config_->getFeatureGripper();   
+  std::string argument = std::to_string(position);
+  std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+  
+  TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+  client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
+  temoto_robot_manager::GripperControl gripper_srvc;
+  gripper_srvc.request.robot_name = robot_name;
+  gripper_srvc.request.position = position;
+
+  if (!client_gripper_control_.call(gripper_srvc))
   {
-    FeatureGripper& ftr = config_->getFeatureGripper();   
-    std::string argument = std::to_string(position);
-    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
-    
-    TEMOTO_DEBUG("Feature 'Gripper' loaded.");
-    client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
-    temoto_robot_manager::GripperControl gripper_srvc;
-    gripper_srvc.request.robot_name = robot_name;
-    gripper_srvc.request.position = position;    
-    if (client_gripper_control_.call(gripper_srvc))
-    {
-      TEMOTO_DEBUG("Call to gripper control was sucessful.");
-    }
-    else
-    {
-      TEMOTO_ERROR("Call to remote RobotManager service failed.");
-    }  
+    throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
   }
-  catch(temoto_core::error::ErrorStack& error_stack)
-  {
-    throw FORWARD_ERROR(error_stack);
-  }
+  
+  TEMOTO_DEBUG("Call to gripper control was sucessful.");
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
 }
 
 bool Robot::isLocal() const
@@ -790,7 +780,7 @@ bool Robot::isLocal() const
   {
     return config_->getTemotoNamespace() == ::temoto_core::common::getTemotoNamespace();
   }
- return true; // some default that should never reached. 
+  return true; // some default that should never reached. 
 }
 
 std::string Robot::getVizInfo()

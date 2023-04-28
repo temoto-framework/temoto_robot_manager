@@ -24,6 +24,11 @@ find_package(catkin REQUIRED COMPONENTS
   yaml-cpp
 )
 
+find_package (Boost 1.65.1 COMPONENTS system REQUIRED)
+if (Boost_FOUND)
+  include_directories (SYSTEM ${Boost_INCLUDE_DIR})
+endif ()
+
 add_message_files(FILES
   CustomFeedback.msg
 )
@@ -76,4 +81,7 @@ add_executable(temoto_robot_manager
   src/robot_features.cpp
 )
 add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(temoto_robot_manager ${catkin_LIBRARIES})
+target_link_libraries(temoto_robot_manager 
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+)
