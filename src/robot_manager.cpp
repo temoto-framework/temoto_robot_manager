@@ -176,14 +176,14 @@ void RobotManager::readRobotDescription(const std::string& path_to_rob_descripti
   // Parse the Robots section
   if (yaml_config["Robots"])
   {
-    // local_configs_ = parseRobotConfigs(yaml_config);
-    local_configs_ = parseRobotConfigs(yaml_config, local_configs_);
+    local_configs_ = parseRobotConfigs(yaml_config);
+
     // Debug what was added
     for (auto& config : local_configs_)
     {
-      TEMOTO_DEBUG_("Added robot: '%s'.", config->getName().c_str());
-      TEMOTO_DEBUG_STREAM_("CONFIG: \n" << config->toString());
+      TEMOTO_DEBUG_STREAM_("Added robot: '" << config->getName() << "'\nCONFIG: " << config->toString());
     }
+
     // Advertise the parsed local robots
     advertiseConfigs(local_configs_);
   }
@@ -349,127 +349,118 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config)
 
   if (!yaml_config.IsMap())
   {
-    // TODO Throw
-    TEMOTO_WARN_("Unable to parse 'Robots' key from config.");
-    return configs;
+    throw TEMOTO_ERRSTACK("Unable to parse 'Robots' key from config.");
   }
 
   YAML::Node robots_node = yaml_config["Robots"];
   if (!robots_node.IsSequence())
   {
-    TEMOTO_WARN_("The given config does not contain sequence of robots.");
-    // TODO Throw
-    return configs;
+    throw TEMOTO_ERRSTACK("The given config does not contain sequence of robots.");
   }
 
   TEMOTO_DEBUG_("Parsing %lu robots.", robots_node.size());
 
   // go over each robot node in the sequence
   for (YAML::const_iterator node_it = robots_node.begin(); node_it != robots_node.end(); ++node_it)
-  {    
-    if (!node_it->IsMap())
-    {
-      TEMOTO_ERROR("Unable to parse the robot config. Parameters in YAML have to be specified in "
-                   "key-value pairs.");
-      continue;
-    }
-
-    try
-    {
-      RobotConfig config(*node_it, *this);
-      
-      // TEMOTO_INFO_STREAM_(config.toString());  //==ToErase==
-
-      if (std::count_if(configs.begin(), configs.end(),
-                        [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0)
-      {
-        // OK, this is unique config, add it to the configs.
-        TEMOTO_INFO_("unique '%s'.", config.getName().c_str());
-        configs.emplace_back(std::make_shared<RobotConfig>(config));
-      }
-      else
-      {
-        TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());       
-      }
-    }
-    catch (...)
-    {
-      TEMOTO_WARN_("Failed to parse RobotConfig from config.");
-      continue;
-    }
-  }
-  return configs;
-}
-
-RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, RobotConfigs configs)
-{
-  // RobotConfigs configs;
-
-  if (!yaml_config.IsMap())
-  {
-    // TODO Throw
-    TEMOTO_WARN_("Unable to parse 'Robots' key from config.");
-    return configs;
-  }
-
-  YAML::Node robots_node = yaml_config["Robots"];
-  if (!robots_node.IsSequence())
-  {
-    TEMOTO_WARN_("The given config does not contain sequence of robots.");
-    // TODO Throw
-    return configs;
-  }
-
-  TEMOTO_DEBUG_("Parsing %lu robots.", robots_node.size());
-
-  // go over each robot node in the sequence
-  for (YAML::const_iterator node_it = robots_node.begin(); node_it != robots_node.end(); ++node_it)
+  try
   {
     if (!node_it->IsMap())
     {
-      TEMOTO_ERROR("Unable to parse the robot config. Parameters in YAML have to be specified in "
-                   "key-value pairs.");
+      TEMOTO_WARN_("Unable to parse the robot config. Parameters in YAML have to be specified in "
+                    "key-value pairs.");
       continue;
     }
 
-    try
+    RobotConfig config(*node_it, *this);
+
+    // Check if the config is unique
+    if (std::count_if(configs.begin(), configs.end()
+    , [&](const RobotConfigPtr& ri) { return ri->getName() == config.getName(); }) == 0)
     {
-      RobotConfig config(*node_it, *this);
-      
-      bool compare = false;
-      for (const auto& config_compare : configs)
-      {
-        if (config.getName() == config_compare->getName())
-        {
-          TEMOTO_INFO_STREAM_("Equal");
-          compare = true;
-          TEMOTO_INFO_STREAM_(config.getName().c_str());          
-        }
-      }    
-      
-      if (std::count_if(configs.begin()
-      , configs.end()
-      , [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
-      {
-        // OK, this is unique config, add it to the configs.
-        TEMOTO_INFO_("unique '%s'.", config.getName().c_str());
-        configs.emplace_back(std::make_shared<RobotConfig>(config));        
-      }
-      else
-      {
-        TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
-        TEMOTO_INFO_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
-      }
-      compare=false;
+      TEMOTO_INFO_("Adding robot '%s'", config.getName().c_str());
+      configs.emplace_back(std::make_shared<RobotConfig>(config));
     }
-    catch (...)
+    else
     {
-      TEMOTO_WARN_("Failed to parse RobotConfig from config.");
-      continue;
+      TEMOTO_WARN_("Ignoring duplicate of robot '%s'", config.getName().c_str());       
     }
   }
+  catch (resource_registrar::TemotoErrorStack& error_stack)
+  {
+    TEMOTO_WARN_STREAM_("Failed to parse config: " << error_stack.what());
+  }
+
   return configs;
 }
+
+// RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, RobotConfigs configs)
+// {
+//   // RobotConfigs configs;
+
+//   if (!yaml_config.IsMap())
+//   {
+//     // TODO Throw
+//     TEMOTO_WARN_("Unable to parse 'Robots' key from config.");
+//     return configs;
+//   }
+
+//   YAML::Node robots_node = yaml_config["Robots"];
+//   if (!robots_node.IsSequence())
+//   {
+//     TEMOTO_WARN_("The given config does not contain sequence of robots.");
+//     // TODO Throw
+//     return configs;
+//   }
+
+//   TEMOTO_DEBUG_("Parsing %lu robots.", robots_node.size());
+
+//   // go over each robot node in the sequence
+//   for (YAML::const_iterator node_it = robots_node.begin(); node_it != robots_node.end(); ++node_it)
+//   try
+//   {
+//     if (!node_it->IsMap())
+//     {
+//       TEMOTO_ERROR("Unable to parse the robot config. Parameters in YAML have to be specified in "
+//                   "key-value pairs.");
+//       continue;
+//     }
+
+//     RobotConfig config(*node_it, *this);
+    
+//     bool compare = false;
+//     for (const auto& config_compare : configs)
+//     {
+//       if (config.getName() == config_compare->getName())
+//       {
+//         TEMOTO_INFO_STREAM_("Equal");
+//         compare = true;
+//         TEMOTO_INFO_STREAM_(config.getName().c_str());          
+//       }
+//     }    
+    
+//     if (std::count_if(configs.begin()
+//     , configs.end()
+//     , [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
+//     {
+//       // OK, this is unique config, add it to the configs.
+//       TEMOTO_INFO_("unique '%s'.", config.getName().c_str());
+//       configs.emplace_back(std::make_shared<RobotConfig>(config));        
+//     }
+//     else
+//     {
+//       TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
+//       TEMOTO_INFO_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
+//     }
+//     compare=false;
+//   }
+//   catch (...)
+//   {
+//     TEMOTO_WARN_("Failed to parse RobotConfig from config.");
+//     continue;
+//   }
+
+//   return configs;
+// }
 
 bool RobotManager::planManipulationPathCb(RobotPlanManipulation::Request& req, RobotPlanManipulation::Response& res)
 try

@@ -66,6 +66,7 @@ public:
   void parseDescription();
   void parseReliability();
 
+  void parseFeatures();
   void parseUrdf();
   void parseNavigation();
   void parseManipulation();

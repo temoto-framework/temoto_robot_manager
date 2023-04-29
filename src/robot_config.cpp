@@ -28,6 +28,7 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
 , temoto_core::BaseSubsystem(b)
 {
   class_name_ = "RobotConfig";
+
   // Parse mandatory information.
   try
   {
@@ -44,10 +45,40 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
   parseReliability();
 
   // Parse robot features
-  parseUrdf();
-  parseNavigation();
-  parseManipulation();
-  parseGripper();
+  parseFeatures();
+  // parseUrdf();
+  // parseNavigation();
+  // parseManipulation();
+  // parseGripper();
+}
+
+void RobotConfig::parseFeatures()
+try
+{
+
+  if (!yaml_config_["features"].IsDefined())
+  {
+    throw TEMOTO_ERRSTACK("The robot has no features described");
+  }
+
+  YAML::Node features_node = yaml_config_["features"];
+
+  if (!features_node.IsSequence())
+  {
+    throw TEMOTO_ERRSTACK("The given config does not contain sequence of features.");
+  }
+
+  TEMOTO_DEBUG_("Parsing %lu features.", features_node.size());
+
+  // Go over each feature node in the sequence
+  for (YAML::const_iterator node_it = features_node.begin(); node_it != features_node.end(); ++node_it)
+  {
+    TEMOTO_WARN_STREAM_("Feature: " << (*node_it)["name"] << ", " << (*node_it)["type"]);
+  }
+}
+catch (YAML::InvalidNode e)
+{
+  throw TEMOTO_ERRSTACK("Unable to parse features: " + std::string(e.what()));
 }
 
 void RobotConfig::parseName()
@@ -64,32 +95,48 @@ catch (YAML::InvalidNode e)
 void RobotConfig::parseTemotoNamespace()
 try
 {
-  setTemotoNamespace(yaml_config_["temoto_namespace"].as<std::string>());
+  if (yaml_config_["temoto_namespace"].IsDefined())
+  {
+    setTemotoNamespace(yaml_config_["temoto_namespace"].as<std::string>());
+  }
+  else
+  {
+    setTemotoNamespace(temoto_core::common::getTemotoNamespace());
+  }
 }
 catch (...)
 {
-  // Assign local namespace, when not available in yaml
-  setTemotoNamespace(temoto_core::common::getTemotoNamespace());
+  TEMOTO_WARN("CONFIG: temoto_namespace is ill formated");
 }
 
 void RobotConfig::parseDescription()
 try
 {
-  description_ = yaml_config_["description"].as<std::string>();
+  if (yaml_config_["description"].IsDefined())
+  {
+    description_ = yaml_config_["description"].as<std::string>();
+  }
+  else
+  {
+    TEMOTO_WARN("CONFIG: description NOT FOUND");
+  }
 }
-catch (YAML::InvalidNode e)
+catch (...)
 {
-  TEMOTO_WARN("CONFIG: description NOT FOUND");
+  TEMOTO_WARN("CONFIG: description is ill formated");
 }
 
 void RobotConfig::parseReliability()
 try
 {
-  resetReliability(yaml_config_["reliability"].as<float>());
+  if (yaml_config_["reliability"].IsDefined())
+  {
+    resetReliability(yaml_config_["reliability"].as<float>());
+  }
 }
-catch (YAML::InvalidNode e)
+catch (...)
 {
-  TEMOTO_DEBUG("CONFIG: reliability NOT FOUND");
+  TEMOTO_WARN("CONFIG: reliability is ill formated");
 }
 
 void RobotConfig::parseUrdf()
