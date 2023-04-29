@@ -245,7 +245,7 @@ void Robot::loadManipulationController()
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
     //ftr.setResourceId(res_id);
-    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
+    std::string desc_sem_param = "/" + config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
 
@@ -313,7 +313,7 @@ void Robot::loadNavigationController()
     // Subscribe to the pose messages
     if (!ftr.getPoseTopic().empty())
     {
-      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
       , 1
       , &Robot::robotPoseCallback
       , this);
@@ -478,7 +478,7 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
     }
 
      // Send the initial pose
-    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
+    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/" + config_->getAbsRobotNamespace() + "/initialpose", 10);
     while(pub.getNumSubscribers() < 1)
     {
       ros::Duration(0.5).sleep();
@@ -512,8 +512,8 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
   //Prepare robot description path and a nodehandle, which is in robot's namespace
-  std::string rob_desc = config_->getAbsRobotNamespace() + "/robot_description";
-  ros::NodeHandle mg_nh(config_->getAbsRobotNamespace());
+  std::string rob_desc = "/" + config_->getAbsRobotNamespace() + "/robot_description";
+  ros::NodeHandle mg_nh("/" + config_->getAbsRobotNamespace());
   moveit::planning_interface::MoveGroupInterface::Options opts(planning_group_name, rob_desc, mg_nh);
   std::unique_ptr<moveit::planning_interface::MoveGroupInterface> group(
       new moveit::planning_interface::MoveGroupInterface(opts));
