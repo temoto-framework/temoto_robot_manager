@@ -67,10 +67,11 @@ public:
   void parseReliability();
 
   void parseFeatures();
-  void parseUrdf();
-  void parseNavigation();
-  void parseManipulation();
-  void parseGripper();
+  void parseUrdf(const YAML::Node& yaml_node);
+  void parseNavigation(const YAML::Node& yaml_node);
+  void parseManipulation(const YAML::Node& yaml_node);
+  void parseGripper(const YAML::Node& yaml_node);
+  void parseCustom(const YAML::Node& yaml_node);
 
   std::string getName() const
   {
@@ -105,6 +106,11 @@ public:
   FeatureGripper& getFeatureGripper()
   {
     return feature_gripper_;
+  }
+
+  std::map<std::string, FeatureCustom>& getCustomFeatures()
+  {
+    return m_feature_custom_;
   }
 
   void adjustReliability(float reliability)
@@ -150,7 +156,7 @@ private:
   FeatureManipulation feature_manipulation_;
   FeatureNavigation feature_navigation_;
   FeatureGripper feature_gripper_;
-  std::vector<RobotFeature*> enabled_features_;
+  std::map<std::string, FeatureCustom> m_feature_custom_;
   
   std::string name_;
   std::string description_;

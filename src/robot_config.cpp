@@ -46,10 +46,6 @@ RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
 
   // Parse robot features
   parseFeatures();
-  // parseUrdf();
-  // parseNavigation();
-  // parseManipulation();
-  // parseGripper();
 }
 
 void RobotConfig::parseFeatures()
@@ -73,7 +69,34 @@ try
   // Go over each feature node in the sequence
   for (YAML::const_iterator node_it = features_node.begin(); node_it != features_node.end(); ++node_it)
   {
-    TEMOTO_WARN_STREAM_("Feature: " << (*node_it)["name"] << ", " << (*node_it)["type"]);
+    std::string feature_name = (*node_it)["name"].as<std::string>();
+    std::string feature_type = (*node_it)["type"].as<std::string>();
+    TEMOTO_DEBUG_STREAM_("Feature: " << feature_name << ", Type: " << feature_type);
+    
+    if (feature_type == "urdf")
+    {
+      parseUrdf(*node_it);
+    }
+    else if (feature_type == "navigation")
+    {
+      parseNavigation(*node_it);
+    }
+    else if (feature_type == "manipulation")
+    {
+      parseManipulation(*node_it);
+    }
+    else if (feature_type == "gripper")
+    {
+      parseGripper(*node_it);
+    }
+    else if (feature_type == "custom")
+    {
+      parseCustom(*node_it);
+    }
+    else
+    {
+      throw TEMOTO_ERRSTACK("Unrecognized feature type '" + feature_type + "'");
+    }
   }
 }
 catch (YAML::InvalidNode e)
@@ -139,15 +162,10 @@ catch (...)
   TEMOTO_WARN("CONFIG: reliability is ill formated");
 }
 
-void RobotConfig::parseUrdf()
+void RobotConfig::parseUrdf(const YAML::Node& yaml_node)
 try
 {
-  if (!yaml_config_["urdf"].IsDefined())
-  {
-    return;
-  }
-
-  feature_urdf_ = FeatureURDF(yaml_config_["urdf"]);
+  feature_urdf_ = FeatureURDF(yaml_node);
   if (!feature_urdf_.getArgs().empty())
   {
     std::string processed_args = feature_urdf_.getArgs();
@@ -156,59 +174,51 @@ try
     feature_urdf_.setArgs(processed_args);
     yaml_config_["urdf"]["args"] = processed_args;
   }
-  enabled_features_.push_back(&feature_urdf_);
 }
 catch (...)
 {
   throw TEMOTO_ERRSTACK("CONFIG: urdf:{package_name or executable} NOT FOUND");
 }
 
-void RobotConfig::parseManipulation()
+void RobotConfig::parseManipulation(const YAML::Node& yaml_node)
 try
 {
-  if (!yaml_config_["manipulation"].IsDefined())
-  {
-    return;
-  }
-
-  feature_manipulation_ = FeatureManipulation(yaml_config_["manipulation"]);
-  enabled_features_.push_back(&feature_manipulation_);
+  feature_manipulation_ = FeatureManipulation(yaml_node);
 }
 catch (YAML::Exception& e)
 {
   TEMOTO_WARN("CONFIG: error parsing manipulation: %s", e.what());
 }
 
-void RobotConfig::parseNavigation()
+void RobotConfig::parseNavigation(const YAML::Node& yaml_node)
 try
 {
-  if (!yaml_config_["navigation"].IsDefined())
-  {
-    return;
-  }
-
-  feature_navigation_ = FeatureNavigation(yaml_config_["navigation"]);
-  enabled_features_.push_back(&feature_navigation_);
+  feature_navigation_ = FeatureNavigation(yaml_node);
 }
 catch (YAML::Exception e)
 {
   throw TEMOTO_ERRSTACK("CONFIG: error parsing navigation: " + std::string(e.what()));
 }
 
-void RobotConfig::parseGripper()
+void RobotConfig::parseGripper(const YAML::Node& yaml_node)
 try
 {
-  if (!yaml_config_["gripper"].IsDefined())
-  {
-    return;
-  }
-  
-  feature_gripper_ = FeatureGripper(yaml_config_["gripper"]);
-  enabled_features_.push_back(&feature_gripper_);
+  feature_gripper_ = FeatureGripper(yaml_node);
 }
 catch (YAML::Exception& e)
 {
   TEMOTO_WARN("CONFIG: error parsing gripper: %s", e.what());
+}
+
+void RobotConfig::parseCustom(const YAML::Node& yaml_node)
+try
+{
+  std::string feature_name = yaml_node["name"].as<std::string>(); 
+  m_feature_custom_.insert({feature_name, FeatureCustom(feature_name, yaml_node)});
+}
+catch (YAML::Exception& e)
+{
+  TEMOTO_WARN("CONFIG: error parsing custom feature: %s", e.what());
 }
 
 std::string RobotConfig::toString() const
@@ -222,6 +232,10 @@ std::string RobotConfig::toString() const
   ret += feature_manipulation_.isEnabled() ? "    manipulation\n" : "";
   ret += feature_navigation_.isEnabled() ? "    navigation\n" : "";
   ret += feature_gripper_.isEnabled() ? "    gripper\n" : "";
+  for (const auto& custom_feature : m_feature_custom_)
+  {
+    ret += custom_feature.second.isEnabled() ? std::string("    custom: " + custom_feature.second.getName() + "\n") : "";
+  }
   return ret;
 }
 

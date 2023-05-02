@@ -111,7 +111,8 @@ void Robot::load()
   }
 
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
-      !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled())
+      !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled() &&
+      !config_->getCustomFeatures().begin()->second.isEnabled())
   {
     throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
                           "urdf, manipulation, navigation, gripper sections in "
@@ -161,6 +162,22 @@ void Robot::load()
   if (config_->getFeatureGripper().isEnabled())
   {
     loadGripperController();
+  }
+
+  /*
+   * Load custom features
+   */
+  for (auto& custom_feature : config_->getCustomFeatures())
+  {
+    if (custom_feature.second.isEnabled())
+    {
+      loadCustomController(custom_feature.second.getName());
+    }
+
+    if (custom_feature.second.isDriverEnabled())
+    {
+      loadCustomDriver(custom_feature.second.getName());
+    }
   }
 
   robot_loaded_ = true;
@@ -398,6 +415,16 @@ void Robot::loadGripperDriver()
   {
     throw FWD_TEMOTO_ERRSTACK(error_stack);
   }
+}
+
+void Robot::loadCustomController(const std::string& feature_name)
+{
+  // TODO
+}
+
+void Robot::loadCustomDriver(const std::string& feature_name)
+{
+  // TODO
 }
 
 temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name

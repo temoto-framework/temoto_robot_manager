@@ -161,6 +161,38 @@ FeatureGripper::FeatureGripper(const YAML::Node& grip_conf)
   this->driver_enabled_ = true;
 }
 
+FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_node)
+: FeatureWithDriver(name)
+{
+  if (yaml_node["controller"].IsDefined())
+  {
+    setFromConfig(yaml_node["controller"]["executable"], this->executable_);
+    setFromConfig(yaml_node["controller"]["executable_type"], this->executable_type_);
+    setFromConfig(yaml_node["controller"]["args"], this->executable_); // TODO check if it exists first
+
+    if (executable_type_ == "ros")
+    {
+      setFromConfig(yaml_node["controller"]["package_name"], this->package_name_);
+    }
+
+    this->feature_enabled_ = true;    
+  }
+
+  if (yaml_node["driver"].IsDefined())
+  {
+    setFromConfig(yaml_node["driver"]["executable"], this->executable_);
+    setFromConfig(yaml_node["driver"]["executable_type"], this->executable_type_);
+    setFromConfig(yaml_node["driver"]["args"], this->executable_);
+
+    if (executable_type_ == "ros")
+    {
+      setFromConfig(yaml_node["driver"]["package_name"], this->package_name_);
+    }
+
+    this->driver_enabled_ = true;
+  }
+}
+
 // bool operator==(const RobotFeature& rf1, const RobotFeature& rf2)
 //{
 //  return (rf1.getType() == rf2.getType() && rf1.getPackageName() == rf2.getPackageName() &&

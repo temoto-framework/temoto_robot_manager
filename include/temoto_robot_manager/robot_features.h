@@ -32,7 +32,10 @@ class RobotFeature
 public:
   RobotFeature(const std::string& name = "unknown_feature");
 
-  std::string getName() const;
+  std::string getName() const
+  {
+    return name_;
+  }
 
   std::string getPackageName() const
   {
@@ -42,6 +45,11 @@ public:
   std::string getExecutable() const
   {
     return executable_;
+  }
+
+  std::string getExecutableType() const
+  {
+    return executable_type_;
   }
 
   std::string getArgs() const
@@ -93,6 +101,7 @@ protected:
   std::string name_;
   std::string package_name_;
   std::string executable_;
+  std::string executable_type_;
   std::string args_;
   temoto_core::temoto_id::ID resource_id_;
   bool feature_enabled_;
@@ -155,6 +164,7 @@ protected:
   bool driver_enabled_;
   std::string driver_package_name_;
   std::string driver_executable_;
+  std::string driver_executable_type_;
   std::string driver_args_;
   temoto_core::temoto_id::ID driver_resource_id_;
 };
@@ -246,7 +256,12 @@ public:
   
 };
 
-//bool operator==(const Feature& feature1, const Feature& feature2);
+class FeatureCustom : public FeatureWithDriver
+{
+public:
+  FeatureCustom(const std::string& name, const YAML::Node& yaml_node);
+};
+
 }
 
 #endif

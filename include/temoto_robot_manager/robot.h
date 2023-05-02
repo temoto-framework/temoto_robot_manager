@@ -95,6 +95,8 @@ private:
   void loadNavigationDriver();
   void loadGripperController();
   void loadGripperDriver();
+  void loadCustomController(const std::string& feature_name);
+  void loadCustomDriver(const std::string& feature_name);
 
   temoto_process_manager::LoadProcess rosExecute(const std::string& package_name
   , const std::string& executable
