@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(temoto_robot_manager)
 
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 option(TEMOTO_ENABLE_TRACING "Use tracer" OFF)
 
 if(TEMOTO_ENABLE_TRACING)
@@ -28,6 +28,8 @@ find_package (Boost 1.65.1 COMPONENTS system REQUIRED)
 if (Boost_FOUND)
   include_directories (SYSTEM ${Boost_INCLUDE_DIR})
 endif ()
+
+find_package(class_loader REQUIRED)
 
 add_message_files(FILES
   CustomFeedback.msg
@@ -71,6 +73,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${class_loader_INCLUDE_DIRS}
 )
 
 add_executable(temoto_robot_manager 
@@ -84,4 +87,5 @@ add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAM
 target_link_libraries(temoto_robot_manager 
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${class_loader_LIBRARIES}
 )

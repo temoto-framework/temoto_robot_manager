@@ -15,6 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "temoto_robot_manager/robot.h"
+#include "temoto_robot_manager/custom_plugin_base.h"
 #include "temoto_resource_registrar/temoto_error.h"
 #include "ros/package.h"
 
