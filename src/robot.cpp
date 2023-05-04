@@ -14,10 +14,10 @@
  * limitations under the License.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "ros/package.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/custom_plugin_base.h"
 #include "temoto_resource_registrar/temoto_error.h"
-#include "ros/package.h"
 
 namespace temoto_robot_manager
 {
@@ -419,8 +419,58 @@ void Robot::loadGripperDriver()
 }
 
 void Robot::loadCustomController(const std::string& feature_name)
+try
 {
-  // TODO
+  auto custom_feature_it = config_->getCustomFeatures().find(feature_name);
+  if (custom_feature_it == config_->getCustomFeatures().end())
+  {
+    throw TEMOTO_ERRSTACK("Could not find feature '" + feature_name + "'");
+  }
+
+  /*
+   * Load the plugin
+   *   TODO: Check if the plugin '.so' file even exists. If it doesn't
+   *   the class_loader will just crash ...
+   */
+  CustomPluginHelper plugin_helper;
+
+  const std::string& plugin_path = custom_feature_it->second.getExecutable();
+  plugin_helper.class_loader = std::make_shared<class_loader::ClassLoader>(plugin_path, false);
+
+  
+  if (plugin_helper.class_loader->getAvailableClasses<CustomPluginBase>().empty())
+  {
+    throw TEMOTO_ERRSTACK("Library contains no plugins, check if the path is correct: '" + plugin_path + "'");
+  }
+
+  std::string plugin_name = plugin_helper.class_loader->getAvailableClasses<CustomPluginBase>().front();
+  plugin_helper.plugin = plugin_helper.class_loader->createSharedInstance<CustomPluginBase>(plugin_name);
+  if (!plugin_helper.class_loader->isLibraryLoaded())
+  {
+    throw TEMOTO_ERRSTACK("Unable to load plugin '" + plugin_path + "'");
+  }
+
+  /*
+   * Initialize the plugin
+   */
+  plugin_helper.plugin->initialize();
+  custom_feature_plugins_.insert({feature_name, plugin_helper});
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
+}
+catch(class_loader::ClassLoaderException & e)
+{
+  throw TEMOTO_ERRSTACK(e.what());
+}
+catch(std::exception& e)
+{
+  throw TEMOTO_ERRSTACK(e.what());
+}
+catch(...)
+{
+  throw TEMOTO_ERRSTACK("Could not load custom feature '" + feature_name + "'");
 }
 
 void Robot::loadCustomDriver(const std::string& feature_name)

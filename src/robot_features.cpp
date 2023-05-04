@@ -168,7 +168,7 @@ FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_nod
   {
     setFromConfig(yaml_node["controller"]["executable"], this->executable_);
     setFromConfig(yaml_node["controller"]["executable_type"], this->executable_type_);
-    setFromConfig(yaml_node["controller"]["args"], this->executable_); // TODO check if it exists first
+    setFromConfig(yaml_node["controller"]["args"], this->args_); // TODO check if it exists first
 
     if (executable_type_ == "ros")
     {
@@ -180,13 +180,13 @@ FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_nod
 
   if (yaml_node["driver"].IsDefined())
   {
-    setFromConfig(yaml_node["driver"]["executable"], this->executable_);
-    setFromConfig(yaml_node["driver"]["executable_type"], this->executable_type_);
-    setFromConfig(yaml_node["driver"]["args"], this->executable_);
+    setFromConfig(yaml_node["driver"]["executable"], this->driver_executable_);
+    setFromConfig(yaml_node["driver"]["executable_type"], this->driver_executable_type_);
+    setFromConfig(yaml_node["driver"]["args"], this->driver_args_);
 
-    if (executable_type_ == "ros")
+    if (driver_executable_type_ == "ros")
     {
-      setFromConfig(yaml_node["driver"]["package_name"], this->package_name_);
+      setFromConfig(yaml_node["driver"]["package_name"], this->driver_package_name_);
     }
 
     this->driver_enabled_ = true;

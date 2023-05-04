@@ -17,14 +17,14 @@
 #include "ros/package.h"
 #include "temoto_robot_manager/robot_manager.h"
 #include "temoto_process_manager/process_manager_services.hpp"
-#include <boost/filesystem/operations.hpp>
-#include <yaml-cpp/yaml.h>
-#include <fstream>
-#include <sstream>
 
+#include <boost/filesystem/operations.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <yaml-cpp/yaml.h>
+#include <fstream>
+#include <sstream>
 
 namespace temoto_robot_manager
 {
