@@ -14,6 +14,7 @@ string[] data_str_array
 float64 data_num
 float64[] data_num_array
 geometry_msgs/PoseStamped data_pose
+geometry_msgs/PoseStamped[] data_pose_array
 
 ---
 

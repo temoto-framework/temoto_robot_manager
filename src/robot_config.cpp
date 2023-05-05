@@ -23,12 +23,9 @@
 
 namespace temoto_robot_manager
 {
-RobotConfig::RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b)
+RobotConfig::RobotConfig(YAML::Node yaml_config)
 : yaml_config_(yaml_config)
-, temoto_core::BaseSubsystem(b)
 {
-  class_name_ = "RobotConfig";
-
   // Parse mandatory information.
   try
   {
@@ -129,7 +126,7 @@ try
 }
 catch (...)
 {
-  TEMOTO_WARN("CONFIG: temoto_namespace is ill formated");
+  TEMOTO_WARN_("CONFIG: temoto_namespace is ill formated");
 }
 
 void RobotConfig::parseDescription()
@@ -141,12 +138,12 @@ try
   }
   else
   {
-    TEMOTO_WARN("CONFIG: description NOT FOUND");
+    TEMOTO_WARN_("CONFIG: description NOT FOUND");
   }
 }
 catch (...)
 {
-  TEMOTO_WARN("CONFIG: description is ill formated");
+  TEMOTO_WARN_("CONFIG: description is ill formated");
 }
 
 void RobotConfig::parseReliability()
@@ -159,7 +156,7 @@ try
 }
 catch (...)
 {
-  TEMOTO_WARN("CONFIG: reliability is ill formated");
+  TEMOTO_WARN_("CONFIG: reliability is ill formated");
 }
 
 void RobotConfig::parseUrdf(const YAML::Node& yaml_node)
@@ -187,7 +184,7 @@ try
 }
 catch (YAML::Exception& e)
 {
-  TEMOTO_WARN("CONFIG: error parsing manipulation: %s", e.what());
+  TEMOTO_WARN_("CONFIG: error parsing manipulation: %s", e.what());
 }
 
 void RobotConfig::parseNavigation(const YAML::Node& yaml_node)
@@ -207,7 +204,7 @@ try
 }
 catch (YAML::Exception& e)
 {
-  TEMOTO_WARN("CONFIG: error parsing gripper: %s", e.what());
+  TEMOTO_WARN_("CONFIG: error parsing gripper: %s", e.what());
 }
 
 void RobotConfig::parseCustom(const YAML::Node& yaml_node)
@@ -218,7 +215,7 @@ try
 }
 catch (YAML::Exception& e)
 {
-  TEMOTO_WARN("CONFIG: error parsing custom feature: %s", e.what());
+  TEMOTO_WARN_("CONFIG: error parsing custom feature: %s", e.what());
 }
 
 std::string RobotConfig::toString() const

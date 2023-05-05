@@ -11,9 +11,10 @@ class CustomPluginBase
 {
 public:
   virtual bool initialize() = 0;
-  virtual bool setGoal(const RmCustomRequest& goal) = 0;
+  virtual bool invoke(const RmCustomRequest& goal) = 0;
   virtual std::optional<RmCustomFeedback> getFeedback() = 0;
   virtual bool preempt() = 0;
+  virtual bool deinitialize() = 0;
   virtual ~CustomPluginBase(){};
 };
 

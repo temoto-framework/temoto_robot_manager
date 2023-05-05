@@ -17,9 +17,7 @@
 #ifndef TEMOTO_ROBOT_MANAGER__TEMOTO_ROBOT_MANAGER__ROBOT_CONFIG_H
 #define TEMOTO_ROBOT_MANAGER__TEMOTO_ROBOT_MANAGER__ROBOT_CONFIG_H
 
-#include "temoto_core/common/temoto_log_macros.h"
 #include "temoto_core/common/reliability.h"
-#include "temoto_core/common/base_subsystem.h"
 #include "temoto_robot_manager/robot_features.h"
 
 #include "yaml-cpp/yaml.h"
@@ -32,14 +30,14 @@
 namespace temoto_robot_manager
 {
 
-class RobotConfig : temoto_core::BaseSubsystem
+class RobotConfig
 {
 public:
   /**
    * @brief RobotConfig
    */
 
-  RobotConfig(YAML::Node yaml_config, temoto_core::BaseSubsystem& b);
+  RobotConfig(YAML::Node yaml_config);
   
   std::string toString() const;
 

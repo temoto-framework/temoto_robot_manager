@@ -134,6 +134,7 @@ try
   TEMOTO_INFO_STREAM("Received request: " << req << std::endl);
 
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  loaded_robot->invokeCustomFeature(req.custom_feature_name, RmCustomRequest{});
 
   res.accepted = true;
   res.request_id = generateId();
@@ -199,7 +200,7 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   {
     try
     {
-      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_, *this);
+      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_);
       loaded_robot->load();
       loaded_robots_.push_back(loaded_robot);
       TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());
@@ -232,7 +233,7 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
       , load_robot_srvc);
 
       TEMOTO_DEBUG_("Call to remote RobotManager was sucessful.");
-      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_, *this);
+      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_);
       loaded_robots_.push_back(loaded_robot);
     }
     catch(resource_registrar::TemotoErrorStack& error_stack)
@@ -371,7 +372,7 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config)
       continue;
     }
 
-    RobotConfig config(*node_it, *this);
+    RobotConfig config(*node_it);
 
     // Check if the config is unique
     if (std::count_if(configs.begin(), configs.end()
@@ -392,75 +393,6 @@ RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config)
 
   return configs;
 }
-
-// RobotConfigs RobotManager::parseRobotConfigs(const YAML::Node& yaml_config, RobotConfigs configs)
-// {
-//   // RobotConfigs configs;
-
-//   if (!yaml_config.IsMap())
-//   {
-//     // TODO Throw
-//     TEMOTO_WARN_("Unable to parse 'Robots' key from config.");
-//     return configs;
-//   }
-
-//   YAML::Node robots_node = yaml_config["Robots"];
-//   if (!robots_node.IsSequence())
-//   {
-//     TEMOTO_WARN_("The given config does not contain sequence of robots.");
-//     // TODO Throw
-//     return configs;
-//   }
-
-//   TEMOTO_DEBUG_("Parsing %lu robots.", robots_node.size());
-
-//   // go over each robot node in the sequence
-//   for (YAML::const_iterator node_it = robots_node.begin(); node_it != robots_node.end(); ++node_it)
-//   try
-//   {
-//     if (!node_it->IsMap())
-//     {
-//       TEMOTO_ERROR("Unable to parse the robot config. Parameters in YAML have to be specified in "
-//                   "key-value pairs.");
-//       continue;
-//     }
-
-//     RobotConfig config(*node_it, *this);
-    
-//     bool compare = false;
-//     for (const auto& config_compare : configs)
-//     {
-//       if (config.getName() == config_compare->getName())
-//       {
-//         TEMOTO_INFO_STREAM_("Equal");
-//         compare = true;
-//         TEMOTO_INFO_STREAM_(config.getName().c_str());          
-//       }
-//     }    
-    
-//     if (std::count_if(configs.begin()
-//     , configs.end()
-//     , [&](const RobotConfigPtr& ri) { return *ri == config; }) == 0 && compare==false )                       
-//     {
-//       // OK, this is unique config, add it to the configs.
-//       TEMOTO_INFO_("unique '%s'.", config.getName().c_str());
-//       configs.emplace_back(std::make_shared<RobotConfig>(config));        
-//     }
-//     else
-//     {
-//       TEMOTO_WARN_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
-//       TEMOTO_INFO_("Ignoring duplicate of robot '%s'.", config.getName().c_str());
-//     }
-//     compare=false;
-//   }
-//   catch (...)
-//   {
-//     TEMOTO_WARN_("Failed to parse RobotConfig from config.");
-//     continue;
-//   }
-
-//   return configs;
-// }
 
 bool RobotManager::planManipulationPathCb(RobotPlanManipulation::Request& req, RobotPlanManipulation::Response& res)
 try
@@ -886,10 +818,8 @@ RobotManager::RobotPtr RobotManager::findLoadedRobot(const std::string& robot_na
   {
     throw TEMOTO_ERRSTACK("Robot '" + robot_name + "' is loaded but its configuration is invalid (nullptr).");
   }
-  else
-  {
-    return *robot_it;
-  }
+
+  return *robot_it;
 }
 
 void RobotManager::restoreState()
@@ -914,7 +844,7 @@ void RobotManager::restoreState()
       // TODO: error this robot is not described in robot_description.yaml
       continue;
     }
-    auto robot = std::make_shared<Robot>(robot_config, query.response.temoto_metadata.request_id, resource_registrar_, *this);
+    auto robot = std::make_shared<Robot>(robot_config, query.response.temoto_metadata.request_id, resource_registrar_);
     robot->recover(query.response.temoto_metadata.request_id);
     loaded_robots_.push_back(robot);
   }

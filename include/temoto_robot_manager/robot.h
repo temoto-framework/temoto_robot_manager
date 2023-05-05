@@ -18,7 +18,6 @@
 #define TEMOTO_ROBOT_MANAGER__ROBOT_H
 
 #include "class_loader/class_loader.hpp"
-#include "temoto_core/common/base_subsystem.h"
 #include "temoto_process_manager/process_manager_services.hpp"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_config.h"
@@ -41,13 +40,12 @@ namespace temoto_robot_manager
 // Forward declaration
 class RobotManager;
 
-class Robot : public temoto_core::BaseSubsystem
+class Robot
 {
 public:
   Robot(RobotConfigPtr config_
   , const std::string& resource_id
-  , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-  , temoto_core::BaseSubsystem& b);
+  , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar);
 
   virtual ~Robot();
   void load();
@@ -66,6 +64,8 @@ public:
   
   void goalNavigation(const geometry_msgs::PoseStamped& target_pose);
   void controlGripper(const std::string& robot_name, const float position);
+
+  void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request);
   
   std::string getName() const
   {

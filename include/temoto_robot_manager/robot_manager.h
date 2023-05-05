@@ -105,9 +105,7 @@ private:
 
   bool customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res);
 
-  RobotConfigs parseRobotConfigs(const YAML::Node& config);
-  
-  // RobotConfigs parseRobotConfigs(const YAML::Node& config, RobotConfigs configs);  
+  RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
 

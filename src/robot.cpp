@@ -23,8 +23,7 @@ namespace temoto_robot_manager
 {
 Robot::Robot(RobotConfigPtr config
 , const std::string& resource_id
-, temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-, temoto_core::BaseSubsystem& b)
+, temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar)
 : config_(config)
 , robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
@@ -32,76 +31,109 @@ Robot::Robot(RobotConfigPtr config
 , robot_operational_(true)
 , state_in_error_(false)
 , robot_loaded_(false)
-, temoto_core::BaseSubsystem(b)
-{
-  class_name_ = __func__;
-}
+{}
 
 Robot::~Robot()
 {
-  if(isLocal())
+  if(!isLocal())
   {
-    // Unload features
-    if (config_->getFeatureURDF().isLoaded())
-    {
-      TEMOTO_WARN("Unloading URDF Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureURDF().getResourceId());
-      config_->getFeatureURDF().setLoaded(false);
-    }
+    return;
+  }
 
-    if (config_->getFeatureManipulation().isLoaded())
-    {
-      TEMOTO_WARN("Unloading Manipulation Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureManipulation().getResourceId());
-      config_->getFeatureManipulation().setLoaded(false);
-    }
+  // Unload features
+  if (config_->getFeatureURDF().isLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading URDF Feature.");
+    config_->getFeatureURDF().setLoaded(false);
+  }
 
-    if (config_->getFeatureManipulation().isDriverLoaded())
-    {
-      TEMOTO_WARN("Unloading Manipulation driver Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureManipulation().getDriverResourceId());
-      config_->getFeatureManipulation().setDriverLoaded(false);
-    }
+  if (config_->getFeatureManipulation().isLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Manipulation Feature.");
+    config_->getFeatureManipulation().setLoaded(false);
+  }
 
-    if (config_->getFeatureNavigation().isLoaded())
-    {
-      TEMOTO_WARN("Unloading Navigation Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getResourceId());
-      config_->getFeatureNavigation().setLoaded(false);
-    }
+  if (config_->getFeatureManipulation().isDriverLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Manipulation driver Feature.");
+    config_->getFeatureManipulation().setDriverLoaded(false);
+  }
 
-    if (config_->getFeatureNavigation().isDriverLoaded())
-    {
-      TEMOTO_WARN("Unloading Navigation driver Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureNavigation().getDriverResourceId());
-      config_->getFeatureNavigation().setDriverLoaded(false);
-    }
+  if (config_->getFeatureNavigation().isLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Navigation Feature.");
+    config_->getFeatureNavigation().setLoaded(false);
+  }
 
-    if (config_->getFeatureGripper().isLoaded())
-    {
-      TEMOTO_WARN("Unloading Gripper Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureGripper().getResourceId());
-      config_->getFeatureGripper().setLoaded(false);
-    }
+  if (config_->getFeatureNavigation().isDriverLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Navigation driver Feature.");
+    config_->getFeatureNavigation().setDriverLoaded(false);
+  }
 
-    if (config_->getFeatureGripper().isDriverLoaded())
+  if (config_->getFeatureGripper().isLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Gripper Feature.");
+    config_->getFeatureGripper().setLoaded(false);
+  }
+
+  if (config_->getFeatureGripper().isDriverLoaded())
+  {
+    TEMOTO_DEBUG_("Unloading Gripper driver Feature.");
+    config_->getFeatureGripper().setDriverLoaded(false);
+  }
+
+  for (auto& custom_feature : config_->getCustomFeatures())
+  {
+    /*
+     * Unload the controller
+     */
+    if (custom_feature.second.isLoaded())
     {
-      TEMOTO_WARN("Unloading Gripper driver Feature.");
-      //resource_registrar_.unloadClientResource(config_->getFeatureGripper().getDriverResourceId());
-      config_->getFeatureGripper().setDriverLoaded(false);
-    }
-    
-    // Remove parameters
-    if(nh_.deleteParam(config_->getAbsRobotNamespace()))
-    {
-      TEMOTO_DEBUG("Parameter(s) removed successfully.");
+      auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature.second.getName());
+      if (custom_feature_plugin_it == custom_feature_plugins_.end())
+      {
+        TEMOTO_ERROR_STREAM_("Plugin '" << custom_feature.second.getName() 
+        << "' of robot '" << config_->getName() << "' not found.");
+        continue;
+      }
+
+      if (!custom_feature_plugin_it->second.plugin->deinitialize())
+      {
+        TEMOTO_ERROR_STREAM_("Unable to uninitialize plugin '" << custom_feature.second.getName() 
+        << "' of robot '" << config_->getName() << "'.");
+      }
+
+      custom_feature_plugin_it->second.plugin.reset();
+      custom_feature_plugins_.erase(custom_feature_plugin_it);
+      custom_feature.second.setLoaded(false);
     }
     else
     {
-      TEMOTO_WARN("Parameter(s) not removed.");
+      TEMOTO_WARN_STREAM_("Plugin '" << custom_feature.second.getName() 
+      << "' of robot '" << config_->getName() << "' not loaded.");
+    }
+
+    /*
+     * Unload the driver
+     */
+    if (custom_feature.second.isDriverLoaded())
+    {
+      custom_feature.second.setDriverLoaded(false);
     }
   }
-  TEMOTO_DEBUG("Robot destructed");
+  
+  // Remove parameters
+  if(nh_.deleteParam(config_->getAbsRobotNamespace()))
+  {
+    TEMOTO_DEBUG_("Parameter(s) removed successfully.");
+  }
+  else
+  {
+    TEMOTO_WARN_("Parameter(s) not removed.");
+  }
+
+  TEMOTO_DEBUG_("Robot destructed");
 }
 
 void Robot::load()
@@ -189,14 +221,14 @@ void Robot::waitForParam(const std::string& param)
   //\TODO: add 30 sec timeout protection.
   while (!nh_.hasParam(param))
   {
-    TEMOTO_DEBUG("Waiting for %s ...", param.c_str());
+    TEMOTO_DEBUG_("Waiting for %s ...", param.c_str());
     if (isInError())
     {
       throw TEMOTO_ERRSTACK("Loading interrupted. The robot is in a failed state.");
     }
     ros::Duration(1).sleep();
   }
-  TEMOTO_DEBUG("Parameter '%s' was found.", param.c_str());
+  TEMOTO_DEBUG_("Parameter '%s' was found.", param.c_str());
 }
 
 void Robot::waitForTopic(const std::string& topic)
@@ -204,14 +236,14 @@ void Robot::waitForTopic(const std::string& topic)
   //\TODO: add 30 sec timeout protection.
   while (!isTopicAvailable(topic))
   {
-    TEMOTO_DEBUG("Waiting for %s ...", topic.c_str());
+    TEMOTO_DEBUG_("Waiting for %s ...", topic.c_str());
     if (isInError())
     {
       throw TEMOTO_ERRSTACK("Loading interrupted. The robot is in a failed state.");
     }
     ros::Duration(1).sleep();
   }
-  TEMOTO_DEBUG("Topic '%s' was found.", topic.c_str());
+  TEMOTO_DEBUG_("Topic '%s' was found.", topic.c_str());
 }
 
 bool Robot::isTopicAvailable(const std::string& topic)
@@ -243,7 +275,7 @@ try
   std::string robot_desc_param = "/" + config_->getAbsRobotNamespace() + "/robot_description";
   waitForParam(robot_desc_param);
   ftr.setLoaded(true);
-  TEMOTO_DEBUG("Feature 'URDF' loaded.");
+  TEMOTO_DEBUG_("Feature 'URDF' loaded.");
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -262,7 +294,6 @@ void Robot::loadManipulationController()
   {
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-    //ftr.setResourceId(res_id);
     std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
@@ -271,12 +302,12 @@ void Robot::loadManipulationController()
     // TODO: read groups from srdf automatically
     for (auto group : ftr.getPlanningGroups())
     {
-      TEMOTO_DEBUG("Adding planning group '%s'.", group.c_str());
+      TEMOTO_DEBUG_("Adding planning group '%s'.", group.c_str());
       addPlanningGroup(group);
     }
 
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'Manipulation Controller' loaded.");
+    TEMOTO_DEBUG_("Feature 'Manipulation Controller' loaded.");
   }
   catch(resource_registrar::TemotoErrorStack& error_stack)
   {
@@ -296,13 +327,12 @@ void Robot::loadManipulationDriver()
   {
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    //ftr.setDriverResourceId(res_id);
 
     std::string joint_states_topic = "/" + config_->getAbsRobotNamespace() + "/joint_states";
     waitForTopic(joint_states_topic);
 
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'Manipulation Driver' loaded.");
+    TEMOTO_DEBUG_("Feature 'Manipulation Driver' loaded.");
   }
   catch(resource_registrar::TemotoErrorStack& error_stack)
   {
@@ -322,7 +352,6 @@ void Robot::loadNavigationController()
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-    //ftr.setResourceId(res_id);
 
     // wait for command velocity to be published
     std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
@@ -339,7 +368,7 @@ void Robot::loadNavigationController()
 
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'Navigation Controller' loaded.");
+    TEMOTO_DEBUG_("Feature 'Navigation Controller' loaded.");
   }
   catch (resource_registrar::TemotoErrorStack& error_stack)
   {
@@ -359,11 +388,10 @@ void Robot::loadNavigationDriver()
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    //ftr.setDriverResourceId(res_id);
     std::string odom_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
     waitForTopic(odom_topic);
     ftr.setDriverLoaded(true);
-    TEMOTO_DEBUG("Feature 'Navigation Driver' loaded.");        
+    TEMOTO_DEBUG_("Feature 'Navigation Driver' loaded.");        
   }
   catch(resource_registrar::TemotoErrorStack& error_stack)
   {
@@ -382,11 +410,10 @@ void Robot::loadGripperController()
   {
     FeatureGripper& ftr = config_->getFeatureGripper();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());          
-    //ftr.setResourceId(res_id);
     std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
     ros::service::waitForService(gripper_topic,-1);
     ftr.setLoaded(true);
-    TEMOTO_DEBUG("Feature 'Gripper Controller' loaded.");
+    TEMOTO_DEBUG_("Feature 'Gripper Controller' loaded.");
     
   }
   catch(resource_registrar::TemotoErrorStack& error_stack)
@@ -396,26 +423,21 @@ void Robot::loadGripperController()
 }
 
 void Robot::loadGripperDriver()
+try
 {
   if (config_->getFeatureGripper().isDriverLoaded())
   {
     return; // Return if already loaded.
   }
-  try
-  {
-    FeatureGripper& ftr = config_->getFeatureGripper();
-    rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-    //ftr.setDriverResourceId(res_id);
-    TEMOTO_DEBUG("Feature 'Gripper driver' loaded.");
-    ros::Duration(5).sleep();
-    TEMOTO_INFO_STREAM("Finish Load Gripper Driver ");
-    //
-
-  }
-  catch(resource_registrar::TemotoErrorStack& error_stack)
-  {
-    throw FWD_TEMOTO_ERRSTACK(error_stack);
-  }
+  
+  FeatureGripper& ftr = config_->getFeatureGripper();
+  rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
+  ros::Duration(5).sleep();
+  TEMOTO_DEBUG_("Feature 'Gripper driver' loaded.");
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
 }
 
 void Robot::loadCustomController(const std::string& feature_name)
@@ -453,8 +475,16 @@ try
   /*
    * Initialize the plugin
    */
-  plugin_helper.plugin->initialize();
-  custom_feature_plugins_.insert({feature_name, plugin_helper});
+  if (plugin_helper.plugin->initialize())
+  {
+    custom_feature_plugins_.insert({feature_name, plugin_helper});
+    config_->getCustomFeatures().at(feature_name).setLoaded(true);
+  }
+  else
+  {
+    plugin_helper.plugin.reset();
+    throw TEMOTO_ERRSTACK("Unable to initialize plugin '" + plugin_path + "'");
+  }
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -476,6 +506,20 @@ catch(...)
 void Robot::loadCustomDriver(const std::string& feature_name)
 {
   // TODO
+}
+
+void Robot::invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request)
+{
+  auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature_name);
+  if (custom_feature_plugin_it == custom_feature_plugins_.end())
+  {
+    throw TEMOTO_ERRSTACK("Feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "' not found.");
+  }
+
+  if (!custom_feature_plugin_it->second.plugin->invoke(request))
+  {
+    throw TEMOTO_ERRSTACK("Unable to invoke feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
+  }
 }
 
 temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name
@@ -604,7 +648,7 @@ void Robot::addPlanningGroup(const std::string& planning_group_name)
   group->setGoalPositionTolerance(0.001);
   group->setGoalOrientationTolerance(0.001);
   group->setGoalJointTolerance(0.001);
-  TEMOTO_DEBUG("Active end effector link: %s", group->getEndEffectorLink().c_str());
+  TEMOTO_DEBUG_("Active end effector link: %s", group->getEndEffectorLink().c_str());
 
   planning_groups_.emplace(planning_group_name, std::move(group));
 }
@@ -635,7 +679,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const g
   
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   
-  TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
+  TEMOTO_DEBUG_("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
     throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first + "' failed.");
@@ -663,7 +707,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
 
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
 
-  TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
+  TEMOTO_DEBUG_("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
     throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first +"' failed.");
@@ -698,7 +742,7 @@ void Robot::planManipulationPath(const std::string& planning_group_name, const s
   
   is_plan_valid_ = static_cast<bool>(group_it->second->plan(last_plan));
   
-  TEMOTO_DEBUG("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
+  TEMOTO_DEBUG_("Plan %s",  is_plan_valid_ ? "FOUND" : "FAILED");
   if(!is_plan_valid_)
   {
     throw TEMOTO_ERRSTACK("Planning with group '" + group_it->first + "' failed.");
@@ -726,11 +770,11 @@ void Robot::executeManipulationPath()
     // Re send path - max 3 Attempts
     for (size_t i=0; !success && i<3; i++)
     {
-      TEMOTO_INFO_STREAM("Attempt = " << i+1);
+      TEMOTO_DEBUG_STREAM_("Attempt = " << i+1);
       success = static_cast<bool>(group_it->second->execute(last_plan));
     }
 
-    TEMOTO_DEBUG("Execution %s",  success ? "SUCCESSFUL" : "FAILED");
+    TEMOTO_DEBUG_("Execution %s",  success ? "SUCCESSFUL" : "FAILED");
     if(!success)
     {
       throw TEMOTO_ERRSTACK("Execute plan with group '" + planning_group_name + "' failed.");
@@ -834,7 +878,7 @@ try
   std::string argument = std::to_string(position);
   std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
   
-  TEMOTO_DEBUG("Feature 'Gripper' loaded.");
+  TEMOTO_DEBUG_("Feature 'Gripper' loaded.");
   client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
   temoto_robot_manager::GripperControl gripper_srvc;
   gripper_srvc.request.robot_name = robot_name;
@@ -845,7 +889,7 @@ try
     throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
   }
   
-  TEMOTO_DEBUG("Call to gripper control was sucessful.");
+  TEMOTO_DEBUG_("Call to gripper control was sucessful.");
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -931,7 +975,7 @@ void Robot::recover(const std::string& parent_query_id)
   TEMOTO_DEBUG_STREAM_("size of erm_queries: " << erm_queries.size());
   for (const auto& erm_query : erm_queries)
   {
-    TEMOTO_DEBUG_STREAM("ERM query: " << erm_query.second.request);
+    TEMOTO_DEBUG_STREAM_("ERM query: " << erm_query.second.request);
     resource_registrar_.registerClientCallback<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
     , temoto_process_manager::srv_name::SERVER
     , erm_query.second.response.temoto_metadata.request_id
