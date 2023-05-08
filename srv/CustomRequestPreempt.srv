@@ -1,0 +1,10 @@
+Header header
+string robot_name
+string custom_feature_name
+string request_id
+uint8 priority
+
+---
+
+bool accepted
+string message

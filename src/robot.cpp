@@ -23,10 +23,12 @@ namespace temoto_robot_manager
 {
 Robot::Robot(RobotConfigPtr config
 , const std::string& resource_id
-, temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar)
+, temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
+, CustomFeatureUpdateCb custom_feature_update_cb_)
 : config_(config)
 , robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
+, custom_feature_update_cb_(custom_feature_update_cb)
 , is_plan_valid_(false)
 , robot_operational_(true)
 , state_in_error_(false)
@@ -519,6 +521,20 @@ void Robot::invokeCustomFeature(const std::string& custom_feature_name, const Rm
   if (!custom_feature_plugin_it->second.plugin->invoke(request))
   {
     throw TEMOTO_ERRSTACK("Unable to invoke feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
+  }
+}
+
+void Robot::preemptCustomFeature(const std::string& custom_feature_name)
+{
+  auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature_name);
+  if (custom_feature_plugin_it == custom_feature_plugins_.end())
+  {
+    throw TEMOTO_ERRSTACK("Feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "' not found.");
+  }
+
+  if (!custom_feature_plugin_it->second.plugin->preempt())
+  {
+    throw TEMOTO_ERRSTACK("Unable to pre-empt feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
   }
 }
 

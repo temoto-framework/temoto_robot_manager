@@ -132,12 +132,47 @@ bool RobotManager::customFeatureCb(CustomRequest::Request& req, CustomRequest::R
 try
 {
   TEMOTO_INFO_STREAM("Received request: " << req << std::endl);
+  std::lock<std::mutex> l(mutex_ongoing_custom_requests_);
 
+  auto custom_request_it = std::find_if(
+    ongoing_custom_requests_.begin()
+  , ongoing_custom_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req == ongoing_req.second.request;
+  });
+
+  /*
+   * Check if that request is already processed by a client with higher priority
+   */
+  else if (custom_request_it != ongoing_custom_requests_.end() &&
+           custom_request_it.second.request.priority > req.priority)
+  {
+    res.message = "Request declined as it is already in process by client with higher priority";
+    res.accepted = false;
+    return true;
+  }
+  
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
-  loaded_robot->invokeCustomFeature(req.custom_feature_name, RmCustomRequest{});
 
-  res.accepted = true;
+  /*
+   * Pre-empt the lower priority request
+   */
+  if (custom_request_it != ongoing_custom_requests_.end())
+  {
+    loaded_robot->preemptCustomFeature(req.custom_feature_name);
+  }
+
+  // TODO: Add pose and pose array
+  loaded_robot->invokeCustomFeature(req.custom_feature_name, RmCustomRequest{
+    .data_num = req.data_num,
+    .data_num_array = req.data_num_array,
+    .data_str = req.data_str,
+    .data_str_array = req.data_str_array
+  });
+
   res.request_id = generateId();
+  res.accepted = true;
   return true;
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
@@ -145,6 +180,71 @@ catch(resource_registrar::TemotoErrorStack& error_stack)
   res.accepted = false;
   res.message = error_stack.getMessage();
   return true;
+}
+
+bool RobotManager::customFeaturePreemptCb(CustomRequestPreempt::Request& req, CustomRequestPreempt::Response& res)
+try
+{
+  TEMOTO_INFO_STREAM("Received a pre-emption request:\n" << req << std::endl);
+  std::lock<std::mutex> l(mutex_ongoing_custom_requests_);
+
+  auto custom_request_it = std::find_if(
+    ongoing_custom_requests_.begin()
+  , ongoing_custom_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req == ongoing_req.second.request;
+  });
+
+  /*
+   * DECLINE: If no ID was provided and priority is low
+   */
+  if (req.request_id.empty() && (req.priority <= custom_request_it.second.request.priority))
+  {
+    res.message = "Pre-emption request declined: Priority lower than required";
+    res.accepted = false;
+    return true;
+  }
+
+  /*
+   * DECLINE: If ID was provided but mismatches
+   */
+  if (!req.request_id.empty() && (req.request_id != custom_request_it.second.response.request_id))
+  {
+    res.message = "Pre-emption request declined: Request ID mismatch";
+    res.accepted = false;
+    return true;
+  }
+
+  /*
+   * ACCEPT: If ID matches or the priority is higher
+   */
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  loaded_robot->preemptCustomFeature(req.custom_feature_name);
+  ongoing_custom_requests_.erase(custom_request_it);
+
+  res.accepted = true;
+  return true;
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  res.message = "Pre-emption request declined: \n" + e.what();
+  res.accepted = false;
+  return true;
+}
+
+void customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback)
+{
+  CustomFeedback msg;
+
+  msg.header.time = ros::Time::now();
+  msg.robot_name = feedback.robot_name;
+  msg.custom_feature_name = feedback.custom_feature_name;
+  msg.request_id = feedback.request_id;
+  msg.status = feedback.status;
+
+  std::lock<std::mutex> l(mutex_pub_custom_feature_feedback_);
+  pub_custom_feature_feedback_.publish(msg);
 }
 
 void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir)
@@ -200,7 +300,9 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   {
     try
     {
-      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_);
+      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
+      , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+
       loaded_robot->load();
       loaded_robots_.push_back(loaded_robot);
       TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());

@@ -105,6 +105,10 @@ private:
 
   bool customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res);
 
+  bool customFeaturePreemptCb(CustomRequestPreempt::Request& req, CustomRequestPreempt::Response& res);
+
+  void customFeatureUpdateCb(const RmCustomFeedback& feedback);
+
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
@@ -138,7 +142,6 @@ private:
   ros::ServiceServer server_navigation_goal_;
   ros::ServiceServer server_gripper_control_position_;
   ros::ServiceServer server_get_robot_config_;
-  ros::ServiceServer server_custom_feature_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -150,7 +153,17 @@ private:
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
 
+  /*
+   * CUSTOM FEATURE 
+   */
+  std::map<std::string, CustomRequest> ongoing_custom_requests_;
+  std::mutex mutex_ongoing_custom_requests_;
+
   ros::Publisher pub_custom_feature_feedback_;
+  std::mutex mutex_pub_custom_feature_feedback_;
+
+  ros::ServiceServer server_custom_feature_;
+  ros::ServiceServer server_custom_feature_preempt_;
   
   // Keeps robot_infos in sync with other managers
   temoto_core::trr::ConfigSynchronizer<RobotManager, PayloadType> config_syncer_;

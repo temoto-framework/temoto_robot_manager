@@ -37,6 +37,7 @@ add_message_files(FILES
 
 add_service_files(FILES
   CustomRequest.srv
+  CustomRequestPreempt.srv
   GripperControl.srv
   RobotLoad.srv
   RobotPlanManipulation.srv

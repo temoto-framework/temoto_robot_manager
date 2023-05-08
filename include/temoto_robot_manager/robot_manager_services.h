@@ -29,6 +29,7 @@
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
 #include "temoto_robot_manager/CustomRequest.h"
+#include "temoto_robot_manager/CustomRequestPreemept.h"
 #include "temoto_robot_manager/CustomFeedback.h"
 
 #include <string>
@@ -76,6 +77,13 @@ static bool operator==(const temoto_robot_manager::RobotLoad::Request& r1,
 
 static bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
                        const temoto_robot_manager::CustomRequest::Request& r2)
+{
+  return (r1.robot_name == r2.robot_name &&
+          r1.custom_feature_name == r2.custom_feature_name);
+}
+
+static bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
+                       const temoto_robot_manager::CustomRequestPreempt::Request& r2)
 {
   return (r1.robot_name == r2.robot_name &&
           r1.custom_feature_name == r2.custom_feature_name);

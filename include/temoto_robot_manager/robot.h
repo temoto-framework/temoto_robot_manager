@@ -37,15 +37,23 @@
 namespace temoto_robot_manager
 {
 
-// Forward declaration
-class RobotManager;
+RmCustomFeedbackWrap : RmCustomFeedback
+{
+  std::string robot_name;
+  std::string custom_feature_name;
+  std::string request_id;
+};
+
+typedef std::function<void(const RmCustomFeedbackWrap&)> CustomFeatureUpdateCb;
 
 class Robot
 {
 public:
+
   Robot(RobotConfigPtr config_
   , const std::string& resource_id
-  , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar);
+  , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
+  , CustomFeatureUpdateCb custom_feature_update_cb_);
 
   virtual ~Robot();
   void load();
@@ -66,6 +74,7 @@ public:
   void controlGripper(const std::string& robot_name, const float position);
 
   void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request);
+  void preemptCustomFeature(const std::string& custom_feature_name);
   
   std::string getName() const
   {
@@ -143,6 +152,7 @@ private:
     std::shared_ptr<class_loader::ClassLoader> class_loader;
   };
   std::map<std::string, CustomPluginHelper> custom_feature_plugins_;
+  CustomFeatureUpdateCb custom_feature_update_cb_ = NULL;
 
   ros::ServiceClient client_gripper_control_;
 };
