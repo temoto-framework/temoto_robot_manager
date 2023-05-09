@@ -39,11 +39,12 @@ struct RmCustomRequest
   };
 
   std::string data_str;
-  double data_num;
-  PoseStamped data_pose;
-
   std::vector<std::string> data_str_array;
+
+  double data_num;
   std::vector<double> data_num_array;
+
+  PoseStamped data_pose;
   std::vector<PoseStamped> data_pose_array;
 };
 

@@ -24,7 +24,7 @@ namespace temoto_robot_manager
 Robot::Robot(RobotConfigPtr config
 , const std::string& resource_id
 , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-, CustomFeatureUpdateCb custom_feature_update_cb_)
+, CustomFeatureUpdateCb custom_feature_update_cb)
 : config_(config)
 , robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
@@ -522,6 +522,8 @@ void Robot::invokeCustomFeature(const std::string& custom_feature_name, const Rm
   {
     throw TEMOTO_ERRSTACK("Unable to invoke feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
   }
+
+  //custom_feature_update_cb_();
 }
 
 void Robot::preemptCustomFeature(const std::string& custom_feature_name)
@@ -914,11 +916,11 @@ catch(resource_registrar::TemotoErrorStack& error_stack)
 
 bool Robot::isLocal() const
 {
-  if (config_) 
+  if (!config_) 
   {
-    return config_->getTemotoNamespace() == ::temoto_core::common::getTemotoNamespace();
+    throw TEMOTO_ERRSTACK("Robot in undefined configuration.");
   }
-  return true; // some default that should never reached. 
+  return config_->getTemotoNamespace() == TEMOTO_LOG_ATTR.getNs(); 
 }
 
 std::string Robot::getVizInfo()

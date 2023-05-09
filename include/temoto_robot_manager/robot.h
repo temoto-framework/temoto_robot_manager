@@ -21,7 +21,6 @@
 #include "temoto_process_manager/process_manager_services.hpp"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_config.h"
-#include "temoto_robot_manager/robot_manager.h"
 #include "temoto_robot_manager/robot_features.h"
 #include "temoto_robot_manager/GripperControl.h"
 #include "temoto_robot_manager/custom_plugin_base.h"
@@ -37,7 +36,7 @@
 namespace temoto_robot_manager
 {
 
-RmCustomFeedbackWrap : RmCustomFeedback
+struct RmCustomFeedbackWrap : RmCustomFeedback
 {
   std::string robot_name;
   std::string custom_feature_name;
@@ -53,7 +52,7 @@ public:
   Robot(RobotConfigPtr config_
   , const std::string& resource_id
   , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-  , CustomFeatureUpdateCb custom_feature_update_cb_);
+  , CustomFeatureUpdateCb custom_feature_update_cb);
 
   virtual ~Robot();
   void load();

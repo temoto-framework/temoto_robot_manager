@@ -29,7 +29,7 @@
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
 #include "temoto_robot_manager/CustomRequest.h"
-#include "temoto_robot_manager/CustomRequestPreemept.h"
+#include "temoto_robot_manager/CustomRequestPreempt.h"
 #include "temoto_robot_manager/CustomFeedback.h"
 
 #include <string>
@@ -54,19 +54,16 @@ const std::string SERVER_SET_MODE = MANAGER + "/" + "set_mode";
 const std::string SERVER_GRIPPER_CONTROL_POSITION = MANAGER + "/" + "gripper_control_position";
 }
 
-namespace channel_name
+namespace channels
 {
-  const std::string CUSTOM_REQUEST = srv_name::MANAGER + "/" + "custom_request";
-  const std::string CUSTOM_FEEDBACK = srv_name::MANAGER + "/" + "custom_feedback";
+namespace custom
+{
+  const std::string REQUEST = srv_name::MANAGER + "/" + "custom_request";
+  const std::string PREEMPT = srv_name::MANAGER + "/" + "custom_preempt";
+  const std::string FEEDBACK = srv_name::MANAGER + "/" + "custom_feedback";
+}
 }
 
-namespace modes
-{
-const std::string AUTO = "auto";
-const std::string NAVIGATION = "navigation";
-const std::string MANIPULATION = "manipulation";
-const std::string GRIPPER = "gripper";
-}
 }
 
 static bool operator==(const temoto_robot_manager::RobotLoad::Request& r1,
@@ -82,12 +79,18 @@ static bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
           r1.custom_feature_name == r2.custom_feature_name);
 }
 
-static bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
-                       const temoto_robot_manager::CustomRequestPreempt::Request& r2)
-{
-  return (r1.robot_name == r2.robot_name &&
-          r1.custom_feature_name == r2.custom_feature_name);
-}
+// bool operator==(const temoto_robot_manager::CustomRequestPreempt::Request& rp1,
+//                 const temoto_robot_manager::CustomRequest::Request& r2)
+// {
+//   return (rp1.robot_name == r2.robot_name &&
+//           rp1.custom_feature_name == r2.custom_feature_name);
+// }
+
+// bool operator==(const temoto_robot_manager::CustomRequest::Request& r1,
+//                 const temoto_robot_manager::CustomRequestPreempt::Request& rp2)
+// {
+//   return (rp2 == r1);
+// }
 
 #endif
 

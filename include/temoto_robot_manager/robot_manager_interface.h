@@ -67,8 +67,10 @@ public:
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
 
       client_custom_request_ = 
-        nh_.serviceClient<CustomRequest>(channel_name::CUSTOM_REQUEST);
-      custom_feedback_ = nh_.subscribe(channel_name::CUSTOM_FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
+        nh_.serviceClient<CustomRequest>(channels::custom::REQUEST);
+      client_custom_request_preempt_ = 
+        nh_.serviceClient<CustomRequestPreempt>(channels::custom::PREEMPT);
+      custom_feedback_ = nh_.subscribe(channels::custom::FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
 
       initialized_ = true;
     }
@@ -86,7 +88,6 @@ public:
 
   bool invokeCustomFeature(CustomRequest& custom_request)
   {
-    custom_request.request.action = CustomRequest::Request::START;
     custom_request.request.client_id = rr_name_;
 
     if (!client_custom_request_.call(custom_request))
@@ -138,15 +139,20 @@ public:
       throw TEMOTO_ERRSTACK("Could not find the request in ongoing requests");
     }
 
-    auto custom_request_cpy = ongoing_query_it->second.request;
-    custom_request_cpy.request.action = CustomRequest::Request::PREEMPT;
+    CustomRequestPreempt preempt_srv_msg;
+    const auto& ongoing_req = ongoing_query_it->second.request.request;
 
-    if (!client_custom_request_.call(custom_request_cpy))
+    preempt_srv_msg.request.custom_feature_name = ongoing_req.custom_feature_name;
+    preempt_srv_msg.request.robot_name = ongoing_req.robot_name;
+    preempt_srv_msg.request.priority = ongoing_req.priority;
+    preempt_srv_msg.request.request_id = ongoing_query_it->first;
+
+    if (!client_custom_request_preempt_.call(preempt_srv_msg))
     {
       throw TEMOTO_ERRSTACK("Unable to reach CustomRequest server");
     }
 
-    return custom_request_cpy.response.accepted;
+    return preempt_srv_msg.response.accepted;
   } 
 
   YAML::Node getRobotConfig(const std::string& robot_name)
@@ -489,6 +495,7 @@ private:
   ros::ServiceClient client_get_robot_config_;
 
   ros::ServiceClient client_custom_request_;
+  ros::ServiceClient client_custom_request_preempt_;
   ros::Subscriber custom_feedback_;
   std::mutex custom_queries_mutex_;
   std::map<std::string, CustomQuery> ongoing_custom_queries_;

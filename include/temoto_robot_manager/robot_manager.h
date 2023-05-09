@@ -22,6 +22,7 @@
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
 #include "temoto_process_manager/process_manager_services.hpp"
+#include "temoto_robot_manager/custom_datastructures.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
@@ -30,6 +31,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
+
 #include <mutex>
 #include <vector>
 #include <map>
@@ -37,8 +39,6 @@
 
 namespace temoto_robot_manager
 {
-// Forward declaration
-class Robot;
 
 typedef std_msgs::String PayloadType;
 
@@ -107,7 +107,7 @@ private:
 
   bool customFeaturePreemptCb(CustomRequestPreempt::Request& req, CustomRequestPreempt::Response& res);
 
-  void customFeatureUpdateCb(const RmCustomFeedback& feedback);
+  void customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback);
 
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
