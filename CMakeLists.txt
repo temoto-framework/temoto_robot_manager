@@ -83,6 +83,7 @@ add_executable(temoto_robot_manager
   src/robot.cpp
   src/robot_config.cpp
   src/robot_features.cpp
+  src/custom_plugin_helper.cpp
 )
 add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(temoto_robot_manager 

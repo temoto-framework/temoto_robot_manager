@@ -17,13 +17,12 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_H
 
-#include "class_loader/class_loader.hpp"
 #include "temoto_process_manager/process_manager_services.hpp"
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_features.h"
 #include "temoto_robot_manager/GripperControl.h"
-#include "temoto_robot_manager/custom_plugin_base.h"
+#include "temoto_robot_manager/custom_plugin_helper.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
@@ -44,6 +43,7 @@ struct RmCustomFeedbackWrap : RmCustomFeedback
 };
 
 typedef std::function<void(const RmCustomFeedbackWrap&)> CustomFeatureUpdateCb;
+typedef std::shared_ptr<CustomPluginHelper> CustomPluginHelperPtr;
 
 class Robot
 {
@@ -145,13 +145,8 @@ private:
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
 
   // Custom related
-  struct CustomPluginHelper
-  {
-    std::shared_ptr<CustomPluginBase> plugin;
-    std::shared_ptr<class_loader::ClassLoader> class_loader;
-  };
-  std::map<std::string, CustomPluginHelper> custom_feature_plugins_;
-  CustomFeatureUpdateCb custom_feature_update_cb_ = NULL;
+  std::map<std::string, CustomPluginHelperPtr> custom_feature_plugins_;
+  CustomFeatureUpdateCb custom_feature_update_cb_;
 
   ros::ServiceClient client_gripper_control_;
 };

@@ -95,18 +95,21 @@ Robot::~Robot()
       auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature.second.getName());
       if (custom_feature_plugin_it == custom_feature_plugins_.end())
       {
-        TEMOTO_ERROR_STREAM_("Plugin '" << custom_feature.second.getName() 
+        TEMOTO_ERROR_STREAM_("Feature '" << custom_feature.second.getName() 
         << "' of robot '" << config_->getName() << "' not found.");
         continue;
       }
 
-      if (!custom_feature_plugin_it->second.plugin->deinitialize())
+      try
+      {
+        custom_feature_plugin_it->second->deinitialize();
+      }
+      catch(resource_registrar::TemotoErrorStack& e)
       {
         TEMOTO_ERROR_STREAM_("Unable to uninitialize plugin '" << custom_feature.second.getName() 
         << "' of robot '" << config_->getName() << "'.");
       }
 
-      custom_feature_plugin_it->second.plugin.reset();
       custom_feature_plugins_.erase(custom_feature_plugin_it);
       custom_feature.second.setLoaded(false);
     }
@@ -456,45 +459,19 @@ try
    *   TODO: Check if the plugin '.so' file even exists. If it doesn't
    *   the class_loader will just crash ...
    */
-  CustomPluginHelper plugin_helper;
-
   const std::string& plugin_path = custom_feature_it->second.getExecutable();
-  plugin_helper.class_loader = std::make_shared<class_loader::ClassLoader>(plugin_path, false);
-
-  
-  if (plugin_helper.class_loader->getAvailableClasses<CustomPluginBase>().empty())
-  {
-    throw TEMOTO_ERRSTACK("Library contains no plugins, check if the path is correct: '" + plugin_path + "'");
-  }
-
-  std::string plugin_name = plugin_helper.class_loader->getAvailableClasses<CustomPluginBase>().front();
-  plugin_helper.plugin = plugin_helper.class_loader->createSharedInstance<CustomPluginBase>(plugin_name);
-  if (!plugin_helper.class_loader->isLibraryLoaded())
-  {
-    throw TEMOTO_ERRSTACK("Unable to load plugin '" + plugin_path + "'");
-  }
+  CustomPluginHelperPtr plugin_helper = std::make_shared<CustomPluginHelper>(plugin_path);
 
   /*
    * Initialize the plugin
    */
-  if (plugin_helper.plugin->initialize())
-  {
-    custom_feature_plugins_.insert({feature_name, plugin_helper});
-    config_->getCustomFeatures().at(feature_name).setLoaded(true);
-  }
-  else
-  {
-    plugin_helper.plugin.reset();
-    throw TEMOTO_ERRSTACK("Unable to initialize plugin '" + plugin_path + "'");
-  }
+  plugin_helper->initialize();
+  custom_feature_plugins_.insert({feature_name, plugin_helper});
+  config_->getCustomFeatures().at(feature_name).setLoaded(true);
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
   throw FWD_TEMOTO_ERRSTACK(error_stack);
-}
-catch(class_loader::ClassLoaderException & e)
-{
-  throw TEMOTO_ERRSTACK(e.what());
 }
 catch(std::exception& e)
 {
@@ -511,6 +488,7 @@ void Robot::loadCustomDriver(const std::string& feature_name)
 }
 
 void Robot::invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request)
+try
 {
   auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature_name);
   if (custom_feature_plugin_it == custom_feature_plugins_.end())
@@ -518,15 +496,19 @@ void Robot::invokeCustomFeature(const std::string& custom_feature_name, const Rm
     throw TEMOTO_ERRSTACK("Feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "' not found.");
   }
 
-  if (!custom_feature_plugin_it->second.plugin->invoke(request))
-  {
-    throw TEMOTO_ERRSTACK("Unable to invoke feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
-  }
+  custom_feature_plugin_it->second->invoke(request);
 
   //custom_feature_update_cb_();
 }
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  std::string message = "Unable to invoke feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.";
+  throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
+}
+
 
 void Robot::preemptCustomFeature(const std::string& custom_feature_name)
+try
 {
   auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature_name);
   if (custom_feature_plugin_it == custom_feature_plugins_.end())
@@ -534,10 +516,12 @@ void Robot::preemptCustomFeature(const std::string& custom_feature_name)
     throw TEMOTO_ERRSTACK("Feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "' not found.");
   }
 
-  if (!custom_feature_plugin_it->second.plugin->preempt())
-  {
-    throw TEMOTO_ERRSTACK("Unable to pre-empt feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.");
-  }
+  custom_feature_plugin_it->second->preempt();
+}
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  std::string message = "Unable to pre-empt feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.";
+  throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
 }
 
 temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name
