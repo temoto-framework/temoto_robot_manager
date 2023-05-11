@@ -8,6 +8,17 @@
 
 namespace temoto_robot_manager
 {
+
+struct RmCustomFeedbackWrap : RmCustomFeedback
+{
+  std::string robot_name;
+  std::string custom_feature_name;
+  std::string request_id;
+};
+
+typedef std::shared_ptr<CustomPluginHelper> CustomPluginHelperPtr;
+typedef std::function<void(const RmCustomFeedbackWrap&)> CustomFeatureUpdateCb;
+
 class CustomPluginHelper
 {
 public:
@@ -20,7 +31,9 @@ public:
     STOPPING,
     ERROR
   };
-  CustomPluginHelper(const std::string& plugin_path);
+
+  CustomPluginHelper(const std::string& plugin_path, CustomFeatureUpdateCb update_cb);
+  ~CustomPluginHelper();
   void initialize();
   void invoke(const RmCustomRequest& request);
   void preempt();
@@ -32,11 +45,13 @@ private:
 
   std::shared_ptr<CustomPluginBase> plugin;
   std::shared_ptr<class_loader::ClassLoader> class_loader;
-  std::thread exec_thread;
+  std::thread exec_thread_;
   std::string plugin_path_;
 
   State state_;
   mutable std::mutex mutex_state_;
+
+  CustomFeatureUpdateCb update_cb_;
 };
 } // temoto_robot_manager namespace
 #endif

@@ -1,12 +1,14 @@
 #include "temoto_robot_manager/custom_plugin_helper.h"
 #include "temoto_resource_registrar/temoto_error.h"
+#include <chrono>
 
 namespace temoto_robot_manager
 {
 
-CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path)
+CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path, CustomFeatureUpdateCb update_cb)
 : plugin_path_(plugin_path)
 , state_(State::NOT_LOADED)
+, update_cb_(update_cb)
 {
 try
 {
@@ -26,12 +28,51 @@ try
     throw TEMOTO_ERRSTACK("Unable to load plugin '" + plugin_path_ + "'");
   }
 
-  setState(State::INITIALIZED);
+  setState(State::UNINITIALIZED);
 }
 catch(class_loader::ClassLoaderException & e)
 {
   throw TEMOTO_ERRSTACK(e.what());
 }
+}
+
+CustomPluginHelper::~CustomPluginHelper()
+{
+  if (getState() == State::PROCESSING)
+  {
+    plugin->preempt();
+
+    while (!exec_thread_.joinable())
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    exec_thread_.join();
+    plugin->deinitialize();
+  }
+
+  else if (getState() == State::STOPPING)
+  {
+    while (!exec_thread_.joinable())
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    exec_thread_.join();
+    plugin->deinitialize();
+  }
+
+  else if(getState() == State::INITIALIZED || getState() == State::ERROR)
+  {
+    if (exec_thread_.joinable())
+    {
+      exec_thread_.join();
+    }
+
+    plugin->deinitialize();
+  }
+  
+  plugin.reset();
 }
 
 void CustomPluginHelper::initialize()
@@ -49,6 +90,8 @@ try
     plugin.reset();
     throw TEMOTO_ERRSTACK("Unable to initialize the plugin");
   }
+
+  setState(State::INITIALIZED);
 }
 catch(class_loader::ClassLoaderException & e)
 {
@@ -63,12 +106,24 @@ void CustomPluginHelper::invoke(const RmCustomRequest& request)
     throw TEMOTO_ERRSTACK("Cannot invoke the plugin. It has to be in 'INITIALIZED' state for that");
   }
 
-  // TODO: invoke the plugin in its own thread
-  if (!plugin->invoke(request))
+  if (exec_thread_.joinable())
   {
-    setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Unable to invoke the plugin");
+    exec_thread_.join();
   }
+
+  exec_thread_ = std::thread(
+  [&]
+  {
+    if (plugin->invoke(request))
+    {
+      setState(State::INITIALIZED);  
+    }
+    else
+    {
+      setState(State::ERROR);
+      //throw TEMOTO_ERRSTACK("Unable to invoke the plugin");
+    }
+  });
 
   setState(State::PROCESSING);
 }
@@ -84,14 +139,28 @@ void CustomPluginHelper::preempt()
   if (!plugin->preempt())
   {
     setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Unable to pre-empt plugin");
+    throw TEMOTO_ERRSTACK("Unable to pre-empt the plugin");
   }
+
+  setState(State::STOPPING);
 }
 
 void CustomPluginHelper::deinitialize()
 try
 {
-  plugin.reset();
+  if (getState() != State::INITIALIZED)
+  {
+    setState(State::ERROR);
+    throw TEMOTO_ERRSTACK("Cannot deinitialize the plugin. It has to be in 'INITIALIZED' state for that");
+  }
+
+  if (!plugin->deinitialize())
+  {
+    setState(State::ERROR);
+    throw TEMOTO_ERRSTACK("Unable to deinitialize the plugin");
+  }
+
+  setState(State::UNINITIALIZED);
 }
 catch(...)
 {

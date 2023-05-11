@@ -102,7 +102,7 @@ Robot::~Robot()
 
       try
       {
-        custom_feature_plugin_it->second->deinitialize();
+        custom_feature_plugins_.erase(custom_feature_plugin_it);
       }
       catch(resource_registrar::TemotoErrorStack& e)
       {
@@ -110,7 +110,6 @@ Robot::~Robot()
         << "' of robot '" << config_->getName() << "'.");
       }
 
-      custom_feature_plugins_.erase(custom_feature_plugin_it);
       custom_feature.second.setLoaded(false);
     }
     else
@@ -129,13 +128,16 @@ Robot::~Robot()
   }
   
   // Remove parameters
-  if(nh_.deleteParam(config_->getAbsRobotNamespace()))
+  if (config_->getFeatureURDF().isLoaded())
   {
-    TEMOTO_DEBUG_("Parameter(s) removed successfully.");
-  }
-  else
-  {
-    TEMOTO_WARN_("Parameter(s) not removed.");
+    if(nh_.deleteParam(config_->getAbsRobotNamespace()))
+    {
+      TEMOTO_DEBUG_("Parameter(s) removed successfully.");
+    }
+    else
+    {
+      TEMOTO_WARN_("Parameter(s) not removed.");
+    }
   }
 
   TEMOTO_DEBUG_("Robot destructed");
@@ -460,7 +462,7 @@ try
    *   the class_loader will just crash ...
    */
   const std::string& plugin_path = custom_feature_it->second.getExecutable();
-  CustomPluginHelperPtr plugin_helper = std::make_shared<CustomPluginHelper>(plugin_path);
+  CustomPluginHelperPtr plugin_helper = std::make_shared<CustomPluginHelper>(plugin_path, custom_feature_update_cb_);
 
   /*
    * Initialize the plugin

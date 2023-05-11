@@ -114,7 +114,7 @@ public:
 
     if (ongoing_query_it == ongoing_custom_queries_.end())
     {
-      throw TEMOTO_ERRSTACK("Could not find the request in ongoing requests");
+      throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
     if (ongoing_query_it->second.feedback.status != CustomFeedback::RUNNING)
@@ -136,7 +136,7 @@ public:
 
     if (ongoing_query_it == ongoing_custom_queries_.end())
     {
-      throw TEMOTO_ERRSTACK("Could not find the request in ongoing requests");
+      throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
     CustomRequestPreempt preempt_srv_msg;
@@ -149,7 +149,7 @@ public:
 
     if (!client_custom_request_preempt_.call(preempt_srv_msg))
     {
-      throw TEMOTO_ERRSTACK("Unable to reach CustomRequest server");
+      throw TEMOTO_ERRSTACK("Unable to reach the CustomRequestPreempt server");
     }
 
     return preempt_srv_msg.response.accepted;

@@ -35,16 +35,6 @@
 namespace temoto_robot_manager
 {
 
-struct RmCustomFeedbackWrap : RmCustomFeedback
-{
-  std::string robot_name;
-  std::string custom_feature_name;
-  std::string request_id;
-};
-
-typedef std::function<void(const RmCustomFeedbackWrap&)> CustomFeatureUpdateCb;
-typedef std::shared_ptr<CustomPluginHelper> CustomPluginHelperPtr;
-
 class Robot
 {
 public:

@@ -124,17 +124,18 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     this);
   server_custom_feature_preempt_ = nh_.advertiseService(
     channels::custom::PREEMPT,
-    &RobotManager::customFeatureCb,
+    &RobotManager::customFeaturePreemptCb,
     this);
   pub_custom_feature_feedback_ = nh_.advertise<CustomFeedback>(channels::custom::FEEDBACK, 10);
 
-  TEMOTO_INFO_("Robot manager is ready.");
+  TEMOTO_INFO_("Robot manager is ready.\n");
 }
 
 bool RobotManager::customFeatureCb(CustomRequest::Request& req, CustomRequest::Response& res)
 try
 {
-  TEMOTO_INFO_STREAM("Received request: " << req << std::endl);
+  TEMOTO_INFO_("Received an invocation request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
   std::lock_guard<std::mutex> l(mutex_ongoing_custom_requests_);
 
   auto custom_request_it = std::find_if(
@@ -152,6 +153,8 @@ try
       custom_request_it->second.request.priority > req.priority)
   {
     res.message = "Request declined as it is already in process by client with higher priority";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+
     res.accepted = false;
     return true;
   }
@@ -163,6 +166,7 @@ try
    */
   if (custom_request_it != ongoing_custom_requests_.end())
   {
+    TEMOTO_INFO_("This request is already in process under a lower priority, preempting.");
     loaded_robot->preemptCustomFeature(req.custom_feature_name);
     ongoing_custom_requests_.erase(custom_request_it);
   }
@@ -189,19 +193,23 @@ try
     return srv_msg;
   }()});
 
+  TEMOTO_INFO_("Invocation request successful.\n");
   return true;
 }
 catch(resource_registrar::TemotoErrorStack& e)
 {
   res.accepted = false;
-  res.message = e.what();
+  res.message = std::string("Unable to invoke the custom feature:\n") + e.what();
+  TEMOTO_WARN_STREAM_(res.message << std::endl);
+
   return true;
 }
 
 bool RobotManager::customFeaturePreemptCb(CustomRequestPreempt::Request& req, CustomRequestPreempt::Response& res)
 try
 {
-  TEMOTO_INFO_STREAM("Received a pre-emption request:\n" << req << std::endl);
+  TEMOTO_INFO_("Received a pre-emption request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
   std::lock_guard<std::mutex> l(mutex_ongoing_custom_requests_);
 
   auto custom_request_it = std::find_if(
@@ -220,6 +228,8 @@ try
   if (req.request_id.empty() && (req.priority <= custom_request_it->second.request.priority))
   {
     res.message = "Pre-emption request declined: Priority lower than required";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+
     res.accepted = false;
     return true;
   }
@@ -230,6 +240,8 @@ try
   if (!req.request_id.empty() && (req.request_id != custom_request_it->second.response.request_id))
   {
     res.message = "Pre-emption request declined: Request ID mismatch";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+    
     res.accepted = false;
     return true;
   }
@@ -241,13 +253,16 @@ try
   loaded_robot->preemptCustomFeature(req.custom_feature_name);
   ongoing_custom_requests_.erase(custom_request_it);
 
+  TEMOTO_INFO_("Pre-emption request initiated successfully.\n");
   res.accepted = true;
   return true;
 }
 catch(resource_registrar::TemotoErrorStack& e)
 {
-  res.message = std::string("Pre-emption request declined: \n") + e.what();
   res.accepted = false;
+  res.message = std::string("Pre-emption request declined: \n") + e.what();
+  TEMOTO_WARN_STREAM_(res.message << std::endl);
+
   return true;
 }
 
@@ -310,73 +325,70 @@ void RobotManager::readRobotDescription(const std::string& path_to_rob_descripti
 
 void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
 {
-  TEMOTO_INFO_("Starting to load robot '%s'...", req.robot_name.c_str());  
+  TEMOTO_INFO_("Loading robot '%s'...", req.robot_name.c_str());  
 
   // Find the suitable robot and fill the process manager service request
   auto config = findRobot(req.robot_name, local_configs_);
   if (config)
+  try
   {
-    try
-    {
-      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-      , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
 
-      loaded_robot->load();
-      loaded_robots_.push_back(loaded_robot);
-      TEMOTO_DEBUG_("Robot '%s' loaded.", config->getName().c_str());
-    }
-    catch (resource_registrar::TemotoErrorStack& e)
-    {
-      throw FWD_TEMOTO_ERRSTACK(e);
-    }
-    catch (...)
-    {
-      config->adjustReliability(0.0);
-      advertiseConfig(config);
-      throw TEMOTO_ERRSTACK("Failed to load robot '" + req.robot_name + "'");
-    }
+    loaded_robot->load();
+    loaded_robots_.push_back(loaded_robot);
+    TEMOTO_INFO_("Robot '%s' loaded.\n", config->getName().c_str());
     return;
   }
+  catch (resource_registrar::TemotoErrorStack& e)
+  {
+    throw FWD_TEMOTO_ERRSTACK(e);
+  }
+  catch (...)
+  {
+    config->adjustReliability(0.0);
+    advertiseConfig(config);
+    throw TEMOTO_ERRSTACK("Failed to load robot '" + req.robot_name + "'");
+  }
+    
   
   // Try to find suitable candidate from remote managers
   config = findRobot(req.robot_name, remote_configs_);
-  if (config)
+  if (!config)
   {
-    try
-    {
-      RobotLoad load_robot_srvc;
-      load_robot_srvc.request.robot_name = req.robot_name;
-      TEMOTO_INFO_("RobotManager is forwarding request to load '%s' to '%s'", req.robot_name.c_str(), config->getTemotoNamespace().c_str());
+    throw TEMOTO_ERRSTACK("Robot manager did not find a suitable robot.");
+  }
 
-      resource_registrar_.call<RobotLoad>("/" + config->getTemotoNamespace() + "/" + srv_name::MANAGER
-      , srv_name::SERVER_LOAD
-      , load_robot_srvc);
+  try
+  {
+    RobotLoad load_robot_srvc;
+    load_robot_srvc.request.robot_name = req.robot_name;
+    TEMOTO_INFO_("RobotManager is forwarding request to load '%s' to '%s'", req.robot_name.c_str(), config->getTemotoNamespace().c_str());
 
-      TEMOTO_DEBUG_("Call to remote RobotManager was sucessful.");
-      auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-      , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
-      loaded_robots_.push_back(loaded_robot);
-    }
-    catch(resource_registrar::TemotoErrorStack& e)
-    {
-      throw FWD_TEMOTO_ERRSTACK(e);
-    }
-    catch (...)
-    {
-      throw TEMOTO_ERRSTACK("Exception occured while creating Robot object.");
-    }
+    resource_registrar_.call<RobotLoad>("/" + config->getTemotoNamespace() + "/" + srv_name::MANAGER
+    , srv_name::SERVER_LOAD
+    , load_robot_srvc);
+
+    TEMOTO_INFO_("Call to remote RobotManager was sucessful.");
+    auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    loaded_robots_.push_back(loaded_robot);
+
     return;
   }
-  else
+  catch(resource_registrar::TemotoErrorStack& e)
   {
-    // no local nor remote robot found
-    throw TEMOTO_ERRSTACK("Robot manager did not find a suitable robot.");
+    throw FWD_TEMOTO_ERRSTACK(e);
+  }
+  catch (...)
+  {
+    throw TEMOTO_ERRSTACK("Exception occured while creating Robot object.");
   }
 }
 
 void RobotManager::unloadCb(RobotLoad::Request& req, RobotLoad::Response& res)
 {
-  TEMOTO_DEBUG_("ROBOT '%s' unloading...", req.robot_name.c_str());
+  TEMOTO_INFO_("Unloading robot '%s' ...", req.robot_name.c_str());
 
   // search for the robot based on its resource id, remove from map,
   // and clear loaded_robot if the unloaded robot was active.
@@ -390,7 +402,7 @@ void RobotManager::unloadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   if (robot_it != loaded_robots_.end())
   {
     loaded_robots_.erase(robot_it);
-    TEMOTO_DEBUG_("ROBOT '%s' unloaded.", req.robot_name.c_str());
+    TEMOTO_INFO_("Robot '%s' unloaded.\n", req.robot_name.c_str());
   }
   else
   {
