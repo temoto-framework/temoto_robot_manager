@@ -171,18 +171,22 @@ try
     ongoing_custom_requests_.erase(custom_request_it);
   }
 
-  // TODO: Add pose and pose array
-  loaded_robot->invokeCustomFeature(req.custom_feature_name, RmCustomRequest{
-    .data_str = req.data_str,
-    .data_str_array = req.data_str_array,
-    .data_num = req.data_num,
-    .data_num_array = req.data_num_array,
-    .data_pose = RmCustomRequest::PoseStamped{},                   // TODO
-    .data_pose_array = std::vector<RmCustomRequest::PoseStamped>{} // TODO
-  });
-
   res.request_id = generateId();
   res.accepted = true;
+
+  RmCustomRequestWrap req_rm;
+  req_rm.robot_name = req.robot_name;
+  req_rm.custom_feature_name = req.custom_feature_name;
+  req_rm.request_id = res.request_id;
+  req_rm.data_str = req.data_str;
+  req_rm.data_str_array = req.data_str_array;
+  req_rm.data_num = req.data_num;
+  req_rm.data_num_array = req.data_num_array;
+  req_rm.data_pose = RmCustomRequest::PoseStamped{};                    // TODO
+  req_rm.data_pose_array = std::vector<RmCustomRequest::PoseStamped>{}; // TODO
+
+  // TODO: Add pose and pose array
+  loaded_robot->invokeCustomFeature(req.custom_feature_name, req_rm);
 
   ongoing_custom_requests_.insert({res.request_id
   , [&]
@@ -275,6 +279,7 @@ void RobotManager::customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback)
   msg.custom_feature_name = feedback.custom_feature_name;
   msg.request_id = feedback.request_id;
   msg.status = feedback.status;
+  msg.progress = feedback.progress;
 
   std::lock_guard<std::mutex> l(mutex_pub_custom_feature_feedback_);
   pub_custom_feature_feedback_.publish(msg);

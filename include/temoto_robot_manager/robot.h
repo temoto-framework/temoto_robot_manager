@@ -62,7 +62,7 @@ public:
   void goalNavigation(const geometry_msgs::PoseStamped& target_pose);
   void controlGripper(const std::string& robot_name, const float position);
 
-  void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request);
+  void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequestWrap& request);
   void preemptCustomFeature(const std::string& custom_feature_name);
   
   std::string getName() const

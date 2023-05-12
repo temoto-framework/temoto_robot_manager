@@ -16,6 +16,15 @@ struct RmCustomFeedbackWrap : RmCustomFeedback
   std::string request_id;
 };
 
+struct RmCustomRequestWrap : RmCustomRequest
+{
+  std::string robot_name;
+  std::string custom_feature_name;
+  std::string request_id;
+};
+
+class CustomPluginHelper; // Forward declaration
+
 typedef std::shared_ptr<CustomPluginHelper> CustomPluginHelperPtr;
 typedef std::function<void(const RmCustomFeedbackWrap&)> CustomFeatureUpdateCb;
 
@@ -28,6 +37,7 @@ public:
     UNINITIALIZED,
     INITIALIZED,
     PROCESSING,
+    FINISHED,
     STOPPING,
     ERROR
   };
@@ -35,13 +45,14 @@ public:
   CustomPluginHelper(const std::string& plugin_path, CustomFeatureUpdateCb update_cb);
   ~CustomPluginHelper();
   void initialize();
-  void invoke(const RmCustomRequest& request);
+  void invoke(const RmCustomRequestWrap& request);
   void preempt();
   void deinitialize();
 
 private:
   State getState() const;
   void setState(State state);
+  void sendUpdate() const;
 
   std::shared_ptr<CustomPluginBase> plugin;
   std::shared_ptr<class_loader::ClassLoader> class_loader;
@@ -51,6 +62,7 @@ private:
   State state_;
   mutable std::mutex mutex_state_;
 
+  std::optional<RmCustomRequestWrap> current_request_;
   CustomFeatureUpdateCb update_cb_;
 };
 } // temoto_robot_manager namespace

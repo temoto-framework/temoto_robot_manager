@@ -9,6 +9,7 @@ CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path, CustomFea
 : plugin_path_(plugin_path)
 , state_(State::NOT_LOADED)
 , update_cb_(update_cb)
+, current_request_{}
 {
 try
 {
@@ -62,7 +63,7 @@ CustomPluginHelper::~CustomPluginHelper()
     plugin->deinitialize();
   }
 
-  else if(getState() == State::INITIALIZED || getState() == State::ERROR)
+  else if(getState() == State::INITIALIZED || getState() == State::FINISHED || getState() == State::ERROR)
   {
     if (exec_thread_.joinable())
     {
@@ -78,7 +79,7 @@ CustomPluginHelper::~CustomPluginHelper()
 void CustomPluginHelper::initialize()
 try
 {
-  if (getState() != State::UNINITIALIZED)
+  if (getState() != State::UNINITIALIZED && getState() != State::FINISHED)
   {
     setState(State::ERROR);
     throw TEMOTO_ERRSTACK("Cannot initalize the plugin. It has to be in 'UNINITIALIZED' state for that");
@@ -98,8 +99,10 @@ catch(class_loader::ClassLoaderException & e)
   throw TEMOTO_ERRSTACK(e.what());
 }
 
-void CustomPluginHelper::invoke(const RmCustomRequest& request)
+void CustomPluginHelper::invoke(const RmCustomRequestWrap& request)
 {
+  initialize();
+
   if (getState() != State::INITIALIZED)
   {
     setState(State::ERROR);
@@ -111,21 +114,25 @@ void CustomPluginHelper::invoke(const RmCustomRequest& request)
     exec_thread_.join();
   }
 
+  current_request_ = request;
   exec_thread_ = std::thread(
   [&]
   {
     if (plugin->invoke(request))
     {
-      setState(State::INITIALIZED);  
+      setState(State::FINISHED);  
     }
     else
     {
       setState(State::ERROR);
       //throw TEMOTO_ERRSTACK("Unable to invoke the plugin");
     }
+
+    sendUpdate();
   });
 
   setState(State::PROCESSING);
+  sendUpdate();
 }
 
 void CustomPluginHelper::preempt()
@@ -143,6 +150,7 @@ void CustomPluginHelper::preempt()
   }
 
   setState(State::STOPPING);
+  sendUpdate();
 }
 
 void CustomPluginHelper::deinitialize()
@@ -177,6 +185,23 @@ void CustomPluginHelper::setState(State state)
 {
   std::lock_guard<std::mutex> l(mutex_state_);
   state_ = state;
+}
+
+void CustomPluginHelper::sendUpdate() const
+{
+  auto fb = plugin->getFeedback();
+  if (fb.has_value())
+  {
+    RmCustomFeedbackWrap fbw;
+
+    fbw.robot_name = current_request_->robot_name;
+    fbw.custom_feature_name = current_request_->custom_feature_name;
+    fbw.request_id = current_request_->request_id;
+    fbw.status = uint8_t(state_);
+    fbw.progress = fb->progress;
+
+    update_cb_(fbw);
+  }
 }
 
 }

@@ -4,9 +4,9 @@ string custom_feature_name
 string request_id
 
 uint8 status
-uint8 IDLE=0
-uint8 RUNNING=1
-uint8 PREEMPTED=2
-uint8 STOPPED=3
+uint8 IDLE=2
+uint8 RUNNING=3
+uint8 FINISHED=4
+uint8 PREEMPTED=5
 
 float64 progress

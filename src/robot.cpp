@@ -463,11 +463,7 @@ try
    */
   const std::string& plugin_path = custom_feature_it->second.getExecutable();
   CustomPluginHelperPtr plugin_helper = std::make_shared<CustomPluginHelper>(plugin_path, custom_feature_update_cb_);
-
-  /*
-   * Initialize the plugin
-   */
-  plugin_helper->initialize();
+  
   custom_feature_plugins_.insert({feature_name, plugin_helper});
   config_->getCustomFeatures().at(feature_name).setLoaded(true);
 }
@@ -489,7 +485,7 @@ void Robot::loadCustomDriver(const std::string& feature_name)
   // TODO
 }
 
-void Robot::invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequest& request)
+void Robot::invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequestWrap& request)
 try
 {
   auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature_name);

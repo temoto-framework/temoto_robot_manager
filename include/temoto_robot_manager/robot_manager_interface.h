@@ -23,6 +23,7 @@
 #include <vector>
 #include <string>
 #include <ctime>
+#include <optional>
 
 namespace temoto_robot_manager
 {
@@ -107,17 +108,18 @@ public:
     return custom_request.response.accepted;
   }
 
-  CustomFeedback getCustomFeatureFeedback(const std::string& request_id)
+  std::optional<CustomFeedback> getCustomFeatureFeedback(const std::string& request_id)
   {
     std::lock_guard<std::mutex> lock(custom_queries_mutex_);
     auto ongoing_query_it = ongoing_custom_queries_.find(request_id);
 
     if (ongoing_query_it == ongoing_custom_queries_.end())
     {
-      throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
+      return {};
+      //throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
-    if (ongoing_query_it->second.feedback.status != CustomFeedback::RUNNING)
+    if (ongoing_query_it->second.feedback.status == CustomFeedback::FINISHED)
     {
       auto feedback = ongoing_query_it->second.feedback;
       ongoing_custom_queries_.erase(ongoing_query_it);
