@@ -33,6 +33,7 @@ Robot::Robot(RobotConfigPtr config
 , robot_operational_(true)
 , state_in_error_(false)
 , robot_loaded_(false)
+, custom_feature_feedback_thread_running_(false)
 {}
 
 Robot::~Robot()
@@ -85,6 +86,14 @@ Robot::~Robot()
     config_->getFeatureGripper().setDriverLoaded(false);
   }
 
+  // First stop the feedback thread
+  custom_feature_feedback_thread_running_ = false;
+  while (!custom_feature_feedback_thread_.joinable())
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  custom_feature_feedback_thread_.join();
+
   for (auto& custom_feature : config_->getCustomFeatures())
   {
     /*
@@ -92,6 +101,8 @@ Robot::~Robot()
      */
     if (custom_feature.second.isLoaded())
     {
+      std::lock_guard<std::mutex> l(custom_feature_plugins_mutex_);
+
       auto custom_feature_plugin_it = custom_feature_plugins_.find(custom_feature.second.getName());
       if (custom_feature_plugin_it == custom_feature_plugins_.end())
       {
@@ -463,9 +474,42 @@ try
    */
   const std::string& plugin_path = custom_feature_it->second.getExecutable();
   CustomPluginHelperPtr plugin_helper = std::make_shared<CustomPluginHelper>(plugin_path, custom_feature_update_cb_);
-  
-  custom_feature_plugins_.insert({feature_name, plugin_helper});
-  config_->getCustomFeatures().at(feature_name).setLoaded(true);
+
+  std::lock_guard<std::mutex> l(custom_feature_plugins_mutex_);
+  {
+    custom_feature_plugins_.insert({feature_name, plugin_helper});
+    config_->getCustomFeatures().at(feature_name).setLoaded(true);
+  }
+
+  /*
+   * Start the custom feature feedback thread
+   */
+  if (custom_feature_feedback_thread_running_)
+  {
+    return;
+  }
+
+  custom_feature_feedback_thread_running_ = true;
+  custom_feature_feedback_thread_ = std::thread(
+  [&]
+  {
+    TEMOTO_DEBUG_("Custom feature feedback thread running");
+
+    while (custom_feature_feedback_thread_running_)
+    {
+      std::lock_guard<std::mutex> l(custom_feature_plugins_mutex_);
+
+      for (const auto& cfp : custom_feature_plugins_)
+      {
+        cfp.second->sendUpdate();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      }
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+
+    TEMOTO_DEBUG_("Custom feature feedback thread finished");
+  });
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {

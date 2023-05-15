@@ -46,13 +46,13 @@ public:
   ~CustomPluginHelper();
   void initialize();
   void invoke(const RmCustomRequestWrap& request);
+  void sendUpdate() const;
   void preempt();
   void deinitialize();
 
 private:
   State getState() const;
   void setState(State state);
-  void sendUpdate() const;
 
   std::shared_ptr<CustomPluginBase> plugin;
   std::shared_ptr<class_loader::ClassLoader> class_loader;

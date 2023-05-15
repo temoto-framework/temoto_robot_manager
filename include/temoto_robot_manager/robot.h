@@ -136,7 +136,10 @@ private:
 
   // Custom related
   std::map<std::string, CustomPluginHelperPtr> custom_feature_plugins_;
+  mutable std::mutex custom_feature_plugins_mutex_;
   CustomFeatureUpdateCb custom_feature_update_cb_;
+  std::thread custom_feature_feedback_thread_;
+  bool custom_feature_feedback_thread_running_;
 
   ros::ServiceClient client_gripper_control_;
 };
