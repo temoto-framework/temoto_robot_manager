@@ -35,7 +35,7 @@ struct RmCustomRequest
   {
     Position position;
     Orientation orientation;
-  };
+  }; 
 
   struct PoseStamped
   {
