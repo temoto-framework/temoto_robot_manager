@@ -182,7 +182,18 @@ try
   req_rm.data_str_array = req.data_str_array;
   req_rm.data_num = req.data_num;
   req_rm.data_num_array = req.data_num_array;
-  req_rm.data_pose = RmCustomRequest::PoseStamped{};                    // TODO
+  
+  // req_rm.data_pose = RmCustomRequest::PoseStamped{};                    // TODO
+  req_rm.data_pose.header.frame_id = req.data_pose.header.frame_id;
+  req_rm.data_pose.pose.position.x = req.data_pose.pose.position.x;
+  req_rm.data_pose.pose.position.y = req.data_pose.pose.position.y;
+  req_rm.data_pose.pose.position.z = req.data_pose.pose.position.z;
+  req_rm.data_pose.pose.orientation.x = req.data_pose.pose.orientation.x;
+  req_rm.data_pose.pose.orientation.y = req.data_pose.pose.orientation.y;
+  req_rm.data_pose.pose.orientation.z = req.data_pose.pose.orientation.z;
+  req_rm.data_pose.pose.orientation.w = req.data_pose.pose.orientation.w;
+
+  
   req_rm.data_pose_array = std::vector<RmCustomRequest::PoseStamped>{}; // TODO
 
   // TODO: Add pose and pose array
