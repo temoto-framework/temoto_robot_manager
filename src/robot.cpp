@@ -50,6 +50,26 @@ Robot::~Robot()
     config_->getFeatureURDF().setLoaded(false);
   }
 
+  for (auto& common_feature : config_->getCommonFeatures())
+  {
+    if (common_feature.second.isLoaded())
+    {
+      TEMOTO_DEBUG_("Unloading Common Procedure.");
+      common_feature.second.setLoaded(false);
+    }
+    else
+    {
+      TEMOTO_WARN_STREAM_("Common feature '" << common_feature.second.getName()
+      << "' of robot '" << config_->getName() << "' not loaded.");
+    }
+
+    if (common_feature.second.isDriverLoaded())
+    {
+      TEMOTO_DEBUG_("Unloading Common driver Feature.");
+      common_feature.second.setDriverLoaded(false);
+    }
+  }
+
   if (config_->getFeatureManipulation().isLoaded())
   {
     TEMOTO_DEBUG_("Unloading Manipulation Feature.");
@@ -163,7 +183,7 @@ void Robot::load()
 
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled() &&
-      !config_->getCustomFeatures().begin()->second.isEnabled())
+      !config_->getCustomFeatures().begin()->second.isEnabled() && !config_->getCommonFeatures().begin()->second.isEnabled())
   {
     throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
                           "urdf, manipulation, navigation, gripper sections in "
@@ -174,6 +194,23 @@ void Robot::load()
   if (config_->getFeatureURDF().isEnabled())
   {
     loadUrdf();
+  }
+
+  /*
+   * Load common features
+   */
+  for (auto& common_feature : config_->getCommonFeatures())
+  {
+    if (common_feature.second.isDriverEnabled())
+    {
+      loadCommonDriver(common_feature.second.getName());
+    }
+
+    // Do we need a controller?
+    if (common_feature.second.isEnabled())
+    {
+      loadCommonController(common_feature.second.getName());
+    }
   }
  
   /*
@@ -452,6 +489,7 @@ try
   rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
   ros::Duration(5).sleep();
   TEMOTO_DEBUG_("Feature 'Gripper driver' loaded.");
+  ftr.setDriverLoaded(true);
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -564,6 +602,53 @@ catch(resource_registrar::TemotoErrorStack& e)
 {
   std::string message = "Unable to pre-empt feature '" + custom_feature_name  + "' of robot '" + config_->getName() + "'.";
   throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
+}
+
+void Robot::loadCommonDriver(const std::string& feature_name)
+try
+{
+  auto common_feature_it = config_->getCommonFeatures().find(feature_name);
+  if (common_feature_it == config_->getCommonFeatures().end())
+  {
+    throw TEMOTO_ERRSTACK("Could not find feature '" + feature_name + "'");
+  }
+
+  if (common_feature_it->second.isDriverLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  FeatureCommon& ftr = common_feature_it->second;
+  rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
+  config_->getCommonFeatures().at(feature_name).setDriverLoaded(true);
+  TEMOTO_DEBUG_("Feature 'Common Driver' loaded.");
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
+}
+
+void Robot::loadCommonController(const std::string& feature_name)
+try
+{
+  auto common_feature_it = config_->getCommonFeatures().find(feature_name);
+  if (common_feature_it == config_->getCommonFeatures().end())
+  {
+    throw TEMOTO_ERRSTACK("Could not find feature '" + feature_name + "'");
+  }
+  if (common_feature_it->second.isLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  FeatureCommon& ftr = common_feature_it->second;
+  rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+  ftr.setLoaded(true);
+  TEMOTO_DEBUG_("Feature 'Common Controller' loaded.");
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
 }
 
 temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name

@@ -70,6 +70,7 @@ public:
   void parseManipulation(const YAML::Node& yaml_node);
   void parseGripper(const YAML::Node& yaml_node);
   void parseCustom(const YAML::Node& yaml_node);
+  void parseCommon(const YAML::Node& yaml_node);
 
   std::string getName() const
   {
@@ -109,6 +110,11 @@ public:
   std::map<std::string, FeatureCustom>& getCustomFeatures()
   {
     return m_feature_custom_;
+  }
+
+  std::map<std::string, FeatureCommon>& getCommonFeatures()
+  {
+    return m_feature_common_;
   }
 
   void adjustReliability(float reliability)
@@ -155,6 +161,7 @@ private:
   FeatureNavigation feature_navigation_;
   FeatureGripper feature_gripper_;
   std::map<std::string, FeatureCustom> m_feature_custom_;
+  std::map<std::string, FeatureCommon> m_feature_common_;
   
   std::string name_;
   std::string description_;

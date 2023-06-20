@@ -193,6 +193,32 @@ FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_nod
   }
 }
 
+FeatureCommon::FeatureCommon(const std::string& name, const YAML::Node& common_conf)
+  : FeatureWithDriver(name)
+{
+  if (common_conf["driver"].IsDefined())
+  {
+    setFromConfig(common_conf["driver"]["package_name"], this->driver_package_name_);
+    setFromConfig(common_conf["driver"]["executable"], this->driver_executable_);
+    if (common_conf["driver"]["args"])
+    {
+      setFromConfig(common_conf["driver"]["args"], this->driver_args_);
+    }
+    this->driver_enabled_ = true;
+  }
+
+  if (common_conf["controller"].IsDefined())
+  {
+    setFromConfig(common_conf["controller"]["package_name"], this->package_name_);
+    setFromConfig(common_conf["controller"]["executable"], this->executable_);
+    if (common_conf["controller"]["args"])
+    {      
+      setFromConfig(common_conf["controller"]["args"], this->args_);
+    }
+    this->feature_enabled_ = true;
+  }
+}
+
 // bool operator==(const RobotFeature& rf1, const RobotFeature& rf2)
 //{
 //  return (rf1.getType() == rf2.getType() && rf1.getPackageName() == rf2.getPackageName() &&

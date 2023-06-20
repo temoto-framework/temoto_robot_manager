@@ -262,6 +262,13 @@ public:
   FeatureCustom(const std::string& name, const YAML::Node& yaml_node);
 };
 
+// Common Procedures Feature
+class FeatureCommon : public FeatureWithDriver
+{
+public:
+  FeatureCommon(const std::string& name, const YAML::Node& common_conf);
+};
+
 }
 
 #endif
