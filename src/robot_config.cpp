@@ -250,7 +250,7 @@ std::string RobotConfig::toString() const
   }
   for (const auto& common_feature : m_feature_common_)
   {
-    ret += common_feature.second.isEnabled() ? std::string("    custom: " + common_feature.second.getName() + "\n") : "";
+    ret += common_feature.second.isEnabled() ? std::string("    common: " + common_feature.second.getName() + "\n") : "";
   }
   return ret;
 }

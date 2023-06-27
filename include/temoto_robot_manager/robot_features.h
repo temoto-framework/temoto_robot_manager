@@ -263,7 +263,7 @@ public:
 };
 
 // Common Procedures Feature
-class FeatureCommon : public FeatureWithDriver
+class FeatureCommon : public RobotFeature
 {
 public:
   FeatureCommon(const std::string& name, const YAML::Node& common_conf);

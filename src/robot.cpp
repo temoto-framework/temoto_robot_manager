@@ -62,12 +62,6 @@ Robot::~Robot()
       TEMOTO_WARN_STREAM_("Common feature '" << common_feature.second.getName()
       << "' of robot '" << config_->getName() << "' not loaded.");
     }
-
-    if (common_feature.second.isDriverLoaded())
-    {
-      TEMOTO_DEBUG_("Unloading Common driver Feature.");
-      common_feature.second.setDriverLoaded(false);
-    }
   }
 
   if (config_->getFeatureManipulation().isLoaded())
@@ -201,15 +195,9 @@ void Robot::load()
    */
   for (auto& common_feature : config_->getCommonFeatures())
   {
-    if (common_feature.second.isDriverEnabled())
-    {
-      loadCommonDriver(common_feature.second.getName());
-    }
-
-    // Do we need a controller?
     if (common_feature.second.isEnabled())
     {
-      loadCommonController(common_feature.second.getName());
+      loadCommonProcedure(common_feature.second.getName());
     }
   }
  
@@ -604,31 +592,7 @@ catch(resource_registrar::TemotoErrorStack& e)
   throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
 }
 
-void Robot::loadCommonDriver(const std::string& feature_name)
-try
-{
-  auto common_feature_it = config_->getCommonFeatures().find(feature_name);
-  if (common_feature_it == config_->getCommonFeatures().end())
-  {
-    throw TEMOTO_ERRSTACK("Could not find feature '" + feature_name + "'");
-  }
-
-  if (common_feature_it->second.isDriverLoaded())
-  {
-    return; // Return if already loaded.
-  }
-
-  FeatureCommon& ftr = common_feature_it->second;
-  rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
-  config_->getCommonFeatures().at(feature_name).setDriverLoaded(true);
-  TEMOTO_DEBUG_("Feature 'Common Driver' loaded.");
-}
-catch(resource_registrar::TemotoErrorStack& error_stack)
-{
-  throw FWD_TEMOTO_ERRSTACK(error_stack);
-}
-
-void Robot::loadCommonController(const std::string& feature_name)
+void Robot::loadCommonProcedure(const std::string& feature_name)
 try
 {
   auto common_feature_it = config_->getCommonFeatures().find(feature_name);
@@ -644,7 +608,7 @@ try
   FeatureCommon& ftr = common_feature_it->second;
   rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
   ftr.setLoaded(true);
-  TEMOTO_DEBUG_("Feature 'Common Controller' loaded.");
+  TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
