@@ -50,7 +50,7 @@ Robot::~Robot()
     config_->getFeatureURDF().setLoaded(false);
   }
 
-  for (auto& common_feature : config_->getCommonFeatures())
+  for (auto& common_feature : config_->getCommonProcedures())
   {
     if (common_feature.second.isLoaded())
     {
@@ -177,7 +177,8 @@ void Robot::load()
 
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled() &&
-      !config_->getCustomFeatures().begin()->second.isEnabled() && !config_->getCommonFeatures().begin()->second.isEnabled())
+      !config_->getCustomFeatures().begin()->second.isEnabled() &&
+      !config_->getCommonProcedures().begin()->second.isEnabled())
   {
     throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
                           "urdf, manipulation, navigation, gripper sections in "
@@ -193,7 +194,7 @@ void Robot::load()
   /*
    * Load common features
    */
-  for (auto& common_feature : config_->getCommonFeatures())
+  for (auto& common_feature : config_->getCommonProcedures())
   {
     if (common_feature.second.isEnabled())
     {
@@ -592,20 +593,20 @@ catch(resource_registrar::TemotoErrorStack& e)
   throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
 }
 
-void Robot::loadCommonProcedure(const std::string& feature_name)
+void Robot::loadCommonProcedure(const std::string& procedure_name)
 try
 {
-  auto common_feature_it = config_->getCommonFeatures().find(feature_name);
-  if (common_feature_it == config_->getCommonFeatures().end())
+  auto common_procedure_it = config_->getCommonProcedures().find(procedure_name);
+  if (common_procedure_it == config_->getCommonProcedures().end())
   {
-    throw TEMOTO_ERRSTACK("Could not find feature '" + feature_name + "'");
+    throw TEMOTO_ERRSTACK("Could not find procedure '" + procedure_name + "'");
   }
-  if (common_feature_it->second.isLoaded())
+  if (common_procedure_it->second.isLoaded())
   {
     return; // Return if already loaded.
   }
 
-  FeatureCommon& ftr = common_feature_it->second;
+  CommonProcedure& ftr = common_procedure_it->second;
   rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
   ftr.setLoaded(true);
   TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");

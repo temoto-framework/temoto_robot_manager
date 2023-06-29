@@ -225,8 +225,8 @@ catch (YAML::Exception& e)
 void RobotConfig::parseCommon(const YAML::Node& yaml_node)
 try
 {
-  std::string feature_name = yaml_node["name"].as<std::string>();
-  m_feature_common_.insert({feature_name, FeatureCommon(feature_name, yaml_node)});
+  std::string procedure_name = yaml_node["name"].as<std::string>();
+  m_common_procedures_.insert({procedure_name, CommonProcedure(procedure_name, yaml_node)});
 }
 catch (YAML::Exception& e)
 {
@@ -248,7 +248,7 @@ std::string RobotConfig::toString() const
   {
     ret += custom_feature.second.isEnabled() ? std::string("    custom: " + custom_feature.second.getName() + "\n") : "";
   }
-  for (const auto& common_feature : m_feature_common_)
+  for (const auto& common_feature : m_common_procedures_)
   {
     ret += common_feature.second.isEnabled() ? std::string("    common: " + common_feature.second.getName() + "\n") : "";
   }

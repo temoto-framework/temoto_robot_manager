@@ -112,9 +112,9 @@ public:
     return m_feature_custom_;
   }
 
-  std::map<std::string, FeatureCommon>& getCommonFeatures()
+  std::map<std::string, CommonProcedure>& getCommonProcedures()
   {
-    return m_feature_common_;
+    return m_common_procedures_;
   }
 
   void adjustReliability(float reliability)
@@ -161,7 +161,7 @@ private:
   FeatureNavigation feature_navigation_;
   FeatureGripper feature_gripper_;
   std::map<std::string, FeatureCustom> m_feature_custom_;
-  std::map<std::string, FeatureCommon> m_feature_common_;
+  std::map<std::string, CommonProcedure> m_common_procedures_;
   
   std::string name_;
   std::string description_;

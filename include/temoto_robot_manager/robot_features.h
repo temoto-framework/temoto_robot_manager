@@ -262,11 +262,11 @@ public:
   FeatureCustom(const std::string& name, const YAML::Node& yaml_node);
 };
 
-// Common Procedures Feature
-class FeatureCommon : public RobotFeature
+// Common Procedures
+class CommonProcedure : public RobotFeature
 {
 public:
-  FeatureCommon(const std::string& name, const YAML::Node& common_conf);
+  CommonProcedure(const std::string& name, const YAML::Node& common_conf);
 };
 
 }

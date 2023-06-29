@@ -199,7 +199,7 @@ FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_nod
   }
 }
 
-FeatureCommon::FeatureCommon(const std::string& name, const YAML::Node& common_conf)
+CommonProcedure::CommonProcedure(const std::string& name, const YAML::Node& common_conf)
 : RobotFeature(name)
 {
   setFromConfig(common_conf["executable"], this->executable_);
