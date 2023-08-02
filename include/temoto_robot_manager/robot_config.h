@@ -19,6 +19,7 @@
 
 #include "temoto_core/common/reliability.h"
 #include "temoto_robot_manager/robot_features.h"
+#include "temoto_robot_manager/robot_common_procedures.h"
 
 #include "yaml-cpp/yaml.h"
 #include <string>

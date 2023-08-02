@@ -178,10 +178,10 @@ void Robot::load()
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled() &&
       !config_->getCustomFeatures().begin()->second.isEnabled() &&
-      !config_->getCommonProcedures().begin()->second.isEnabled())
+      !config_->getCommonProcedures().begin()->second.isDefined())
   {
     throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
-                          "urdf, manipulation, navigation, gripper sections in "
+                          "urdf, manipulation, navigation, gripper or custom sections in "
                           "the configuration file.");
   }
 
@@ -192,13 +192,15 @@ void Robot::load()
   }
 
   /*
-   * Load common features
+   * Load common procedures
    */
-  for (auto& common_feature : config_->getCommonProcedures())
+  for (auto& common_procedure : config_->getCommonProcedures())
   {
-    if (common_feature.second.isEnabled())
+    TEMOTO_INFO_("Here");
+    if (common_procedure.second.isDefined())
     {
-      loadCommonProcedure(common_feature.second.getName());
+      TEMOTO_INFO_(common_procedure.second.getName());
+      loadCommonProcedure(common_procedure.second.getName());
     }
   }
  
@@ -607,9 +609,18 @@ try
   }
 
   CommonProcedure& ftr = common_procedure_it->second;
-  rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-  ftr.setLoaded(true);
-  TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
+  if (ftr.getExecutableType() == "ros")
+  {
+    rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
+  }
+  else
+  {
+    programExecute(ftr.getExecutable(), ftr.getArgs());
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
+  }
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -626,6 +637,27 @@ try
   load_proc_srvc.request.ros_namespace = config_->getAbsRobotNamespace(); //Execute in robot namespace
   load_proc_srvc.request.action = temoto_process_manager::action::ROS_EXECUTE;
   load_proc_srvc.request.executable = executable;
+  load_proc_srvc.request.args = args;
+
+  resource_registrar_.call<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
+  , temoto_process_manager::srv_name::SERVER
+  , load_proc_srvc
+  , std::bind(&Robot::resourceStatusCb, this, std::placeholders::_1, std::placeholders::_2));
+
+  return load_proc_srvc;
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
+}
+
+temoto_process_manager::LoadProcess Robot::programExecute(const std::string& program_name
+, const std::string& args)
+try
+{
+  temoto_process_manager::LoadProcess load_proc_srvc;
+  load_proc_srvc.request.action = temoto_process_manager::action::SYS_EXECUTE;
+  load_proc_srvc.request.executable = program_name;
   load_proc_srvc.request.args = args;
 
   resource_registrar_.call<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER

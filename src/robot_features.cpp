@@ -199,22 +199,6 @@ FeatureCustom::FeatureCustom(const std::string& name, const YAML::Node& yaml_nod
   }
 }
 
-CommonProcedure::CommonProcedure(const std::string& name, const YAML::Node& common_conf)
-: RobotFeature(name)
-{
-  setFromConfig(common_conf["executable"], this->executable_);
-  setFromConfig(common_conf["executable_type"], this->executable_type_);
-  if (common_conf["args"])
-  {
-    setFromConfig(common_conf["args"], this->args_);
-  }
-  if (executable_type_ == "ros")
-  {
-    setFromConfig(common_conf["package_name"], this->package_name_);
-  }
-  this->feature_enabled_ = true;
-}
-
 // bool operator==(const RobotFeature& rf1, const RobotFeature& rf2)
 //{
 //  return (rf1.getType() == rf2.getType() && rf1.getPackageName() == rf2.getPackageName() &&

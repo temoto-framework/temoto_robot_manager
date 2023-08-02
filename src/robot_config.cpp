@@ -248,9 +248,9 @@ std::string RobotConfig::toString() const
   {
     ret += custom_feature.second.isEnabled() ? std::string("    custom: " + custom_feature.second.getName() + "\n") : "";
   }
-  for (const auto& common_feature : m_common_procedures_)
+  for (const auto& common_procedure : m_common_procedures_)
   {
-    ret += common_feature.second.isEnabled() ? std::string("    common: " + common_feature.second.getName() + "\n") : "";
+    ret += common_procedure.second.isDefined() ? std::string("    common: " + common_procedure.second.getName() + "\n") : "";
   }
   return ret;
 }

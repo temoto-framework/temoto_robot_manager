@@ -21,6 +21,7 @@
 #include "rr/ros1_resource_registrar.h"
 #include "temoto_robot_manager/robot_config.h"
 #include "temoto_robot_manager/robot_features.h"
+#include "temoto_robot_manager/robot_common_procedures.h"
 #include "temoto_robot_manager/GripperControl.h"
 #include "temoto_robot_manager/custom_plugin_helper.h"
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -102,6 +103,9 @@ private:
 
   temoto_process_manager::LoadProcess rosExecute(const std::string& package_name
   , const std::string& executable
+  , const std::string& args = "");
+
+  temoto_process_manager::LoadProcess programExecute(const std::string& program_name
   , const std::string& args = "");
 
   void resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
