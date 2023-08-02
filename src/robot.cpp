@@ -340,7 +340,7 @@ void Robot::loadManipulationController()
   {
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
+    std::string desc_sem_param = "/" + config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
 
@@ -406,7 +406,7 @@ void Robot::loadNavigationController()
     // Subscribe to the pose messages
     if (!ftr.getPoseTopic().empty())
     {
-      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
       , 1
       , &Robot::robotPoseCallback
       , this);
@@ -456,7 +456,7 @@ void Robot::loadGripperController()
   {
     FeatureGripper& ftr = config_->getFeatureGripper();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());          
-    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+    std::string gripper_topic = "/" + config_->getAbsRobotNamespace() + "/gripper_control";
     ros::service::waitForService(gripper_topic,-1);
     ftr.setLoaded(true);
     TEMOTO_DEBUG_("Feature 'Gripper Controller' loaded.");
@@ -726,7 +726,7 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
     }
 
      // Send the initial pose
-    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
+    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/" + config_->getAbsRobotNamespace() + "/initialpose", 10);
     while(pub.getNumSubscribers() < 1)
     {
       ros::Duration(0.5).sleep();
@@ -760,8 +760,8 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
   //Prepare robot description path and a nodehandle, which is in robot's namespace
-  std::string rob_desc = config_->getAbsRobotNamespace() + "/robot_description";
-  ros::NodeHandle mg_nh(config_->getAbsRobotNamespace());
+  std::string rob_desc = "/" + config_->getAbsRobotNamespace() + "/robot_description";
+  ros::NodeHandle mg_nh("/" + config_->getAbsRobotNamespace());
   moveit::planning_interface::MoveGroupInterface::Options opts(planning_group_name, rob_desc, mg_nh);
   std::unique_ptr<moveit::planning_interface::MoveGroupInterface> group(
       new moveit::planning_interface::MoveGroupInterface(opts));
@@ -1002,7 +1002,7 @@ try
 {
   FeatureGripper& ftr = config_->getFeatureGripper();   
   std::string argument = std::to_string(position);
-  std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+  std::string gripper_topic = "/" + config_->getAbsRobotNamespace() + "/gripper_control";
   
   TEMOTO_DEBUG_("Feature 'Gripper' loaded.");
   client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
@@ -1130,7 +1130,7 @@ void Robot::recover(const std::string& parent_query_id)
     // Subscribe to the pose messages
     if (!config_->getFeatureNavigation().getPoseTopic().empty())
     {
-      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + config_->getFeatureNavigation().getPoseTopic()
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + config_->getFeatureNavigation().getPoseTopic()
       , 1
       , &Robot::robotPoseCallback
       , this);
