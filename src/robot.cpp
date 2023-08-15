@@ -196,7 +196,6 @@ void Robot::load()
    */
   for (auto& common_procedure : config_->getCommonProcedures())
   {
-    TEMOTO_INFO_("Here");
     if (common_procedure.second.isDefined())
     {
       TEMOTO_INFO_(common_procedure.second.getName());
