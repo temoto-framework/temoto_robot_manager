@@ -50,18 +50,14 @@ Robot::~Robot()
     config_->getFeatureURDF().setLoaded(false);
   }
 
-  for (auto& common_feature : config_->getCommonProcedures())
+  for (auto& common_procedure : config_->getCommonProcedures())
   {
-    if (common_feature.second.isLoaded())
+    if (!common_procedure.second.isLoaded())
     {
-      TEMOTO_DEBUG_("Unloading Common Procedure.");
-      common_feature.second.setLoaded(false);
+      continue;
     }
-    else
-    {
-      TEMOTO_WARN_STREAM_("Common feature '" << common_feature.second.getName()
-      << "' of robot '" << config_->getName() << "' not loaded.");
-    }
+    TEMOTO_DEBUG_("Unloading Common Procedure.");
+    common_procedure.second.setLoaded(false);
   }
 
   if (config_->getFeatureManipulation().isLoaded())
