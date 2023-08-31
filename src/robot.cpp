@@ -50,6 +50,16 @@ Robot::~Robot()
     config_->getFeatureURDF().setLoaded(false);
   }
 
+  for (auto& common_procedure : config_->getCommonProcedures())
+  {
+    if (!common_procedure.second.isLoaded())
+    {
+      continue;
+    }
+    TEMOTO_DEBUG_("Unloading Common Procedure.");
+    common_procedure.second.setLoaded(false);
+  }
+
   if (config_->getFeatureManipulation().isLoaded())
   {
     TEMOTO_DEBUG_("Unloading Manipulation Feature.");
@@ -163,10 +173,11 @@ void Robot::load()
 
   if (!config_->getFeatureURDF().isEnabled() && !config_->getFeatureManipulation().isEnabled() &&
       !config_->getFeatureNavigation().isEnabled() && !config_->getFeatureGripper().isEnabled() &&
-      !config_->getCustomFeatures().begin()->second.isEnabled())
+      !config_->getCustomFeatures().begin()->second.isEnabled() &&
+      !config_->getCommonProcedures().begin()->second.isDefined())
   {
     throw TEMOTO_ERRSTACK("Robot is missing features. Please specify "
-                          "urdf, manipulation, navigation, gripper sections in "
+                          "urdf, manipulation, navigation, gripper or custom sections in "
                           "the configuration file.");
   }
 
@@ -174,6 +185,18 @@ void Robot::load()
   if (config_->getFeatureURDF().isEnabled())
   {
     loadUrdf();
+  }
+
+  /*
+   * Load common procedures
+   */
+  for (auto& common_procedure : config_->getCommonProcedures())
+  {
+    if (common_procedure.second.isDefined())
+    {
+      TEMOTO_INFO_(common_procedure.second.getName());
+      loadCommonProcedure(common_procedure.second.getName());
+    }
   }
  
   /*
@@ -312,7 +335,7 @@ void Robot::loadManipulationController()
   {
     FeatureManipulation& ftr = config_->getFeatureManipulation();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-    std::string desc_sem_param = config_->getAbsRobotNamespace() + "/robot_description_semantic";
+    std::string desc_sem_param = "/" + config_->getAbsRobotNamespace() + "/robot_description_semantic";
     waitForParam(desc_sem_param);
     ros::Duration(5).sleep();
 
@@ -378,7 +401,7 @@ void Robot::loadNavigationController()
     // Subscribe to the pose messages
     if (!ftr.getPoseTopic().empty())
     {
-      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
       , 1
       , &Robot::robotPoseCallback
       , this);
@@ -428,7 +451,7 @@ void Robot::loadGripperController()
   {
     FeatureGripper& ftr = config_->getFeatureGripper();
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());          
-    std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+    std::string gripper_topic = "/" + config_->getAbsRobotNamespace() + "/gripper_control";
     ros::service::waitForService(gripper_topic,-1);
     ftr.setLoaded(true);
     TEMOTO_DEBUG_("Feature 'Gripper Controller' loaded.");
@@ -452,6 +475,7 @@ try
   rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
   ros::Duration(5).sleep();
   TEMOTO_DEBUG_("Feature 'Gripper driver' loaded.");
+  ftr.setDriverLoaded(true);
 }
 catch(resource_registrar::TemotoErrorStack& error_stack)
 {
@@ -566,6 +590,38 @@ catch(resource_registrar::TemotoErrorStack& e)
   throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
 }
 
+void Robot::loadCommonProcedure(const std::string& procedure_name)
+try
+{
+  auto common_procedure_it = config_->getCommonProcedures().find(procedure_name);
+  if (common_procedure_it == config_->getCommonProcedures().end())
+  {
+    throw TEMOTO_ERRSTACK("Could not find procedure '" + procedure_name + "'");
+  }
+  if (common_procedure_it->second.isLoaded())
+  {
+    return; // Return if already loaded.
+  }
+
+  CommonProcedure& ftr = common_procedure_it->second;
+  if (ftr.getExecutableType() == "ros")
+  {
+    rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
+  }
+  else
+  {
+    programExecute(ftr.getExecutable(), ftr.getArgs());
+    ftr.setLoaded(true);
+    TEMOTO_DEBUG_("Feature 'Common Procedure' loaded.");
+  }
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
+}
+
 temoto_process_manager::LoadProcess Robot::rosExecute(const std::string& package_name
 , const std::string& executable
 , const std::string& args)
@@ -576,6 +632,27 @@ try
   load_proc_srvc.request.ros_namespace = config_->getAbsRobotNamespace(); //Execute in robot namespace
   load_proc_srvc.request.action = temoto_process_manager::action::ROS_EXECUTE;
   load_proc_srvc.request.executable = executable;
+  load_proc_srvc.request.args = args;
+
+  resource_registrar_.call<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
+  , temoto_process_manager::srv_name::SERVER
+  , load_proc_srvc
+  , std::bind(&Robot::resourceStatusCb, this, std::placeholders::_1, std::placeholders::_2));
+
+  return load_proc_srvc;
+}
+catch(resource_registrar::TemotoErrorStack& error_stack)
+{
+  throw FWD_TEMOTO_ERRSTACK(error_stack);
+}
+
+temoto_process_manager::LoadProcess Robot::programExecute(const std::string& program_name
+, const std::string& args)
+try
+{
+  temoto_process_manager::LoadProcess load_proc_srvc;
+  load_proc_srvc.request.action = temoto_process_manager::action::SYS_EXECUTE;
+  load_proc_srvc.request.executable = program_name;
   load_proc_srvc.request.args = args;
 
   resource_registrar_.call<temoto_process_manager::LoadProcess>(temoto_process_manager::srv_name::MANAGER
@@ -644,7 +721,7 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
     }
 
      // Send the initial pose
-    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(config_->getAbsRobotNamespace() + "/initialpose", 10);
+    ros::Publisher pub = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("/" + config_->getAbsRobotNamespace() + "/initialpose", 10);
     while(pub.getNumSubscribers() < 1)
     {
       ros::Duration(0.5).sleep();
@@ -678,8 +755,8 @@ void Robot::resourceStatusCb(temoto_process_manager::LoadProcess srv_msg
 void Robot::addPlanningGroup(const std::string& planning_group_name)
 {
   //Prepare robot description path and a nodehandle, which is in robot's namespace
-  std::string rob_desc = config_->getAbsRobotNamespace() + "/robot_description";
-  ros::NodeHandle mg_nh(config_->getAbsRobotNamespace());
+  std::string rob_desc = "/" + config_->getAbsRobotNamespace() + "/robot_description";
+  ros::NodeHandle mg_nh("/" + config_->getAbsRobotNamespace());
   moveit::planning_interface::MoveGroupInterface::Options opts(planning_group_name, rob_desc, mg_nh);
   std::unique_ptr<moveit::planning_interface::MoveGroupInterface> group(
       new moveit::planning_interface::MoveGroupInterface(opts));
@@ -920,7 +997,7 @@ try
 {
   FeatureGripper& ftr = config_->getFeatureGripper();   
   std::string argument = std::to_string(position);
-  std::string gripper_topic = config_->getAbsRobotNamespace() + "/gripper_control";
+  std::string gripper_topic = "/" + config_->getAbsRobotNamespace() + "/gripper_control";
   
   TEMOTO_DEBUG_("Feature 'Gripper' loaded.");
   client_gripper_control_ = nh_.serviceClient<temoto_robot_manager::GripperControl>(gripper_topic);
@@ -1048,7 +1125,7 @@ void Robot::recover(const std::string& parent_query_id)
     // Subscribe to the pose messages
     if (!config_->getFeatureNavigation().getPoseTopic().empty())
     {
-      localized_pose_sub_ = nh_.subscribe(config_->getAbsRobotNamespace() + "/" + config_->getFeatureNavigation().getPoseTopic()
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + config_->getFeatureNavigation().getPoseTopic()
       , 1
       , &Robot::robotPoseCallback
       , this);

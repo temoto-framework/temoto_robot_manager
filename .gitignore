@@ -2,6 +2,9 @@
 *.so
 lib/
 
+# Ignore vs workspace-specifi settings
+*.vscode/
+
 # Ignore vim temp files
 *.swp
 

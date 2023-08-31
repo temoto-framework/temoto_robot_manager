@@ -81,13 +81,16 @@ FeatureManipulation::FeatureManipulation(const YAML::Node& manip_conf)
   }
   this->feature_enabled_ = true;
 
-  this->driver_package_name_ = manip_conf["driver"]["package_name"].as<std::string>();
-  this->driver_executable_ = manip_conf["driver"]["executable"].as<std::string>();
-  if (manip_conf["driver"]["args"])
+  if (manip_conf["driver"].IsDefined())
   {
-    this->driver_args_ = manip_conf["driver"]["args"].as<std::string>();
+    this->driver_package_name_ = manip_conf["driver"]["package_name"].as<std::string>();
+    this->driver_executable_ = manip_conf["driver"]["executable"].as<std::string>();
+    if (manip_conf["driver"]["args"])
+    {
+      this->driver_args_ = manip_conf["driver"]["args"].as<std::string>();
+    }
+    this->driver_enabled_ = true;
   }
-  this->driver_enabled_ = true;
 }
 
 FeatureNavigation::FeatureNavigation() : FeatureWithDriver("navigation")
@@ -117,16 +120,19 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
   }
 
   /*
-   * Get the driver configuration. Required
+   * Get the driver configuration.
    */
-  this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
-                       && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
-  // Optional parameters
-  if (this->driver_enabled_)
+  if (nav_conf["driver"].IsDefined())
   {
-    setFromConfig(nav_conf["driver"]["args"], this->driver_args_);
-    setFromConfig(nav_conf["driver"]["odom_topic"], this->odom_topic_);
-    setFromConfig(nav_conf["driver"]["cmd_vel_topic"], this->cmd_vel_topic_);
+    this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
+                        && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
+    // Optional parameters
+    if (this->driver_enabled_)
+    {
+      setFromConfig(nav_conf["driver"]["args"], this->driver_args_);
+      setFromConfig(nav_conf["driver"]["odom_topic"], this->odom_topic_);
+      setFromConfig(nav_conf["driver"]["cmd_vel_topic"], this->cmd_vel_topic_);
+    }
   }
 }
 

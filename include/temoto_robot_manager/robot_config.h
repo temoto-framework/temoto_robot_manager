@@ -19,6 +19,7 @@
 
 #include "temoto_core/common/reliability.h"
 #include "temoto_robot_manager/robot_features.h"
+#include "temoto_robot_manager/robot_common_procedures.h"
 
 #include "yaml-cpp/yaml.h"
 #include <string>
@@ -70,6 +71,7 @@ public:
   void parseManipulation(const YAML::Node& yaml_node);
   void parseGripper(const YAML::Node& yaml_node);
   void parseCustom(const YAML::Node& yaml_node);
+  void parseCommon(const YAML::Node& yaml_node);
 
   std::string getName() const
   {
@@ -109,6 +111,11 @@ public:
   std::map<std::string, FeatureCustom>& getCustomFeatures()
   {
     return m_feature_custom_;
+  }
+
+  std::map<std::string, CommonProcedure>& getCommonProcedures()
+  {
+    return m_common_procedures_;
   }
 
   void adjustReliability(float reliability)
@@ -155,6 +162,7 @@ private:
   FeatureNavigation feature_navigation_;
   FeatureGripper feature_gripper_;
   std::map<std::string, FeatureCustom> m_feature_custom_;
+  std::map<std::string, CommonProcedure> m_common_procedures_;
   
   std::string name_;
   std::string description_;

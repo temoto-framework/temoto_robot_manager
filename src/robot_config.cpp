@@ -90,6 +90,10 @@ try
     {
       parseCustom(*node_it);
     }
+    else if (feature_type == "common")
+    {
+      parseCommon(*node_it);
+    }
     else
     {
       throw TEMOTO_ERRSTACK("Unrecognized feature type '" + feature_type + "'");
@@ -218,6 +222,17 @@ catch (YAML::Exception& e)
   TEMOTO_WARN_("CONFIG: error parsing custom feature: %s", e.what());
 }
 
+void RobotConfig::parseCommon(const YAML::Node& yaml_node)
+try
+{
+  std::string procedure_name = yaml_node["name"].as<std::string>();
+  m_common_procedures_.insert({procedure_name, CommonProcedure(procedure_name, yaml_node)});
+}
+catch (YAML::Exception& e)
+{
+  TEMOTO_WARN_("CONFIG: error parsing common feature: %s", e.what());
+}
+
 std::string RobotConfig::toString() const
 {
   std::string ret;
@@ -232,6 +247,10 @@ std::string RobotConfig::toString() const
   for (const auto& custom_feature : m_feature_custom_)
   {
     ret += custom_feature.second.isEnabled() ? std::string("    custom: " + custom_feature.second.getName() + "\n") : "";
+  }
+  for (const auto& common_procedure : m_common_procedures_)
+  {
+    ret += common_procedure.second.isDefined() ? std::string("    common: " + common_procedure.second.getName() + "\n") : "";
   }
   return ret;
 }

@@ -31,11 +31,16 @@ struct RmCustomRequest
     double w;
   };
 
+  struct Pose
+  {
+    Position position;
+    Orientation orientation;
+  }; 
+
   struct PoseStamped
   {
     Header header;
-    Position position;
-    Orientation orientation;
+    Pose pose;
   };
 
   std::string data_str;
