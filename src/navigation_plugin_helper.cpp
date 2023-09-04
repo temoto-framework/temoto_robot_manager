@@ -1,11 +1,13 @@
-#include "temoto_robot_manager/custom_plugin_helper.h"
+#include "temoto_robot_manager/navigation_plugin_helper.h"
 #include "temoto_resource_registrar/temoto_error.h"
 #include <chrono>
+
+#include <iostream>
 
 namespace temoto_robot_manager
 {
 
-CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path, CustomFeatureUpdateCb update_cb)
+NavigationPluginHelper::NavigationPluginHelper(const std::string& plugin_path, NavigationFeatureUpdateCb update_cb)
 : plugin_path_(plugin_path)
 , state_(State::NOT_LOADED)
 , update_cb_(update_cb)
@@ -13,17 +15,20 @@ CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path, CustomFea
 {
 try
 {
-  TEMOTO_INFO_STREAM_("\n ====== [Custom plug Helper] try  ============" + plugin_path_);
+  TEMOTO_INFO_("\n ====== [Nav plug Helper] try  ============");
+  TEMOTO_INFO_STREAM_("\n ====== [Nav plug Helper] try  ============" + plugin_path_);
   class_loader = std::make_shared<class_loader::ClassLoader>(plugin_path_, false);
 
-  if (class_loader->getAvailableClasses<CustomPluginBase>().empty())
+  if (class_loader->getAvailableClasses<NavigationPluginBase>().empty())
   {
     setState(State::ERROR);
     throw TEMOTO_ERRSTACK("Library contains no plugins, check if the path is correct: '" + plugin_path_ + "'");
   }
 
-  std::string plugin_name = class_loader->getAvailableClasses<CustomPluginBase>().front();
-  plugin = class_loader->createSharedInstance<CustomPluginBase>(plugin_name);
+  std::string plugin_name = class_loader->getAvailableClasses<NavigationPluginBase>().front();
+  plugin = class_loader->createSharedInstance<NavigationPluginBase>(plugin_name);
+  TEMOTO_INFO_("\n ====== [Nav plug Helper] createSharedInstance()  ============");
+  TEMOTO_INFO_(plugin_name);
   if (!class_loader->isLibraryLoaded())
   {
     setState(State::ERROR);
@@ -31,6 +36,7 @@ try
   }
 
   setState(State::UNINITIALIZED);
+  TEMOTO_INFO_("\n ====== [Nav plug Helper] End Constructor  ============");
 }
 catch(class_loader::ClassLoaderException & e)
 {
@@ -38,11 +44,11 @@ catch(class_loader::ClassLoaderException & e)
 }
 }
 
-CustomPluginHelper::~CustomPluginHelper()
+NavigationPluginHelper::~NavigationPluginHelper()
 {
   if (getState() == State::PROCESSING)
   {
-    plugin->preempt();
+    plugin->cancelGoal();
 
     while (!exec_thread_.joinable())
     {
@@ -77,22 +83,29 @@ CustomPluginHelper::~CustomPluginHelper()
   plugin.reset();
 }
 
-void CustomPluginHelper::initialize()
+void NavigationPluginHelper::initialize()
 try
 {
+  TEMOTO_INFO_("====== [Nav plug Helper] Try Initialize ()  ============");
+  State enumValue = getState();
+  
+  std::cout << "Enum value: " << static_cast<int>(enumValue) << std::endl;
+
   if (getState() != State::UNINITIALIZED && getState() != State::FINISHED)
   {
+    TEMOTO_INFO_("\n ====== [Nav plug Helper] if getState()  ============");
     setState(State::ERROR);
+    TEMOTO_INFO_("\n ====== [Nav plug Helper] setState()  ============");
     throw TEMOTO_ERRSTACK("Cannot initalize the plugin. It has to be in 'UNINITIALIZED' state for that");
   }
-
+  TEMOTO_INFO_("====== [Nav plug Helper] getState ()  ============");
   if (!plugin->initialize())
   {
     setState(State::ERROR);
     plugin.reset();
     throw TEMOTO_ERRSTACK("Unable to initialize the plugin");
   }
-
+  TEMOTO_INFO_("====== [Nav plug Helper] set State Initialized  ============");
   setState(State::INITIALIZED);
 }
 catch(class_loader::ClassLoaderException & e)
@@ -100,14 +113,16 @@ catch(class_loader::ClassLoaderException & e)
   throw TEMOTO_ERRSTACK(e.what());
 }
 
-void CustomPluginHelper::invoke(const RmCustomRequestWrap& request)
+void NavigationPluginHelper::sendGoal(const RmNavigationRequestWrap& request)
 {
+  TEMOTO_INFO_("================= [Nav plug Helper] sendGoal - Initialize==================");
+  
   initialize();
 
   if (getState() != State::INITIALIZED)
   {
     setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Cannot invoke the plugin. It has to be in 'INITIALIZED' state for that");
+    throw TEMOTO_ERRSTACK("Cannot send navigation goal. The plugin has to be in 'INITIALIZED' state for that");
   }
 
   if (exec_thread_.joinable())
@@ -119,7 +134,7 @@ void CustomPluginHelper::invoke(const RmCustomRequestWrap& request)
   exec_thread_ = std::thread(
   [&]
   {
-    if (plugin->invoke(request))
+    if (plugin->sendGoal(request))
     {
       setState(State::FINISHED);  
     }
@@ -136,25 +151,25 @@ void CustomPluginHelper::invoke(const RmCustomRequestWrap& request)
   sendUpdate();
 }
 
-void CustomPluginHelper::preempt()
+void NavigationPluginHelper::cancelGoal()
 {
   if (getState() != State::PROCESSING)
   {
     setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Cannot pre-empt the plugin. It has to be in 'PROCESSING' state for that");
+    throw TEMOTO_ERRSTACK("Cannot cancel the goal. Plugin has to be in 'PROCESSING' state for that");
   }
 
-  if (!plugin->preempt())
+  if (!plugin->cancelGoal())
   {
     setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Unable to pre-empt the plugin");
+    throw TEMOTO_ERRSTACK("Unable to cancel goal");
   }
 
   setState(State::STOPPING);
   sendUpdate();
 }
 
-void CustomPluginHelper::deinitialize()
+void NavigationPluginHelper::deinitialize()
 try
 {
   if (getState() != State::INITIALIZED)
@@ -176,30 +191,33 @@ catch(...)
   throw TEMOTO_ERRSTACK("Unable to deinitialize the plugin");
 }
 
-CustomPluginHelper::State CustomPluginHelper::getState() const
+NavigationPluginHelper::State NavigationPluginHelper::getState() const
 {
+  TEMOTO_INFO_("\n ====== [getState] ============");
   std::lock_guard<std::mutex> l(mutex_state_);
+  TEMOTO_INFO_("\n ====== [getState] before return ============");
+  std::cout << "Enum value: " << static_cast<int>(state_) << std::endl;
   return state_;
 }
 
-void CustomPluginHelper::setState(State state)
+void NavigationPluginHelper::setState(State state)
 {
   std::lock_guard<std::mutex> l(mutex_state_);
   state_ = state;
 }
 
-void CustomPluginHelper::sendUpdate() const
+void NavigationPluginHelper::sendUpdate() const
 {
   auto fb = plugin->getFeedback();
   if (fb.has_value())
   {
-    RmCustomFeedbackWrap fbw;
+    RmNavigationFeedbackWrap fbw;
 
     fbw.robot_name = current_request_->robot_name;
-    fbw.custom_feature_name = current_request_->custom_feature_name;
+    fbw.navigation_feature_name = current_request_->navigation_feature_name;
     fbw.request_id = current_request_->request_id;
     fbw.status = uint8_t(state_);
-    fbw.progress = fb->progress;
+    fbw.base_position = fb->base_position;
 
     update_cb_(fbw);
   }

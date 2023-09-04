@@ -193,7 +193,7 @@ try
   req_rm.data_pose.pose.orientation.z = req.data_pose.pose.orientation.z;
   req_rm.data_pose.pose.orientation.w = req.data_pose.pose.orientation.w;
   
-  req_rm.data_pose_array = std::vector<RmCustomRequest::PoseStamped>{}; // TODO
+  req_rm.data_pose_array = std::vector<PoseStamped>{}; // TODO
 
   // TODO: Add pose and pose array
   loaded_robot->invokeCustomFeature(req.custom_feature_name, req_rm);

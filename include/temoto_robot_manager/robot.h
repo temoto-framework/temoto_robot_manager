@@ -24,6 +24,7 @@
 #include "temoto_robot_manager/robot_common_procedures.h"
 #include "temoto_robot_manager/GripperControl.h"
 #include "temoto_robot_manager/custom_plugin_helper.h"
+#include "temoto_robot_manager/navigation_plugin_helper.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <move_base_msgs/MoveBaseAction.h>
@@ -138,7 +139,11 @@ private:
   typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
   ros::Subscriber localized_pose_sub_;
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
-
+  
+  NavigationPluginHelperPtr navigation_feature_plugin_;
+  mutable std::mutex navigation_feature_plugins_mutex_;
+  NavigationFeatureUpdateCb navigation_feature_update_cb_;
+  
   // Custom related
   std::map<std::string, CustomPluginHelperPtr> custom_feature_plugins_;
   mutable std::mutex custom_feature_plugins_mutex_;

@@ -106,9 +106,17 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
    * Get the controller configuration. Not required
    */
   if (nav_conf["controller"].IsDefined())
-  {
-    this->feature_enabled_ = setFromConfig(nav_conf["controller"]["package_name"], this->package_name_)
-                          && setFromConfig(nav_conf["controller"]["executable"], this->executable_);
+  {    
+    setFromConfig(nav_conf["controller"]["executable"], this->executable_);
+    setFromConfig(nav_conf["controller"]["executable_type"], this->executable_type_);
+
+    if (executable_type_ == "ros")
+    {
+      setFromConfig(nav_conf["controller"]["package_name"], this->package_name_);
+    }
+
+    this->feature_enabled_ = true;
+
     // Optional parameters                     
     if (this->feature_enabled_)
     {
@@ -116,16 +124,23 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
       setFromConfig(nav_conf["controller"]["global_planner"], this->global_planner_);
       setFromConfig(nav_conf["controller"]["local_planner"], this->local_planner_);
       setFromConfig(nav_conf["controller"]["pose_topic"], this->pose_topic_);
-    }
+    }    
   }
 
   /*
    * Get the driver configuration.
    */
   if (nav_conf["driver"].IsDefined())
-  {
-    this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
-                        && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
+  {    
+    setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
+    setFromConfig(nav_conf["driver"]["executable_type"], this->driver_executable_type_);
+
+    if (driver_executable_type_ == "ros")
+    {
+      setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_);
+    }
+
+    this->driver_enabled_ = true;
     // Optional parameters
     if (this->driver_enabled_)
     {
@@ -133,6 +148,7 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
       setFromConfig(nav_conf["driver"]["odom_topic"], this->odom_topic_);
       setFromConfig(nav_conf["driver"]["cmd_vel_topic"], this->cmd_vel_topic_);
     }
+
   }
 }
 
