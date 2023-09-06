@@ -12,15 +12,15 @@ namespace temoto_robot_manager
 struct RmNavigationFeedbackWrap : RmNavigationFeedback
 {
   std::string robot_name;
-  std::string navigation_feature_name;
-  std::string request_id;
+  // std::string navigation_feature_name;
+  // std::string request_id;
 };
 
 struct RmNavigationRequestWrap : RmNavigationGoal
 {
   std::string robot_name;
-  std::string navigation_feature_name;
-  std::string request_id;
+  // std::string navigation_feature_name;
+  // std::string request_id;
 };
 
 class NavigationPluginHelper; // Forward declaration

@@ -22,7 +22,8 @@
 #include "temoto_core/trr/config_synchronizer.h"
 #include "temoto_core/ConfigSync.h"
 #include "temoto_process_manager/process_manager_services.hpp"
-#include "temoto_robot_manager/rm_datastructures.h"
+#include "temoto_robot_manager/custom_datastructures.h"
+// #include "temoto_robot_manager/navigation_datastructures.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
@@ -109,6 +110,8 @@ private:
 
   void customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback);
 
+  void navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback);
+
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
@@ -152,6 +155,13 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
+
+  // DO I NEED THIS?
+  RobotNavigationGoal ongoing_navigation_requests_;
+  std::mutex mutex_ongoing_navigation_requests_;
+  
+  ros::Publisher pub_navigation_feature_feedback_;
+  std::mutex mutex_pub_navigation_feature_feedback_;
 
   /*
    * CUSTOM FEATURE 

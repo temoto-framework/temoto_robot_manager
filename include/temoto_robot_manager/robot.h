@@ -44,7 +44,8 @@ public:
   Robot(RobotConfigPtr config_
   , const std::string& resource_id
   , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-  , CustomFeatureUpdateCb custom_feature_update_cb);
+  , CustomFeatureUpdateCb custom_feature_update_cb
+  , NavigationFeatureUpdateCb navigation_feature_update_cb);
 
   virtual ~Robot();
   void load();
@@ -143,6 +144,8 @@ private:
   NavigationPluginHelperPtr navigation_feature_plugin_;
   mutable std::mutex navigation_feature_plugins_mutex_;
   NavigationFeatureUpdateCb navigation_feature_update_cb_;
+  std::thread navigation_feature_feedback_thread_;
+  bool navigation_feature_feedback_thread_running_;
   
   // Custom related
   std::map<std::string, CustomPluginHelperPtr> custom_feature_plugins_;

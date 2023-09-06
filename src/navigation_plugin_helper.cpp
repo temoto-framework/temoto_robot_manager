@@ -15,8 +15,6 @@ NavigationPluginHelper::NavigationPluginHelper(const std::string& plugin_path, N
 {
 try
 {
-  TEMOTO_INFO_("\n ====== [Nav plug Helper] try  ============");
-  TEMOTO_INFO_STREAM_("\n ====== [Nav plug Helper] try  ============" + plugin_path_);
   class_loader = std::make_shared<class_loader::ClassLoader>(plugin_path_, false);
 
   if (class_loader->getAvailableClasses<NavigationPluginBase>().empty())
@@ -27,16 +25,13 @@ try
 
   std::string plugin_name = class_loader->getAvailableClasses<NavigationPluginBase>().front();
   plugin = class_loader->createSharedInstance<NavigationPluginBase>(plugin_name);
-  TEMOTO_INFO_("\n ====== [Nav plug Helper] createSharedInstance()  ============");
-  TEMOTO_INFO_(plugin_name);
   if (!class_loader->isLibraryLoaded())
   {
     setState(State::ERROR);
     throw TEMOTO_ERRSTACK("Unable to load plugin '" + plugin_path_ + "'");
   }
 
-  setState(State::UNINITIALIZED);
-  TEMOTO_INFO_("\n ====== [Nav plug Helper] End Constructor  ============");
+  setState(State::UNINITIALIZED);  
 }
 catch(class_loader::ClassLoaderException & e)
 {
@@ -86,19 +81,11 @@ NavigationPluginHelper::~NavigationPluginHelper()
 void NavigationPluginHelper::initialize()
 try
 {
-  TEMOTO_INFO_("====== [Nav plug Helper] Try Initialize ()  ============");
-  State enumValue = getState();
-  
-  std::cout << "Enum value: " << static_cast<int>(enumValue) << std::endl;
-
   if (getState() != State::UNINITIALIZED && getState() != State::FINISHED)
   {
-    TEMOTO_INFO_("\n ====== [Nav plug Helper] if getState()  ============");
     setState(State::ERROR);
-    TEMOTO_INFO_("\n ====== [Nav plug Helper] setState()  ============");
     throw TEMOTO_ERRSTACK("Cannot initalize the plugin. It has to be in 'UNINITIALIZED' state for that");
   }
-  TEMOTO_INFO_("====== [Nav plug Helper] getState ()  ============");
   if (!plugin->initialize())
   {
     setState(State::ERROR);
@@ -115,8 +102,6 @@ catch(class_loader::ClassLoaderException & e)
 
 void NavigationPluginHelper::sendGoal(const RmNavigationRequestWrap& request)
 {
-  TEMOTO_INFO_("================= [Nav plug Helper] sendGoal - Initialize==================");
-  
   initialize();
 
   if (getState() != State::INITIALIZED)
@@ -193,10 +178,7 @@ catch(...)
 
 NavigationPluginHelper::State NavigationPluginHelper::getState() const
 {
-  TEMOTO_INFO_("\n ====== [getState] ============");
   std::lock_guard<std::mutex> l(mutex_state_);
-  TEMOTO_INFO_("\n ====== [getState] before return ============");
-  std::cout << "Enum value: " << static_cast<int>(state_) << std::endl;
   return state_;
 }
 
@@ -212,13 +194,15 @@ void NavigationPluginHelper::sendUpdate() const
   if (fb.has_value())
   {
     RmNavigationFeedbackWrap fbw;
-
+    
     fbw.robot_name = current_request_->robot_name;
-    fbw.navigation_feature_name = current_request_->navigation_feature_name;
-    fbw.request_id = current_request_->request_id;
+    // fbw.navigation_feature_name = current_request_->navigation_feature_name;
+    // fbw.request_id = current_request_->request_id;
     fbw.status = uint8_t(state_);
+    fbw.progress = fb->progress;
     fbw.base_position = fb->base_position;
-
+    std::cout << "sendUpdate: progress -->" << fb->progress << " " << fbw.progress << std::endl;
+    std::cout << "Robot Name -->" <<  current_request_->robot_name << " " << fbw.robot_name << std::endl;
     update_cb_(fbw);
   }
 }

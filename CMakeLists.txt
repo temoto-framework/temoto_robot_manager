@@ -33,6 +33,7 @@ find_package(class_loader REQUIRED)
 
 add_message_files(FILES
   CustomFeedback.msg
+  NavigationFeedback.msg
 )
 
 add_service_files(FILES

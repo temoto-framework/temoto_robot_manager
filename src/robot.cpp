@@ -25,16 +25,19 @@ namespace temoto_robot_manager
 Robot::Robot(RobotConfigPtr config
 , const std::string& resource_id
 , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-, CustomFeatureUpdateCb custom_feature_update_cb)
+, CustomFeatureUpdateCb custom_feature_update_cb
+, NavigationFeatureUpdateCb navigation_feature_update_cb)
 : config_(config)
 , robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
 , custom_feature_update_cb_(custom_feature_update_cb)
+, navigation_feature_update_cb_(navigation_feature_update_cb)
 , is_plan_valid_(false)
 , robot_operational_(true)
 , state_in_error_(false)
 , robot_loaded_(false)
 , custom_feature_feedback_thread_running_(false)
+, navigation_feature_feedback_thread_running_(false)
 {}
 
 Robot::~Robot()
@@ -73,9 +76,18 @@ Robot::~Robot()
     config_->getFeatureManipulation().setDriverLoaded(false);
   }
 
+  // Stop Thread
+  navigation_feature_feedback_thread_running_ = false;
+  while (!navigation_feature_feedback_thread_.joinable())
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  navigation_feature_feedback_thread_.join();
+
   if (config_->getFeatureNavigation().isLoaded())
   {
-    TEMOTO_DEBUG_("Unloading Navigation Feature.");
+    TEMOTO_DEBUG_("Unloading Navigation Feature.");    
+    navigation_feature_plugin_.reset();
     config_->getFeatureNavigation().setLoaded(false);
   }
 
@@ -385,16 +397,13 @@ void Robot::loadManipulationDriver()
 // Load Move Base
 void Robot::loadNavigationController()
 {
-  TEMOTO_INFO_("0 ================= Loading Navigation contoller ==================");
   if (config_->getFeatureNavigation().isLoaded())
   {
     return; // Return if already loaded.
   }
-  TEMOTO_INFO_("1 ================= Loading Navigation contoller ==================");
   try
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
-    TEMOTO_INFO_("2 ================= Loading Navigation contoller ==================");
     if (ftr.getExecutableType() == "ros")
     {
       // Previous Implementation 
@@ -418,16 +427,15 @@ void Robot::loadNavigationController()
       try
       {
         const std::string& plugin_path = ftr.getExecutable();
-        TEMOTO_INFO_("Executable");
-        TEMOTO_INFO_(plugin_path);
         NavigationPluginHelperPtr plugin_helper = std::make_shared<NavigationPluginHelper>(plugin_path, navigation_feature_update_cb_);
 
         std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+        navigation_feature_plugin_ = plugin_helper;
         // ftr.setLoaded(true);
         
 
         // /*
-        // * Start the custom feature feedback thread
+        // * Start the navigation feature feedback thread
         // */
         // if (navigation_feature_feedback_thread_running_)
         // {
@@ -438,22 +446,17 @@ void Robot::loadNavigationController()
         // navigation_feature_feedback_thread_ = std::thread(
         // [&]
         // {
-        //   TEMOTO_DEBUG_("Custom feature feedback thread running");
+        //   TEMOTO_DEBUG_("Navigation feature feedback thread running");
 
         //   while (navigation_feature_feedback_thread_running_)
         //   {
-        //     std::lock_guard<std::mutex> l(custom_feature_plugins_mutex_);
+        //     std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
 
-        //     for (const auto& cfp : custom_feature_plugins_)
-        //     {
-        //       cfp.second->sendUpdate();
-        //       std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        //     }
-
+        //     navigation_feature_plugin_->sendUpdate();
         //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
         //   }
 
-        //   TEMOTO_DEBUG_("Custom feature feedback thread finished");
+        //   TEMOTO_DEBUG_("Navigation feature feedback thread finished");
         // });
       }
       catch(resource_registrar::TemotoErrorStack& error_stack)
@@ -469,8 +472,6 @@ void Robot::loadNavigationController()
         throw TEMOTO_ERRSTACK("Could not load navigation feature");
       }
     }
-
-    TEMOTO_INFO_("3 ================= Loadng Navigation contoller ==================");
 
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
@@ -1031,16 +1032,46 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
   TEMOTO_INFO_("================= [robot.cpp 1031] getFeatureNavigation ==================");
   FeatureNavigation& ftr = config_->getFeatureNavigation();
   RmNavigationRequestWrap request;
+  request.robot_name = config_->getName();
   request.goal_pose.header.frame_id = target_pose.header.frame_id;
   request.goal_pose.pose.position.x = target_pose.pose.position.x;
   request.goal_pose.pose.position.y = target_pose.pose.position.y;
   request.goal_pose.pose.position.z = target_pose.pose.position.z;
+  TEMOTO_INFO_STREAM_("position z: " << request.goal_pose.pose.position.z);
   request.goal_pose.pose.orientation.x = target_pose.pose.orientation.x;
   request.goal_pose.pose.orientation.y = target_pose.pose.orientation.y;
   request.goal_pose.pose.orientation.z = target_pose.pose.orientation.z;
   request.goal_pose.pose.orientation.w = target_pose.pose.orientation.w;
   TEMOTO_INFO_("================= Before send Goal  ==================");
+
+  
+
   navigation_feature_plugin_->sendGoal(request);
+
+  /*
+  * Start the navigation feature feedback thread
+  */
+  if (navigation_feature_feedback_thread_running_)
+  {
+    return;
+  }
+
+  navigation_feature_feedback_thread_running_ = true;
+  navigation_feature_feedback_thread_ = std::thread(
+  [&]
+  {
+    TEMOTO_DEBUG_("Navigation feature feedback thread running");
+
+    while (navigation_feature_feedback_thread_running_)
+    {
+      std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+
+      navigation_feature_plugin_->sendUpdate();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+
+    TEMOTO_DEBUG_("Navigation feature feedback thread finished");
+  });
 
   // std::string act_rob_ns = "/" + config_->getAbsRobotNamespace() + "/move_base";
   // MoveBaseClient ac(act_rob_ns, true);

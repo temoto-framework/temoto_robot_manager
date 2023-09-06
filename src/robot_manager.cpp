@@ -127,6 +127,7 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     &RobotManager::customFeaturePreemptCb,
     this);
   pub_custom_feature_feedback_ = nh_.advertise<CustomFeedback>(channels::custom::FEEDBACK, 10);
+  pub_navigation_feature_feedback_ = nh_.advertise<NavigationFeedback>(NAVIGATION_FEEDBACK, 10);
 
   TEMOTO_INFO_("Robot manager is ready.\n");
 }
@@ -295,6 +296,31 @@ void RobotManager::customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback)
   pub_custom_feature_feedback_.publish(msg);
 }
 
+void RobotManager::navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback)
+{
+  NavigationFeedback msg;
+
+  msg.header.stamp = ros::Time::now();
+  msg.robot_name = feedback.robot_name;
+  // msg.request_id = feedback.request_id;
+  msg.status = feedback.status;
+  msg.progress = feedback.progress;
+
+  // Convert from RM/PoseStamped to geomety_msgs/PoseStamped
+  msg.base_position.header.frame_id = feedback.base_position.header.frame_id;
+  msg.base_position.header.stamp = ros::Time::now();
+  msg.base_position.pose.position.x = feedback.base_position.pose.position.x;
+  msg.base_position.pose.position.y = feedback.base_position.pose.position.y;
+  msg.base_position.pose.position.z = feedback.base_position.pose.position.z;
+  msg.base_position.pose.orientation.x = feedback.base_position.pose.orientation.x;
+  msg.base_position.pose.orientation.y = feedback.base_position.pose.orientation.y;
+  msg.base_position.pose.orientation.z = feedback.base_position.pose.orientation.z;
+  msg.base_position.pose.orientation.w = feedback.base_position.pose.orientation.w;  
+
+  std::lock_guard<std::mutex> l(mutex_pub_navigation_feature_feedback_);
+  pub_navigation_feature_feedback_.publish(msg);
+}
+
 void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir)
 {
   if (std::string(current_dir.c_str()).empty())
@@ -348,7 +374,8 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   try
   {
     auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
 
     loaded_robot->load();
     loaded_robots_.push_back(loaded_robot);
@@ -386,7 +413,8 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
 
     TEMOTO_INFO_("Call to remote RobotManager was sucessful.");
     auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
     loaded_robots_.push_back(loaded_robot);
 
     return;
@@ -753,15 +781,23 @@ catch(resource_registrar::TemotoErrorStack& e)
 bool RobotManager::goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res)
 try
 {
+  TEMOTO_INFO_("Received a goal Navigation request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+
+  TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())
   {
+    TEMOTO_INFO_STREAM_(" Loaded Robot, it is local ");
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
     loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
     res.success = true;   
   }
   else
   {
+    TEMOTO_INFO_STREAM_(" Loaded Robot, it is remote ");
     std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
       + srv_name::SERVER_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
@@ -993,7 +1029,8 @@ void RobotManager::restoreState()
       continue;
     }
     auto robot = std::make_shared<Robot>(robot_config, query.response.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
     robot->recover(query.response.temoto_metadata.request_id);
     loaded_robots_.push_back(robot);
   }

@@ -1,7 +1,7 @@
 #ifndef TEMOTO_ROBOT_MANAGER__NAVIGATION_PLUGIN_BASE_H
 #define TEMOTO_ROBOT_MANAGER__NAVIGATION_PLUGIN_BASE_H
 
-#include "temoto_robot_manager/rm_datastructures.h"
+#include "temoto_robot_manager/navigation_datastructures.h"
 #include <optional>
 
 namespace temoto_robot_manager

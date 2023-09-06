@@ -73,6 +73,7 @@ public:
         nh_.serviceClient<CustomRequestPreempt>(channels::custom::PREEMPT);
       custom_feedback_ = nh_.subscribe(channels::custom::FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
 
+      navigation_feedback_ = nh_.subscribe(NAVIGATION_FEEDBACK, 1, &RobotManagerInterface::navigationFeedbackCb, this);
       initialized_ = true;
     }
     else
@@ -383,6 +384,53 @@ public:
     }
   }
 
+  bool navigationGoal(RobotNavigationGoal& goal)
+  {
+    if (goal.request.target_pose.header.frame_id.empty())
+    {
+      throw TEMOTO_ERRSTACK("Reference frame is not defined");
+    }
+
+    if (!client_navigation_goal_.call(goal))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
+    }
+
+    if (!goal.response.success)
+    {
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
+    }
+    return goal.response.success;
+  }
+
+  std::optional<NavigationFeedback> getNavigationFeedback(const std::string& robot_name)
+  {
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+    auto ongoing_query_it = ongoing_navigation_queries_.find(robot_name);
+
+    if (ongoing_query_it == ongoing_navigation_queries_.end())
+    {
+      return {};
+      //throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
+    }
+
+    if (ongoing_query_it->second.status == NavigationFeedback::FINISHED)
+    {
+      auto feedback = ongoing_query_it->second;
+      ongoing_navigation_queries_.erase(ongoing_query_it);
+      return feedback;
+    }
+    else
+    {
+      return ongoing_query_it->second;
+    }
+  }
+
+  bool cancelNavigationGoal(const std::string& robot_name)
+  {
+    
+  }
+
   void controlGripperPosition(const std::string& robot_name, const float& position)
   {
     temoto_robot_manager::RobotGripperControlPosition msg;    
@@ -479,6 +527,20 @@ private:
     return;
   }
 
+  void navigationFeedbackCb(const NavigationFeedback& msg)
+  {
+    TEMOTO_INFO_STREAM_("Nav feedback" << msg);
+    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.robot_name);
+
+    if (ongoing_nav_query_it != ongoing_navigation_queries_.end())
+    {
+      ongoing_nav_query_it->second = msg;
+    }
+
+    return;
+  }
+
   std::string rr_name_;
   std::string unique_suffix_;
   bool initialized_;
@@ -501,6 +563,10 @@ private:
   ros::Subscriber custom_feedback_;
   std::mutex custom_queries_mutex_;
   std::map<std::string, CustomQuery> ongoing_custom_queries_;
+
+  ros::Subscriber navigation_feedback_;
+  std::mutex navigation_queries_mutex_;
+  std::map<std::string, NavigationFeedback> ongoing_navigation_queries_;
 
   std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;
 };

@@ -13,7 +13,6 @@ CustomPluginHelper::CustomPluginHelper(const std::string& plugin_path, CustomFea
 {
 try
 {
-  TEMOTO_INFO_STREAM_("\n ====== [Custom plug Helper] try  ============" + plugin_path_);
   class_loader = std::make_shared<class_loader::ClassLoader>(plugin_path_, false);
 
   if (class_loader->getAvailableClasses<CustomPluginBase>().empty())
