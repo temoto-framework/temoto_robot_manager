@@ -92,7 +92,6 @@ try
     plugin.reset();
     throw TEMOTO_ERRSTACK("Unable to initialize the plugin");
   }
-  TEMOTO_INFO_("====== [Nav plug Helper] set State Initialized  ============");
   setState(State::INITIALIZED);
 }
 catch(class_loader::ClassLoaderException & e)
@@ -201,8 +200,8 @@ void NavigationPluginHelper::sendUpdate() const
     fbw.status = uint8_t(state_);
     fbw.progress = fb->progress;
     fbw.base_position = fb->base_position;
-    std::cout << "sendUpdate: progress -->" << fb->progress << " " << fbw.progress << std::endl;
-    std::cout << "Robot Name -->" <<  current_request_->robot_name << " " << fbw.robot_name << std::endl;
+    std::cout << "sendUpdate: progress -->" << fb->progress << std::endl;
+    std::cout << "status: -->" << fbw.status << std::endl;
     update_cb_(fbw);
   }
 }

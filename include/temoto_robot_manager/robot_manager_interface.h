@@ -66,6 +66,9 @@ public:
         nh_.serviceClient<RobotGripperControlPosition>(srv_name::SERVER_GRIPPER_CONTROL_POSITION);
       client_get_robot_config_ =
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
+      
+      client_cancel_navigation_goal_ =
+        nh_.serviceClient<RobotCancelNavigationGoal>(srv_name::SERVER_CANCEL_NAVIGATION_GOAL);
 
       client_custom_request_ = 
         nh_.serviceClient<CustomRequest>(channels::custom::REQUEST);
@@ -73,7 +76,7 @@ public:
         nh_.serviceClient<CustomRequestPreempt>(channels::custom::PREEMPT);
       custom_feedback_ = nh_.subscribe(channels::custom::FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
 
-      navigation_feedback_ = nh_.subscribe(NAVIGATION_FEEDBACK, 1, &RobotManagerInterface::navigationFeedbackCb, this);
+      navigation_feedback_ = nh_.subscribe(srv_name::NAVIGATION_FEEDBACK, 1, &RobotManagerInterface::navigationFeedbackCb, this);
       initialized_ = true;
     }
     else
@@ -428,7 +431,20 @@ public:
 
   bool cancelNavigationGoal(const std::string& robot_name)
   {
-    
+    temoto_robot_manager::RobotCancelNavigationGoal msg;
+    msg.request.robot_name = robot_name;
+
+    if (!client_cancel_navigation_goal_.call(msg))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach the CancelNavigationGoal server");
+    }
+
+    if (!msg.response.result)
+    {
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'CancelNavigationGoal'");
+    }
+
+    return msg.response.result;
   }
 
   void controlGripperPosition(const std::string& robot_name, const float& position)
@@ -500,6 +516,7 @@ public:
     client_set_manipulation_target_.shutdown();
     client_get_manipulation_target_.shutdown();
     client_navigation_goal_.shutdown();
+    client_cancel_navigation_goal_.shutdown();
     client_gripper_control_position_.shutdown();
 
     TEMOTO_DEBUG_("RobotManagerInterface destroyed.");
@@ -523,13 +540,11 @@ private:
     {
       ongoing_query_it->second.feedback = msg;
     }
-
-    return;
   }
 
   void navigationFeedbackCb(const NavigationFeedback& msg)
   {
-    TEMOTO_INFO_STREAM_("Nav feedback" << msg);
+    TEMOTO_INFO_STREAM_("progress: " << msg.progress << " " << static_cast<int>(msg.status));
     std::lock_guard<std::mutex> lock(custom_queries_mutex_);
     auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.robot_name);
 
@@ -555,6 +570,7 @@ private:
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_get_manipulation_named_targets_;
   ros::ServiceClient client_navigation_goal_;
+  ros::ServiceClient client_cancel_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_get_robot_config_;
 

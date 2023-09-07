@@ -1106,6 +1106,17 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 
 }
 
+void Robot::cancelNavigationGoal()
+try
+{
+  navigation_feature_plugin_->cancelGoal();
+}
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  std::string message = "Unable to cancel navigation goal of robot '" + config_->getName() + "'.";
+  throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
+}
+
 void Robot::controlGripper(const std::string& robot_name,const float position)
 try
 {

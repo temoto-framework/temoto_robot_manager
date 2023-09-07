@@ -63,6 +63,7 @@ public:
   std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
   
   void goalNavigation(const geometry_msgs::PoseStamped& target_pose);
+  void cancelNavigationGoal();
   void controlGripper(const std::string& robot_name, const float position);
 
   void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequestWrap& request);

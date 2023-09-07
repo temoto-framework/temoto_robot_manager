@@ -114,6 +114,10 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     srv_name::SERVER_GET_CONFIG,
     &RobotManager::getRobotConfigCb,
     this);
+  server_cancel_navigation_goal_ = nh_.advertiseService(
+    srv_name::SERVER_CANCEL_NAVIGATION_GOAL, 
+    &RobotManager::cancelNavigationGoalCb,
+    this);
 
   /*
    * Set up the Custom Feature channel
@@ -127,7 +131,7 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     &RobotManager::customFeaturePreemptCb,
     this);
   pub_custom_feature_feedback_ = nh_.advertise<CustomFeedback>(channels::custom::FEEDBACK, 10);
-  pub_navigation_feature_feedback_ = nh_.advertise<NavigationFeedback>(NAVIGATION_FEEDBACK, 10);
+  pub_navigation_feature_feedback_ = nh_.advertise<NavigationFeedback>(srv_name::NAVIGATION_FEEDBACK, 10);
 
   TEMOTO_INFO_("Robot manager is ready.\n");
 }
@@ -184,7 +188,6 @@ try
   req_rm.data_num = req.data_num;
   req_rm.data_num_array = req.data_num_array;
   
-  // req_rm.data_pose = RmCustomRequest::PoseStamped{};                    // TODO
   req_rm.data_pose.header.frame_id = req.data_pose.header.frame_id;
   req_rm.data_pose.pose.position.x = req.data_pose.pose.position.x;
   req_rm.data_pose.pose.position.y = req.data_pose.pose.position.y;
@@ -821,6 +824,50 @@ try
 catch(resource_registrar::TemotoErrorStack& e)
 {
   res.success = false;
+  return true;
+}
+
+bool RobotManager::cancelNavigationGoalCb(RobotCancelNavigationGoal::Request& req, RobotCancelNavigationGoal::Response& res)
+try
+{
+  TEMOTO_INFO_("Cancel Navigation goal request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+  TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  if (loaded_robot->isLocal())
+  {
+    TEMOTO_INFO_STREAM_(" Loaded Robot, it is local ");
+    loaded_robot->cancelNavigationGoal();
+    res.result = true;   
+  }
+  else
+  {
+    TEMOTO_INFO_STREAM_(" Loaded Robot, it is remote ");
+    std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+      + srv_name::SERVER_CANCEL_NAVIGATION_GOAL;
+    TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
+
+    ros::ServiceClient client_cancel_navigation_goal_ = nh_.serviceClient<RobotCancelNavigationGoal>(topic);
+    RobotCancelNavigationGoal fwd_cancel_goal_srvc;
+    fwd_cancel_goal_srvc.request = req;
+    fwd_cancel_goal_srvc.response = res;
+    if (client_cancel_navigation_goal_.call(fwd_cancel_goal_srvc))
+    {
+      res = fwd_cancel_goal_srvc.response;
+    }
+    else
+    {
+      throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
+    }
+  }
+  res.result = true;
+  return true;  
+}
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  res.result = false;
   return true;
 }
 

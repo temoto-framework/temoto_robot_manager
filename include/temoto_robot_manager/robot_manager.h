@@ -112,6 +112,8 @@ private:
 
   void navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback);
 
+  bool cancelNavigationGoalCb(RobotCancelNavigationGoal::Request& req, RobotCancelNavigationGoal::Response& res);
+
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
   RobotConfigPtr findRobot(const std::string& robot_name, const RobotConfigs& robot_infos);
@@ -145,6 +147,7 @@ private:
   ros::ServiceServer server_navigation_goal_;
   ros::ServiceServer server_gripper_control_position_;
   ros::ServiceServer server_get_robot_config_;
+  ros::ServiceServer server_cancel_navigation_goal_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -155,8 +158,8 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
+  ros::ServiceClient client_cancel_navigation_goal_;
 
-  // DO I NEED THIS?
   RobotNavigationGoal ongoing_navigation_requests_;
   std::mutex mutex_ongoing_navigation_requests_;
   
