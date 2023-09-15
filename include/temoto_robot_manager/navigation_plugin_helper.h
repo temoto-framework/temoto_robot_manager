@@ -42,22 +42,23 @@ public:
     ERROR
   };
 
-  NavigationPluginHelper(const std::string& plugin_path, NavigationFeatureUpdateCb update_cb);
+  NavigationPluginHelper(const std::string& plugin_path, const std::string& robot_ns, NavigationFeatureUpdateCb update_cb);
   ~NavigationPluginHelper();
   void initialize();
   void sendGoal(const RmNavigationRequestWrap& request);
   void sendUpdate() const;
   void cancelGoal();
   void deinitialize();
+  State getState() const;
 
 private:
-  State getState() const;
   void setState(State state);
 
   std::shared_ptr<NavigationPluginBase> plugin;
   std::shared_ptr<class_loader::ClassLoader> class_loader;
   std::thread exec_thread_;
   std::string plugin_path_;
+  std::string robot_ns_;
 
   State state_;
   mutable std::mutex mutex_state_;

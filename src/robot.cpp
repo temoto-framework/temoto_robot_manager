@@ -404,74 +404,46 @@ void Robot::loadNavigationController()
   try
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
-    if (ftr.getExecutableType() == "ros")
+    
+    rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
+    // wait for command velocity to be published
+    std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
+    waitForTopic(cmd_vel_topic);
+
+    // Subscribe to the pose messages
+    if (!ftr.getPoseTopic().empty())
     {
-      // Previous Implementation 
-      rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-      // wait for command velocity to be published
-      std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
-      waitForTopic(cmd_vel_topic);
-
-      // Subscribe to the pose messages
-      if (!ftr.getPoseTopic().empty())
-      {
-        localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
-        , 1
-        , &Robot::robotPoseCallback
-        , this);
-      }
+      localized_pose_sub_ = nh_.subscribe("/" + config_->getAbsRobotNamespace() + "/" + ftr.getPoseTopic()
+      , 1
+      , &Robot::robotPoseCallback
+      , this);
     }
-    else if (ftr.getExecutableType() == "lib")
+    
+    
+    TEMOTO_INFO_("Load Navigation contoller lib");
+    try
     {
-      TEMOTO_INFO_("Navigation contoller lib");
-      try
-      {
-        const std::string& plugin_path = ftr.getExecutable();
-        NavigationPluginHelperPtr plugin_helper = std::make_shared<NavigationPluginHelper>(plugin_path, navigation_feature_update_cb_);
+      const std::string& plugin_path = ftr.getControllerInterface();
+      std::string act_rob_ns = "/" + config_->getAbsRobotNamespace();
 
-        std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
-        navigation_feature_plugin_ = plugin_helper;
-        // ftr.setLoaded(true);
-        
+      NavigationPluginHelperPtr plugin_helper = std::make_shared<NavigationPluginHelper>(plugin_path, act_rob_ns, navigation_feature_update_cb_);
 
-        // /*
-        // * Start the navigation feature feedback thread
-        // */
-        // if (navigation_feature_feedback_thread_running_)
-        // {
-        //   return;
-        // }
-
-        // navigation_feature_feedback_thread_running_ = true;
-        // navigation_feature_feedback_thread_ = std::thread(
-        // [&]
-        // {
-        //   TEMOTO_DEBUG_("Navigation feature feedback thread running");
-
-        //   while (navigation_feature_feedback_thread_running_)
-        //   {
-        //     std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
-
-        //     navigation_feature_plugin_->sendUpdate();
-        //     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        //   }
-
-        //   TEMOTO_DEBUG_("Navigation feature feedback thread finished");
-        // });
-      }
-      catch(resource_registrar::TemotoErrorStack& error_stack)
-      {
-        throw FWD_TEMOTO_ERRSTACK(error_stack);
-      }
-      catch(std::exception& e)
-      {
-        throw TEMOTO_ERRSTACK(e.what());
-      }
-      catch(...)
-      {
-        throw TEMOTO_ERRSTACK("Could not load navigation feature");
-      }
+      std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+      navigation_feature_plugin_ = plugin_helper;
     }
+    catch(resource_registrar::TemotoErrorStack& error_stack)
+    {
+      throw FWD_TEMOTO_ERRSTACK(error_stack);
+    }
+    catch(std::exception& e)
+    {
+      throw TEMOTO_ERRSTACK(e.what());
+    }
+    catch(...)
+    {
+      throw TEMOTO_ERRSTACK("Could not load navigation feature");
+    }
+    
 
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
@@ -496,7 +468,6 @@ void Robot::loadNavigationDriver()
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     std::string odom_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
-    TEMOTO_INFO_(" ===== Loadng Navigation driver =====  Waitinf for topic =====");
     TEMOTO_INFO_(odom_topic);
 
     waitForTopic(odom_topic);
@@ -1024,12 +995,10 @@ std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_
 
 void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 {
-  TEMOTO_INFO_("================= [robot.cpp 1026] goalNavigation ==================");
   if (!isRobotOperational())
   {
     throw TEMOTO_ERRSTACK("Could not navigate the robot because robot is not operational");
   }
-  TEMOTO_INFO_("================= [robot.cpp 1031] getFeatureNavigation ==================");
   FeatureNavigation& ftr = config_->getFeatureNavigation();
   RmNavigationRequestWrap request;
   request.robot_name = config_->getName();
@@ -1037,78 +1006,86 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
   request.goal_pose.pose.position.x = target_pose.pose.position.x;
   request.goal_pose.pose.position.y = target_pose.pose.position.y;
   request.goal_pose.pose.position.z = target_pose.pose.position.z;
-  TEMOTO_INFO_STREAM_("position z: " << request.goal_pose.pose.position.z);
   request.goal_pose.pose.orientation.x = target_pose.pose.orientation.x;
   request.goal_pose.pose.orientation.y = target_pose.pose.orientation.y;
   request.goal_pose.pose.orientation.z = target_pose.pose.orientation.z;
   request.goal_pose.pose.orientation.w = target_pose.pose.orientation.w;
-  TEMOTO_INFO_("================= Before send Goal  ==================");
-
-  
-
+  std::cout << "\033[1;32m [R] goalNavigation\033[0m\n" <<std::endl;
+  std::cout << target_pose <<std::endl;
+  std::cout << "\033[1;32m [R] goalNavigation\033[0m\n" <<std::endl;
   navigation_feature_plugin_->sendGoal(request);
 
   /*
   * Start the navigation feature feedback thread
   */
-  if (navigation_feature_feedback_thread_running_)
+  if (!navigation_feature_feedback_thread_running_)
   {
-    return;
+    navigation_feature_feedback_thread_running_ = true;
+    navigation_feature_feedback_thread_ = std::thread(
+    [&]
+    {
+      TEMOTO_DEBUG_("Navigation feature feedback thread running");
+
+      while (navigation_feature_feedback_thread_running_)
+      {
+        std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+
+        navigation_feature_plugin_->sendUpdate();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      }
+
+      TEMOTO_DEBUG_("Navigation feature feedback thread finished");
+    });
   }
 
-  navigation_feature_feedback_thread_running_ = true;
-  navigation_feature_feedback_thread_ = std::thread(
-  [&]
-  {
-    TEMOTO_DEBUG_("Navigation feature feedback thread running");
-
-    while (navigation_feature_feedback_thread_running_)
-    {
-      std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
-
-      navigation_feature_plugin_->sendUpdate();
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-
-    TEMOTO_DEBUG_("Navigation feature feedback thread finished");
-  });
+  
 
   // std::string act_rob_ns = "/" + config_->getAbsRobotNamespace() + "/move_base";
-  // MoveBaseClient ac(act_rob_ns, true);
   
-  // if (!ac.waitForServer(ros::Duration(5.0)))
+
+
+
+  /////////////////////////////////////////////////////////////////////
+
+  // Wait until either the goal is finished or robot has encountered a system issue  
+
+  // NOT_LOADED,
+  // UNINITIALIZED,
+  // INITIALIZED,
+  // PROCESSING,
+  // FINISHED,
+  // STOPPING,
+  // ERROR
+
+  while((navigation_feature_plugin_->getState() == temoto_robot_manager::NavigationPluginHelper::State::PROCESSING)
+     && isRobotOperational())
+  {
+    ros::Duration(1).sleep();
+  }
+
+  if (!isRobotOperational())
+  {
+    cancelNavigationGoal();
+    throw TEMOTO_ERRSTACK("Could not finish the navigation goal because the robot is not operational");
+  }
+  else if(navigation_feature_plugin_->getState() != temoto_robot_manager::NavigationPluginHelper::State::FINISHED)
+  {
+    throw TEMOTO_ERRSTACK("The base failed to move");
+  }
+
+  // DO I NEED TO STOP THE FEEDBACK THREAD?
+  // navigation_feature_feedback_thread_running_ = false;
+  // while (!navigation_feature_feedback_thread_.joinable())
   // {
-  //   TEMOTO_ERRSTACK("The move_base action server did not come up");
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(5));
   // }
-
-  // move_base_msgs::MoveBaseGoal goal;
-  // goal.target_pose = target_pose;
-  // goal.target_pose.header.stamp = ros::Time::now();
-  // ac.sendGoal(goal);
-
-  // // Wait until either the goal is finished or robot has encountered a system issue
-  // while((ac.getState() == actionlib::SimpleClientGoalState::PENDING || ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
-  //    && isRobotOperational())
-  // {
-  //   ros::Duration(1).sleep();
-  // }
-
-  // if (!isRobotOperational())
-  // {
-  //   ac.cancelGoal();
-  //   throw TEMOTO_ERRSTACK("Could not finish the navigation goal because the robot is not operational");
-  // }
-  // else if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
-  // {
-  //   throw TEMOTO_ERRSTACK("The base failed to move");
-  // }
-
-
+  // navigation_feature_feedback_thread_.join();
 }
 
 void Robot::cancelNavigationGoal()
 try
 {
+  std::cout << "\033[1;32m [R] Cancel goalNavigation\033[0m\n" <<std::endl;
   navigation_feature_plugin_->cancelGoal();
 }
 catch(resource_registrar::TemotoErrorStack& e)

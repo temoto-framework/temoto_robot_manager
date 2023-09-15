@@ -107,16 +107,9 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
    */
   if (nav_conf["controller"].IsDefined())
   {    
-    setFromConfig(nav_conf["controller"]["executable"], this->executable_);
-    setFromConfig(nav_conf["controller"]["executable_type"], this->executable_type_);
-
-    if (executable_type_ == "ros")
-    {
-      setFromConfig(nav_conf["controller"]["package_name"], this->package_name_);
-    }
-
-    this->feature_enabled_ = true;
-
+    this->feature_enabled_ = setFromConfig(nav_conf["controller"]["package_name"], this->package_name_)
+                          && setFromConfig(nav_conf["controller"]["executable"], this->executable_)
+                          && setFromConfig(nav_conf["controller"]["controller_interface"], this->controller_interface_);
     // Optional parameters                     
     if (this->feature_enabled_)
     {
@@ -132,15 +125,8 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
    */
   if (nav_conf["driver"].IsDefined())
   {    
-    setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
-    setFromConfig(nav_conf["driver"]["executable_type"], this->driver_executable_type_);
-
-    if (driver_executable_type_ == "ros")
-    {
-      setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_);
-    }
-
-    this->driver_enabled_ = true;
+    this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
+                        && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
     // Optional parameters
     if (this->driver_enabled_)
     {
@@ -148,7 +134,6 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
       setFromConfig(nav_conf["driver"]["odom_topic"], this->odom_topic_);
       setFromConfig(nav_conf["driver"]["cmd_vel_topic"], this->cmd_vel_topic_);
     }
-
   }
 }
 

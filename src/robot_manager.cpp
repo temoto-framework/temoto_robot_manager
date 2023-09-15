@@ -786,11 +786,18 @@ try
 {
   TEMOTO_INFO_("Received a goal Navigation request");
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
-  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
+  // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
 
   TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
+  std::cout << "\033[1;32m [RM] goalNavigationCb\033[0m\n" <<std::endl;
+  std::cout << req.target_pose <<std::endl;
+  std::cout << "\033[1;32m [RM] goalNavigationCb\033[0m\n" <<std::endl;
+
   if (loaded_robot->isLocal())
   {
     TEMOTO_INFO_STREAM_(" Loaded Robot, it is local ");
@@ -832,7 +839,9 @@ try
 {
   TEMOTO_INFO_("Cancel Navigation goal request");
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
-  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
+  // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
   TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);

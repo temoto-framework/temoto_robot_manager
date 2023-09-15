@@ -10,7 +10,7 @@ namespace temoto_robot_manager
 class NavigationPluginBase
 {
 public:
-  virtual bool initialize() = 0;
+  virtual bool initialize(const std::string& robot_ns) = 0;
   virtual bool sendGoal(RmNavigationGoal goal) = 0;
   virtual std::optional<RmNavigationFeedback> getFeedback() = 0;
   virtual bool cancelGoal() = 0;

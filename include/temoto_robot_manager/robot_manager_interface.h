@@ -380,7 +380,7 @@ public:
     {
       throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-
+    
     if (!msg.response.success)
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
@@ -389,6 +389,9 @@ public:
 
   bool navigationGoal(RobotNavigationGoal& goal)
   {
+    std::cout << "\033[1;35m [RMI] navigationGoal\033[0m\n" <<std::endl;
+    std::cout << goal.request.target_pose <<std::endl;
+    std::cout << "\033[1;35m [RMI] navigationGoal\033[0m\n" <<std::endl;
     if (goal.request.target_pose.header.frame_id.empty())
     {
       throw TEMOTO_ERRSTACK("Reference frame is not defined");
@@ -401,7 +404,7 @@ public:
 
     if (!goal.response.success)
     {
-      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
+      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");      
     }
     return goal.response.success;
   }
@@ -443,7 +446,7 @@ public:
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'CancelNavigationGoal'");
     }
-
+    TEMOTO_INFO_STREAM_("  [RMI] --> End of cancelNavigationGoal");
     return msg.response.result;
   }
 
@@ -544,7 +547,6 @@ private:
 
   void navigationFeedbackCb(const NavigationFeedback& msg)
   {
-    TEMOTO_INFO_STREAM_("progress: " << msg.progress << " " << static_cast<int>(msg.status));
     std::lock_guard<std::mutex> lock(custom_queries_mutex_);
     auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.robot_name);
 
@@ -552,7 +554,6 @@ private:
     {
       ongoing_nav_query_it->second = msg;
     }
-
     return;
   }
 

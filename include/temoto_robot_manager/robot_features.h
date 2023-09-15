@@ -240,12 +240,18 @@ public:
     return pose_topic_;
   }
 
+  const std::string& getControllerInterface() const
+  {
+    return controller_interface_;
+  }
+
 private:
   std::string global_planner_;
   std::string local_planner_;
   std::string odom_topic_;
   std::string cmd_vel_topic_;
   std::string pose_topic_;
+  std::string controller_interface_;
 };
 
 class FeatureGripper : public FeatureWithDriver

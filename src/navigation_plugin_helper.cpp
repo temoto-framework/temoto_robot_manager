@@ -7,11 +7,12 @@
 namespace temoto_robot_manager
 {
 
-NavigationPluginHelper::NavigationPluginHelper(const std::string& plugin_path, NavigationFeatureUpdateCb update_cb)
+NavigationPluginHelper::NavigationPluginHelper(const std::string& plugin_path, const std::string& robot_ns, NavigationFeatureUpdateCb update_cb)
 : plugin_path_(plugin_path)
 , state_(State::NOT_LOADED)
 , update_cb_(update_cb)
 , current_request_{}
+, robot_ns_(robot_ns)
 {
 try
 {
@@ -86,7 +87,7 @@ try
     setState(State::ERROR);
     throw TEMOTO_ERRSTACK("Cannot initalize the plugin. It has to be in 'UNINITIALIZED' state for that");
   }
-  if (!plugin->initialize())
+  if (!plugin->initialize(robot_ns_))
   {
     setState(State::ERROR);
     plugin.reset();
@@ -137,20 +138,29 @@ void NavigationPluginHelper::sendGoal(const RmNavigationRequestWrap& request)
 
 void NavigationPluginHelper::cancelGoal()
 {
-  if (getState() != State::PROCESSING)
+
+  if (getState() == State::FINISHED)
   {
-    setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Cannot cancel the goal. Plugin has to be in 'PROCESSING' state for that");
+    std::cout << "\033[1;32m [Plugin helper] Nothing to Cancel. Goal finished already\033[0m\n" <<std::endl;
+    return;
   }
 
-  if (!plugin->cancelGoal())
+  if (getState() == State::PROCESSING)
   {
-    setState(State::ERROR);
-    throw TEMOTO_ERRSTACK("Unable to cancel goal");
-  }
+    // setState(State::ERROR);
+    std::cout << "\033[1;32m [Plugin helper] State = processing\033[0m\n" <<std::endl;
+    // throw TEMOTO_ERRSTACK("Cannot cancel the goal. Plugin has to be in 'PROCESSING' state for that");
+    if (!plugin->cancelGoal())
+    {
+      std::cout << "\033[1;32m [Plugin helper] !plugin->cancelGoal \033[0m\n" <<std::endl;
+      setState(State::ERROR);
+      throw TEMOTO_ERRSTACK("Unable to cancel goal");
+    }
 
-  setState(State::STOPPING);
-  sendUpdate();
+    std::cout << "\033[1;32m [Plugin helper] end cancelgoal \033[0m\n" <<std::endl;
+    setState(State::STOPPING);
+    sendUpdate();
+  }  
 }
 
 void NavigationPluginHelper::deinitialize()
@@ -200,8 +210,6 @@ void NavigationPluginHelper::sendUpdate() const
     fbw.status = uint8_t(state_);
     fbw.progress = fb->progress;
     fbw.base_position = fb->base_position;
-    std::cout << "sendUpdate: progress -->" << fb->progress << std::endl;
-    std::cout << "status: -->" << fbw.status << std::endl;
     update_cb_(fbw);
   }
 }
