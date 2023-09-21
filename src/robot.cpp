@@ -1010,9 +1010,6 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
   request.goal_pose.pose.orientation.y = target_pose.pose.orientation.y;
   request.goal_pose.pose.orientation.z = target_pose.pose.orientation.z;
   request.goal_pose.pose.orientation.w = target_pose.pose.orientation.w;
-  std::cout << "\033[1;32m [R] goalNavigation\033[0m\n" <<std::endl;
-  std::cout << target_pose <<std::endl;
-  std::cout << "\033[1;32m [R] goalNavigation\033[0m\n" <<std::endl;
   navigation_feature_plugin_->sendGoal(request);
 
   /*
@@ -1037,25 +1034,6 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
       TEMOTO_DEBUG_("Navigation feature feedback thread finished");
     });
   }
-
-  
-
-  // std::string act_rob_ns = "/" + config_->getAbsRobotNamespace() + "/move_base";
-  
-
-
-
-  /////////////////////////////////////////////////////////////////////
-
-  // Wait until either the goal is finished or robot has encountered a system issue  
-
-  // NOT_LOADED,
-  // UNINITIALIZED,
-  // INITIALIZED,
-  // PROCESSING,
-  // FINISHED,
-  // STOPPING,
-  // ERROR
 
   while((navigation_feature_plugin_->getState() == temoto_robot_manager::NavigationPluginHelper::State::PROCESSING)
      && isRobotOperational())
@@ -1085,7 +1063,6 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 void Robot::cancelNavigationGoal()
 try
 {
-  std::cout << "\033[1;32m [R] Cancel goalNavigation\033[0m\n" <<std::endl;
   navigation_feature_plugin_->cancelGoal();
 }
 catch(resource_registrar::TemotoErrorStack& e)

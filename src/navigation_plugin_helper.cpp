@@ -141,26 +141,25 @@ void NavigationPluginHelper::cancelGoal()
 
   if (getState() == State::FINISHED)
   {
-    std::cout << "\033[1;32m [Plugin helper] Nothing to Cancel. Goal finished already\033[0m\n" <<std::endl;
+    std::cout << "\033[1;32m [Plugin helper] There is no goal to cancel.\033[0m\n" <<std::endl;
     return;
   }
 
-  if (getState() == State::PROCESSING)
+  if (getState() != State::PROCESSING)
   {
-    // setState(State::ERROR);
-    std::cout << "\033[1;32m [Plugin helper] State = processing\033[0m\n" <<std::endl;
-    // throw TEMOTO_ERRSTACK("Cannot cancel the goal. Plugin has to be in 'PROCESSING' state for that");
-    if (!plugin->cancelGoal())
-    {
-      std::cout << "\033[1;32m [Plugin helper] !plugin->cancelGoal \033[0m\n" <<std::endl;
-      setState(State::ERROR);
-      throw TEMOTO_ERRSTACK("Unable to cancel goal");
-    }
+    setState(State::ERROR);
+    throw TEMOTO_ERRSTACK("Cannot pre-empt the plugin. It has to be in 'PROCESSING' state for that");
+  }
+  
+  if (!plugin->cancelGoal())
+  {
+    setState(State::ERROR);
+    throw TEMOTO_ERRSTACK("Unable to cancel goal");
+  }
 
-    std::cout << "\033[1;32m [Plugin helper] end cancelgoal \033[0m\n" <<std::endl;
-    setState(State::STOPPING);
-    sendUpdate();
-  }  
+  setState(State::STOPPING);
+  sendUpdate();
+  
 }
 
 void NavigationPluginHelper::deinitialize()
@@ -205,8 +204,6 @@ void NavigationPluginHelper::sendUpdate() const
     RmNavigationFeedbackWrap fbw;
     
     fbw.robot_name = current_request_->robot_name;
-    // fbw.navigation_feature_name = current_request_->navigation_feature_name;
-    // fbw.request_id = current_request_->request_id;
     fbw.status = uint8_t(state_);
     fbw.progress = fb->progress;
     fbw.base_position = fb->base_position;

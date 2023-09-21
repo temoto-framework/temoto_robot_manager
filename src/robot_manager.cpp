@@ -787,27 +787,19 @@ try
   TEMOTO_INFO_("Received a goal Navigation request");
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
 
-  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
+  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel cmd is triggered after sendGoal() finishes its execution
   // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
-
-  TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
-
-  std::cout << "\033[1;32m [RM] goalNavigationCb\033[0m\n" <<std::endl;
-  std::cout << req.target_pose <<std::endl;
-  std::cout << "\033[1;32m [RM] goalNavigationCb\033[0m\n" <<std::endl;
 
   if (loaded_robot->isLocal())
   {
-    TEMOTO_INFO_STREAM_(" Loaded Robot, it is local ");
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
     loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
     res.success = true;   
   }
   else
   {
-    TEMOTO_INFO_STREAM_(" Loaded Robot, it is remote ");
     std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
       + srv_name::SERVER_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
@@ -843,17 +835,14 @@ try
   // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
   // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
-  TEMOTO_INFO_STREAM_("Robot name: " << req.robot_name);
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())
   {
-    TEMOTO_INFO_STREAM_(" Loaded Robot, it is local ");
     loaded_robot->cancelNavigationGoal();
     res.result = true;   
   }
   else
   {
-    TEMOTO_INFO_STREAM_(" Loaded Robot, it is remote ");
     std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
       + srv_name::SERVER_CANCEL_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
