@@ -143,7 +143,7 @@ private:
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
   
   NavigationPluginHelperPtr navigation_feature_plugin_;
-  mutable std::mutex navigation_feature_plugins_mutex_;
+  mutable std::mutex navigation_feature_plugin_mutex_;
   NavigationFeatureUpdateCb navigation_feature_update_cb_;
   std::thread navigation_feature_feedback_thread_;
   bool navigation_feature_feedback_thread_running_;

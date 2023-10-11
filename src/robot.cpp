@@ -428,7 +428,7 @@ void Robot::loadNavigationController()
 
       NavigationPluginHelperPtr plugin_helper = std::make_shared<NavigationPluginHelper>(plugin_path, act_rob_ns, navigation_feature_update_cb_);
 
-      std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+      std::lock_guard<std::mutex> l(navigation_feature_plugin_mutex_);
       navigation_feature_plugin_ = plugin_helper;
     }
     catch(resource_registrar::TemotoErrorStack& error_stack)
@@ -1025,7 +1025,7 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 
       while (navigation_feature_feedback_thread_running_)
       {
-        std::lock_guard<std::mutex> l(navigation_feature_plugins_mutex_);
+        std::lock_guard<std::mutex> l(navigation_feature_plugin_mutex_);
 
         navigation_feature_plugin_->sendUpdate();
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -1035,11 +1035,11 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
     });
   }
 
-  while((navigation_feature_plugin_->getState() == temoto_robot_manager::NavigationPluginHelper::State::PROCESSING)
-     && isRobotOperational())
-  {
-    ros::Duration(1).sleep();
-  }
+  // while((navigation_feature_plugin_->getState() == temoto_robot_manager::NavigationPluginHelper::State::PROCESSING)
+  //    && isRobotOperational())
+  // {
+  //   ros::Duration(1).sleep();
+  // }
 
   if (!isRobotOperational())
   {

@@ -788,7 +788,7 @@ try
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
 
   // I have commented out this line because I need to cancel the goal. If Uncommented, cancel cmd is triggered after sendGoal() finishes its execution
-  // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
@@ -833,7 +833,7 @@ try
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
 
   // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
-  // std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())

@@ -404,6 +404,16 @@ public:
     {
       // throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
     }
+
+    // wait 
+    std::cout << getNavigationFeedback(goal.request.robot_name)->status << std::endl;
+    
+    while (getNavigationFeedback(goal.request.robot_name)->status != NavigationFeedback::FINISHED
+          || getNavigationFeedback(goal.request.robot_name)->status != NavigationFeedback::CANCELLED)
+    {
+      ros::Duration(1).sleep();
+    }
+    
     return goal.response.success;
   }
 
