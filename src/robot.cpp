@@ -1035,12 +1035,6 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
     });
   }
 
-  // while((navigation_feature_plugin_->getState() == temoto_robot_manager::NavigationPluginHelper::State::PROCESSING)
-  //    && isRobotOperational())
-  // {
-  //   ros::Duration(1).sleep();
-  // }
-
   if (!isRobotOperational())
   {
     cancelNavigationGoal();
