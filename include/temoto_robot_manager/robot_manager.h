@@ -160,7 +160,7 @@ private:
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_cancel_navigation_goal_;
 
-  RobotNavigationGoal ongoing_navigation_requests_;
+  std::map<std::string, RobotNavigationGoal> ongoing_navigation_requests_;
   std::mutex mutex_ongoing_navigation_requests_;
   
   ros::Publisher pub_navigation_feature_feedback_;

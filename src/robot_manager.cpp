@@ -786,16 +786,56 @@ try
 {
   TEMOTO_INFO_("Received a goal Navigation request");
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
-
-  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel cmd is triggered after sendGoal() finishes its execution
   std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
+  auto navigation_request_it = std::find_if(
+    ongoing_navigation_requests_.begin()
+  , ongoing_navigation_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req == ongoing_req.second.request;
+    // return req.robot_name == ongoing_req.second.request.robot_name;
+  });
+
+  /*
+   * Check if that request is already processed by a client with higher priority
+   */
+  if (navigation_request_it != ongoing_navigation_requests_.end() &&
+      navigation_request_it->second.request.priority > req.priority)
+  {
+    TEMOTO_WARN_STREAM_("Request declined as it is already in process by client with higher priority" << std::endl);
+    return true;
+  }
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
+  /*
+   * Pre-empt the lower priority request
+   */
+  if (navigation_request_it != ongoing_navigation_requests_.end())
+  {
+    TEMOTO_INFO_("This request is already in process under a lower priority, preempting.");
+    loaded_robot->cancelNavigationGoal();
+    ongoing_navigation_requests_.erase(navigation_request_it);
+  }
 
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
     loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
+
+    // ongoing_navigation_requests_.insert({req.robot_name
+    // , [&]
+    // {
+    //   RobotNavigationGoal goal;
+    //   goal.request = req;
+    //   goal.response = res;
+    //   return goal;
+    // }()});
+    RobotNavigationGoal goal;
+    goal.request = req;
+    goal.response = res;
+    ongoing_navigation_requests_.insert({req.robot_name, goal});
+
     res.success = true;   
   }
   else
@@ -818,7 +858,7 @@ try
     }
   }
   res.success = true;
-  return true;  
+  return true;
 }
 catch(resource_registrar::TemotoErrorStack& e)
 {
@@ -832,13 +872,37 @@ try
   TEMOTO_INFO_("Cancel Navigation goal request");
   TEMOTO_DEBUG_STREAM_("Request:\n" << req);
 
-  // I have commented out this line because I need to cancel the goal. If Uncommented, cancel works after sendGoal() finishes its execution
   std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
 
+  auto navigation_request_it = std::find_if(
+    ongoing_navigation_requests_.begin()
+  , ongoing_navigation_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req.robot_name == ongoing_req.second.request.robot_name;
+  });
+
+  /*
+   * DECLINE: If priority is low
+   */
+  if (req.priority <= navigation_request_it->second.request.priority)
+  {
+    TEMOTO_WARN_STREAM_("Cancel goal request declined: Priority lower than required" << std::endl);
+    return true;
+  }
+
+  /*
+   * ACCEPT: If the priority is higher
+   */
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())
   {
     loaded_robot->cancelNavigationGoal();
+    if (navigation_request_it != ongoing_navigation_requests_.end())
+    {
+      ongoing_navigation_requests_.erase(navigation_request_it);
+    }
+
     res.result = true;   
   }
   else

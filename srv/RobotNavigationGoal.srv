@@ -1,5 +1,6 @@
 string robot_name
 geometry_msgs/PoseStamped target_pose
+uint8 priority
 
 ---
 

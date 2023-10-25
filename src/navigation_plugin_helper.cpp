@@ -142,6 +142,7 @@ void NavigationPluginHelper::cancelGoal()
   if (getState() == State::FINISHED)
   {
     std::cout << "\033[1;32m [Plugin helper] There is no goal to cancel.\033[0m\n" <<std::endl;
+    sendUpdate();
     return;
   }
 

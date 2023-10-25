@@ -402,7 +402,7 @@ public:
 
     if (!goal.response.success)
     {
-      // throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
+      TEMOTO_INFO_("Goal response not success");
     }
 
     ongoing_navigation_queries_.insert({goal.request.robot_name, NavigationQuery(goal)});
@@ -424,7 +424,6 @@ public:
     {
       return false;
     }
-    
     return goal.response.success;
   }
 
@@ -435,11 +434,20 @@ public:
 
     if (ongoing_query_it == ongoing_navigation_queries_.end())
     {
+      TEMOTO_INFO_STREAM_("There's no ongoing query");
       return {};
       //throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
-    return ongoing_query_it->second.feedback;
+    if (ongoing_query_it->second.feedback.status == NavigationFeedback::FINISHED)
+    {
+      auto feedback = ongoing_query_it->second.feedback;
+      return feedback;
+    }
+    else
+    {
+      return ongoing_query_it->second.feedback;
+    }
   }
 
   bool cancelNavigationGoal(const std::string& robot_name)

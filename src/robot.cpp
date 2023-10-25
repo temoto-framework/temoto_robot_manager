@@ -1035,16 +1035,6 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
     });
   }
 
-  if (!isRobotOperational())
-  {
-    cancelNavigationGoal();
-    throw TEMOTO_ERRSTACK("Could not finish the navigation goal because the robot is not operational");
-  }
-  else if(navigation_feature_plugin_->getState() != temoto_robot_manager::NavigationPluginHelper::State::FINISHED)
-  {
-    throw TEMOTO_ERRSTACK("The base failed to move");
-  }
-
   // DO I NEED TO STOP THE FEEDBACK THREAD?
   // navigation_feature_feedback_thread_running_ = false;
   // while (!navigation_feature_feedback_thread_.joinable())
