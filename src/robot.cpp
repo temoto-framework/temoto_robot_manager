@@ -1033,15 +1033,7 @@ void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
 
       TEMOTO_DEBUG_("Navigation feature feedback thread finished");
     });
-  }
-
-  // DO I NEED TO STOP THE FEEDBACK THREAD?
-  // navigation_feature_feedback_thread_running_ = false;
-  // while (!navigation_feature_feedback_thread_.joinable())
-  // {
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  // }
-  // navigation_feature_feedback_thread_.join();
+  }  
 }
 
 void Robot::cancelNavigationGoal()

@@ -167,7 +167,7 @@ try
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
   /*
-   * Pre-empt the lower priority request
+   *Pre-empt the lower priority request
    */
   if (custom_request_it != ongoing_custom_requests_.end())
   {
@@ -823,20 +823,19 @@ try
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
     loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
 
-    // ongoing_navigation_requests_.insert({req.robot_name
-    // , [&]
-    // {
-    //   RobotNavigationGoal goal;
-    //   goal.request = req;
-    //   goal.response = res;
-    //   return goal;
-    // }()});
     RobotNavigationGoal goal;
     goal.request = req;
     goal.response = res;
-    ongoing_navigation_requests_.insert({req.robot_name, goal});
-
-    res.success = true;   
+    
+    auto it = ongoing_navigation_requests_.find(req.robot_name);
+    if (it != ongoing_navigation_requests_.end())
+    {
+      it->second = goal;
+    }
+    else
+    {
+      ongoing_navigation_requests_.insert(std::make_pair(req.robot_name, goal));
+    }
   }
   else
   {

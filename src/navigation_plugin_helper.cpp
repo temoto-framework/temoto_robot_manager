@@ -113,24 +113,25 @@ void NavigationPluginHelper::sendGoal(const RmNavigationRequestWrap& request)
   if (exec_thread_.joinable())
   {
     exec_thread_.join();
+    is_thread_running_ = false;
   }
-
-  current_request_ = request;
-  exec_thread_ = std::thread(
-  [&]
+  if(!is_thread_running_)
   {
-    if (plugin->sendGoal(request))
+    current_request_ = request;
+    exec_thread_ = std::thread([this, request]
     {
-      setState(State::FINISHED);  
-    }
-    else
-    {
-      setState(State::ERROR);
-      //throw TEMOTO_ERRSTACK("Unable to invoke the plugin");
-    }
-
-    sendUpdate();
-  });
+      if (this->plugin->sendGoal(request))
+      {
+        setState(State::FINISHED);
+      }
+      else
+      {
+        setState(State::ERROR);
+      }
+      sendUpdate();
+    });
+    is_thread_running_ = true;
+  }
 
   setState(State::PROCESSING);
   sendUpdate();

@@ -55,6 +55,7 @@ private:
   std::thread exec_thread_;
   std::string plugin_path_;
   std::string robot_ns_;
+  bool is_thread_running_ = false;
 
   State state_;
   mutable std::mutex mutex_state_;
