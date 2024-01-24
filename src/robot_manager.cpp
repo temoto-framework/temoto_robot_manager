@@ -901,8 +901,6 @@ try
     {
       ongoing_navigation_requests_.erase(navigation_request_it);
     }
-
-    res.result = true;   
   }
   else
   {

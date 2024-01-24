@@ -159,7 +159,7 @@ public:
     }
 
     return preempt_srv_msg.response.accepted;
-  } 
+  }
 
   YAML::Node getRobotConfig(const std::string& robot_name)
   try
@@ -434,37 +434,22 @@ public:
 
     if (ongoing_query_it == ongoing_navigation_queries_.end())
     {
-      TEMOTO_INFO_STREAM_("There's no ongoing query");
+      TEMOTO_INFO_STREAM_("There's no ongoing query for the " << robot_name << " robot");
       return {};
       //throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
-    if (ongoing_query_it->second.feedback.status == NavigationFeedback::FINISHED)
-    {
-      auto feedback = ongoing_query_it->second.feedback;
-      return feedback;
-    }
-    else
-    {
-      return ongoing_query_it->second.feedback;
-    }
+    return ongoing_query_it->second.feedback;
   }
 
-  bool cancelNavigationGoal(const std::string& robot_name)
+  bool cancelNavigationGoal(RobotCancelNavigationGoal& cancel_goal)
   {
-    temoto_robot_manager::RobotCancelNavigationGoal msg;
-    msg.request.robot_name = robot_name;
-
-    if (!client_cancel_navigation_goal_.call(msg))
+    if (!client_cancel_navigation_goal_.call(cancel_goal))
     {
       throw TEMOTO_ERRSTACK("Unable to reach the CancelNavigationGoal server");
     }
 
-    if (!msg.response.result)
-    {
-      throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'CancelNavigationGoal'");
-    }
-    return msg.response.result;
+    return cancel_goal.response.result;
   }
 
   void controlGripperPosition(const std::string& robot_name, const float& position)

@@ -4,4 +4,3 @@ uint8 priority
 ---
 
 bool result
-string message
