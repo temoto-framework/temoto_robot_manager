@@ -25,14 +25,14 @@
 #include "temoto_robot_manager/RobotGetVizInfo.h"
 #include "temoto_robot_manager/RobotGetTarget.h"
 #include "temoto_robot_manager/RobotGetNamedTargets.h"
-#include "temoto_robot_manager/RobotNavigationGoal.h"
+#include "temoto_robot_manager/NavigationGoal.h"
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
 #include "temoto_robot_manager/CustomRequest.h"
 #include "temoto_robot_manager/CustomRequestPreempt.h"
 #include "temoto_robot_manager/CustomFeedback.h"
 #include "temoto_robot_manager/NavigationFeedback.h"
-#include "temoto_robot_manager/RobotCancelNavigationGoal.h"
+#include "temoto_robot_manager/CancelNavigationGoal.h"
 
 #include <string>
 

@@ -993,23 +993,13 @@ std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_
   return group_it->second->getNamedTargets();
 }
 
-void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const RmNavigationRequestWrap& request)
 {
   if (!isRobotOperational())
   {
     throw TEMOTO_ERRSTACK("Could not navigate the robot because robot is not operational");
   }
   FeatureNavigation& ftr = config_->getFeatureNavigation();
-  RmNavigationRequestWrap request;
-  request.robot_name = config_->getName();
-  request.goal_pose.header.frame_id = target_pose.header.frame_id;
-  request.goal_pose.pose.position.x = target_pose.pose.position.x;
-  request.goal_pose.pose.position.y = target_pose.pose.position.y;
-  request.goal_pose.pose.position.z = target_pose.pose.position.z;
-  request.goal_pose.pose.orientation.x = target_pose.pose.orientation.x;
-  request.goal_pose.pose.orientation.y = target_pose.pose.orientation.y;
-  request.goal_pose.pose.orientation.z = target_pose.pose.orientation.z;
-  request.goal_pose.pose.orientation.w = target_pose.pose.orientation.w;
   navigation_feature_plugin_->sendGoal(request);
 
   /*

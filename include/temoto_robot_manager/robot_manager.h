@@ -90,7 +90,7 @@ private:
 
   bool getManipulationNamedTargetsCb(RobotGetNamedTargets::Request& req, RobotGetNamedTargets::Response& res);
 
-  bool goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res);
+  bool goalNavigationCb(NavigationGoal::Request& req, NavigationGoal::Response& res);
 
   bool gripperControlPositionCb(RobotGripperControlPosition::Request& req, RobotGripperControlPosition::Response& res);
 
@@ -112,7 +112,7 @@ private:
 
   void navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback);
 
-  bool cancelNavigationGoalCb(RobotCancelNavigationGoal::Request& req, RobotCancelNavigationGoal::Response& res);
+  bool cancelNavigationGoalCb(CancelNavigationGoal::Request& req, CancelNavigationGoal::Response& res);
 
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
@@ -160,7 +160,7 @@ private:
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_cancel_navigation_goal_;
 
-  std::map<std::string, RobotNavigationGoal> ongoing_navigation_requests_;
+  std::map<std::string, NavigationGoal> ongoing_navigation_requests_;
   std::mutex mutex_ongoing_navigation_requests_;
   
   ros::Publisher pub_navigation_feature_feedback_;

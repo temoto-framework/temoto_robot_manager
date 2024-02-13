@@ -62,7 +62,7 @@ public:
   std::vector<double> getCurrentJointValues(const std::string& planning_group_name);
   std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
   
-  void goalNavigation(const geometry_msgs::PoseStamped& target_pose);
+  void goalNavigation(const RmNavigationRequestWrap& request);
   void cancelNavigationGoal();
   void controlGripper(const std::string& robot_name, const float position);
 

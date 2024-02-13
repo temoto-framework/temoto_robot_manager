@@ -49,9 +49,9 @@ add_service_files(FILES
   RobotGetTarget.srv
   RobotGetNamedTargets.srv
   RobotGetConfig.srv
-  RobotNavigationGoal.srv
+  NavigationGoal.srv
   RobotGripperControlPosition.srv
-  RobotCancelNavigationGoal.srv
+  CancelNavigationGoal.srv
 )
 
 generate_messages(DEPENDENCIES

@@ -206,6 +206,7 @@ void NavigationPluginHelper::sendUpdate() const
     RmNavigationFeedbackWrap fbw;
     
     fbw.robot_name = current_request_->robot_name;
+    fbw.request_id = current_request_->request_id;
     fbw.status = uint8_t(state_);
     fbw.progress = fb->progress;
     fbw.base_position = fb->base_position;

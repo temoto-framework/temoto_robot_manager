@@ -61,14 +61,14 @@ public:
       client_get_manipulation_named_targets_ =
         nh_.serviceClient<RobotGetNamedTargets>(srv_name::SERVER_GET_MANIPULATION_NAMED_TARGETS);
       client_navigation_goal_ =
-        nh_.serviceClient<RobotNavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
+        nh_.serviceClient<NavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
       client_gripper_control_position_ =
         nh_.serviceClient<RobotGripperControlPosition>(srv_name::SERVER_GRIPPER_CONTROL_POSITION);
       client_get_robot_config_ =
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
       
       client_cancel_navigation_goal_ =
-        nh_.serviceClient<RobotCancelNavigationGoal>(srv_name::SERVER_CANCEL_NAVIGATION_GOAL);
+        nh_.serviceClient<CancelNavigationGoal>(srv_name::SERVER_CANCEL_NAVIGATION_GOAL);
 
       client_custom_request_ = 
         nh_.serviceClient<CustomRequest>(channels::custom::REQUEST);
@@ -367,7 +367,7 @@ public:
   void navigationGoal(const std::string& robot_name
   , const geometry_msgs::PoseStamped& pose)
   {
-    temoto_robot_manager::RobotNavigationGoal msg;
+    temoto_robot_manager::NavigationGoal msg;
     msg.request.target_pose = pose;
     
     if (pose.header.frame_id.empty())
@@ -388,7 +388,7 @@ public:
     }
   }
 
-  bool navigationGoal(RobotNavigationGoal& goal)
+  bool navigationGoal(NavigationGoal& goal)
   {
     if (goal.request.target_pose.header.frame_id.empty())
     {
@@ -405,45 +405,57 @@ public:
       TEMOTO_INFO_("Goal response not success");
     }
 
-    ongoing_navigation_queries_.insert({goal.request.robot_name, NavigationQuery(goal)});
+    goal.request.request_id = goal.response.request_id;
+    ongoing_navigation_queries_.insert({goal.request.request_id , NavigationQuery(goal)});
 
     // wait to finish execution
-    while (getNavigationFeedback(goal.request.robot_name)->status != NavigationFeedback::FINISHED
-          && getNavigationFeedback(goal.request.robot_name)->status != NavigationFeedback::CANCELLED)
+    while (getNavigationFeedback(goal.request.request_id)->status != NavigationFeedback::FINISHED
+          && getNavigationFeedback(goal.request.request_id)->status != NavigationFeedback::CANCELLED && ros::ok())
     {
       ros::Duration(1).sleep();
     }
 
-    auto ongoing_query_it = ongoing_navigation_queries_.find(goal.request.robot_name);
+    auto ongoing_query_it = ongoing_navigation_queries_.find(goal.request.request_id);
     if (ongoing_query_it != ongoing_navigation_queries_.end())
     {
       ongoing_navigation_queries_.erase(ongoing_query_it);
     }
 
-    if (getNavigationFeedback(goal.request.robot_name)->status == NavigationFeedback::CANCELLED)
+    if (getNavigationFeedback(goal.request.request_id)->status == NavigationFeedback::CANCELLED)
     {
       return false;
     }
     return goal.response.success;
   }
 
-  std::optional<NavigationFeedback> getNavigationFeedback(const std::string& robot_name)
+  std::optional<NavigationFeedback> getNavigationFeedback(const std::string& request_id)
   {
     std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
-    auto ongoing_query_it = ongoing_navigation_queries_.find(robot_name);
-
+    auto ongoing_query_it = ongoing_navigation_queries_.find(request_id);
     if (ongoing_query_it == ongoing_navigation_queries_.end())
     {
-      TEMOTO_INFO_STREAM_("There's no ongoing query for the " << robot_name << " robot");
+      TEMOTO_INFO_STREAM_("There's no ongoing query with " << request_id << " request id");
       return {};
-      //throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
     }
 
     return ongoing_query_it->second.feedback;
   }
 
-  bool cancelNavigationGoal(RobotCancelNavigationGoal& cancel_goal)
+  bool cancelNavigationGoal(const std::string& request_id)
   {
+    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    auto ongoing_query_it = ongoing_navigation_queries_.find(request_id);
+
+    if (ongoing_query_it == ongoing_navigation_queries_.end())
+    {
+      throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
+    }
+
+    CancelNavigationGoal cancel_goal;
+    cancel_goal.request.robot_name = ongoing_query_it->second.request.request.robot_name;
+    cancel_goal.request.priority = ongoing_query_it->second.request.request.priority;
+    cancel_goal.request.request_id = ongoing_query_it->first;
+
     if (!client_cancel_navigation_goal_.call(cancel_goal))
     {
       throw TEMOTO_ERRSTACK("Unable to reach the CancelNavigationGoal server");
@@ -538,8 +550,8 @@ private:
 
   struct NavigationQuery
   {
-    NavigationQuery(const RobotNavigationGoal& nr) : request{nr}{}
-    RobotNavigationGoal request;
+    NavigationQuery(const NavigationGoal& nr) : request{nr}{}
+    NavigationGoal request;
     NavigationFeedback feedback;
   };
 
@@ -557,7 +569,7 @@ private:
   void navigationFeedbackCb(const NavigationFeedback& msg)
   {
     std::lock_guard<std::mutex> lock(custom_queries_mutex_);
-    auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.robot_name);
+    auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.request_id);
     if (ongoing_nav_query_it != ongoing_navigation_queries_.end())
     {
       ongoing_nav_query_it->second.feedback = msg;

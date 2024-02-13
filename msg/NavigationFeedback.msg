@@ -1,6 +1,6 @@
 Header header
 string robot_name
-# string request_id
+string request_id
 
 uint8 status
 uint8 IDLE=2

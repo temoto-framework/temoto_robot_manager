@@ -305,7 +305,7 @@ void RobotManager::navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& fee
 
   msg.header.stamp = ros::Time::now();
   msg.robot_name = feedback.robot_name;
-  // msg.request_id = feedback.request_id;
+  msg.request_id = feedback.request_id;
   msg.status = feedback.status;
   msg.progress = feedback.progress;
 
@@ -781,7 +781,7 @@ catch(resource_registrar::TemotoErrorStack& e)
   return true;
 }
 
-bool RobotManager::goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res)
+bool RobotManager::goalNavigationCb(NavigationGoal::Request& req, NavigationGoal::Response& res)
 try
 {
   TEMOTO_INFO_("Received a goal Navigation request");
@@ -794,7 +794,6 @@ try
   , [&](const auto& ongoing_req)
   {
     return req == ongoing_req.second.request;
-    // return req.robot_name == ongoing_req.second.request.robot_name;
   });
 
   /*
@@ -818,23 +817,44 @@ try
     ongoing_navigation_requests_.erase(navigation_request_it);
   }
 
+  req.request_id = generateId();
+  res.request_id = req.request_id;
+
+  RmNavigationRequestWrap req_rm;
+  req_rm.robot_name = req.robot_name;
+  req_rm.request_id = res.request_id;
+  req_rm.goal_pose.header.frame_id = req.target_pose.header.frame_id;
+  req_rm.goal_pose.pose.position.x = req.target_pose.pose.position.x;
+  req_rm.goal_pose.pose.position.y = req.target_pose.pose.position.y;
+  req_rm.goal_pose.pose.position.z = req.target_pose.pose.position.z;
+  req_rm.goal_pose.pose.orientation.x = req.target_pose.pose.orientation.x;
+  req_rm.goal_pose.pose.orientation.y = req.target_pose.pose.orientation.y;
+  req_rm.goal_pose.pose.orientation.z = req.target_pose.pose.orientation.z;
+  req_rm.goal_pose.pose.orientation.w = req.target_pose.pose.orientation.w;
+
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
-    loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
-
-    RobotNavigationGoal goal;
+    loaded_robot->goalNavigation(req_rm);
+    
+    NavigationGoal goal;
     goal.request = req;
     goal.response = res;
     
-    auto it = ongoing_navigation_requests_.find(req.robot_name);
+    auto it = std::find_if(
+      ongoing_navigation_requests_.begin()
+    , ongoing_navigation_requests_.end()
+    , [&](const auto& ongoing_req)
+    {
+      return req.robot_name == ongoing_req.second.request.robot_name;
+    });
     if (it != ongoing_navigation_requests_.end())
     {
       it->second = goal;
     }
     else
     {
-      ongoing_navigation_requests_.insert(std::make_pair(req.robot_name, goal));
+      ongoing_navigation_requests_.insert(std::make_pair(req.request_id, goal));
     }
   }
   else
@@ -843,8 +863,8 @@ try
       + srv_name::SERVER_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
 
-    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<RobotNavigationGoal>(topic);
-    RobotNavigationGoal fwd_goal_srvc;
+    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<NavigationGoal>(topic);
+    NavigationGoal fwd_goal_srvc;
     fwd_goal_srvc.request = req;
     fwd_goal_srvc.response = res;
     if (client_navigation_goal_.call(fwd_goal_srvc))
@@ -865,7 +885,7 @@ catch(resource_registrar::TemotoErrorStack& e)
   return true;
 }
 
-bool RobotManager::cancelNavigationGoalCb(RobotCancelNavigationGoal::Request& req, RobotCancelNavigationGoal::Response& res)
+bool RobotManager::cancelNavigationGoalCb(CancelNavigationGoal::Request& req, CancelNavigationGoal::Response& res)
 try
 {
   TEMOTO_INFO_("Cancel Navigation goal request");
@@ -881,17 +901,35 @@ try
     return req.robot_name == ongoing_req.second.request.robot_name;
   });
 
-  /*
-   * DECLINE: If priority is low
-   */
-  if (req.priority <= navigation_request_it->second.request.priority)
+  if (navigation_request_it == ongoing_navigation_requests_.end())
   {
-    TEMOTO_WARN_STREAM_("Cancel goal request declined: Priority lower than required" << std::endl);
+    TEMOTO_WARN_STREAM_("There is no ongoing navigation. Request id " << req.request_id << " is invalid" << std::endl);
     return true;
   }
 
   /*
-   * ACCEPT: If the priority is higher
+   * DECLINE: If priority is low
+   */
+  if (req.request_id.empty() && (req.priority <= navigation_request_it->second.request.priority))
+  {
+    res.message = "Cancel goal request declined: Priority lower than required";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+    return true;
+  }
+
+  /*
+   * DECLINE: If ID was provided but mismatches
+   */
+  if (!req.request_id.empty() && (req.request_id != navigation_request_it->second.response.request_id))
+  {
+    res.message = "Cancel Goal request declined: Request ID mismatch";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+    res.result = false;
+    return true;
+  }
+
+  /*
+   * ACCEPT: If ID matches or the priority is higher
    */
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
   if (loaded_robot->isLocal())
@@ -908,8 +946,8 @@ try
       + srv_name::SERVER_CANCEL_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
 
-    ros::ServiceClient client_cancel_navigation_goal_ = nh_.serviceClient<RobotCancelNavigationGoal>(topic);
-    RobotCancelNavigationGoal fwd_cancel_goal_srvc;
+    ros::ServiceClient client_cancel_navigation_goal_ = nh_.serviceClient<CancelNavigationGoal>(topic);
+    CancelNavigationGoal fwd_cancel_goal_srvc;
     fwd_cancel_goal_srvc.request = req;
     fwd_cancel_goal_srvc.response = res;
     if (client_cancel_navigation_goal_.call(fwd_cancel_goal_srvc))
@@ -926,6 +964,8 @@ try
 }
 catch(resource_registrar::TemotoErrorStack& e)
 {
+  res.message = std::string("Cancel Navigation Goal request declined: \n") + e.what();
+  TEMOTO_WARN_STREAM_(res.message << std::endl);
   res.result = false;
   return true;
 }

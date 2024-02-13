@@ -1,6 +1,8 @@
 string robot_name
 uint8 priority
+string request_id
 
 ---
 
 bool result
+string message
