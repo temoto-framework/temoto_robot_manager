@@ -106,9 +106,10 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
    * Get the controller configuration. Not required
    */
   if (nav_conf["controller"].IsDefined())
-  {
+  {    
     this->feature_enabled_ = setFromConfig(nav_conf["controller"]["package_name"], this->package_name_)
-                          && setFromConfig(nav_conf["controller"]["executable"], this->executable_);
+                          && setFromConfig(nav_conf["controller"]["executable"], this->executable_)
+                          && setFromConfig(nav_conf["controller"]["controller_interface"], this->controller_interface_);
     // Optional parameters                     
     if (this->feature_enabled_)
     {
@@ -116,14 +117,14 @@ FeatureNavigation::FeatureNavigation(const YAML::Node& nav_conf)
       setFromConfig(nav_conf["controller"]["global_planner"], this->global_planner_);
       setFromConfig(nav_conf["controller"]["local_planner"], this->local_planner_);
       setFromConfig(nav_conf["controller"]["pose_topic"], this->pose_topic_);
-    }
+    }    
   }
 
   /*
    * Get the driver configuration.
    */
   if (nav_conf["driver"].IsDefined())
-  {
+  {    
     this->driver_enabled_ = setFromConfig(nav_conf["driver"]["package_name"], this->driver_package_name_)
                         && setFromConfig(nav_conf["driver"]["executable"], this->driver_executable_);
     // Optional parameters

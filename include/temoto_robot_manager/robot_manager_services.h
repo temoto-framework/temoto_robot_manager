@@ -25,12 +25,14 @@
 #include "temoto_robot_manager/RobotGetVizInfo.h"
 #include "temoto_robot_manager/RobotGetTarget.h"
 #include "temoto_robot_manager/RobotGetNamedTargets.h"
-#include "temoto_robot_manager/RobotNavigationGoal.h"
+#include "temoto_robot_manager/NavigationGoal.h"
 #include "temoto_robot_manager/RobotGripperControlPosition.h"
 #include "temoto_robot_manager/RobotGetConfig.h"
 #include "temoto_robot_manager/CustomRequest.h"
 #include "temoto_robot_manager/CustomRequestPreempt.h"
 #include "temoto_robot_manager/CustomFeedback.h"
+#include "temoto_robot_manager/NavigationFeedback.h"
+#include "temoto_robot_manager/CancelNavigationGoal.h"
 
 #include <string>
 
@@ -52,7 +54,13 @@ const std::string SERVER_GET_MANIPULATION_NAMED_TARGETS = MANAGER + "/" + "get_m
 const std::string SERVER_NAVIGATION_GOAL = MANAGER + "/" + "navigation_goal";
 const std::string SERVER_SET_MODE = MANAGER + "/" + "set_mode";
 const std::string SERVER_GRIPPER_CONTROL_POSITION = MANAGER + "/" + "gripper_control_position";
+const std::string SERVER_CANCEL_NAVIGATION_GOAL = MANAGER + "/" + "cancel_navigation_goal";
+
+const std::string NAVIGATION_FEEDBACK = MANAGER + "/" + "navigation_feedback";
+
 }
+
+
 
 namespace channels
 {

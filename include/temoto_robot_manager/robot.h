@@ -24,9 +24,9 @@
 #include "temoto_robot_manager/robot_common_procedures.h"
 #include "temoto_robot_manager/GripperControl.h"
 #include "temoto_robot_manager/custom_plugin_helper.h"
+#include "temoto_robot_manager/navigation_plugin_helper.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
-#include <move_base_msgs/MoveBaseAction.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <string>
 #include <map>
@@ -43,7 +43,8 @@ public:
   Robot(RobotConfigPtr config_
   , const std::string& resource_id
   , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-  , CustomFeatureUpdateCb custom_feature_update_cb);
+  , CustomFeatureUpdateCb custom_feature_update_cb
+  , NavigationFeatureUpdateCb navigation_feature_update_cb);
 
   virtual ~Robot();
   void load();
@@ -60,7 +61,8 @@ public:
   std::vector<double> getCurrentJointValues(const std::string& planning_group_name);
   std::vector<std::string> getNamedTargetPoses(const std::string& planning_group_name);
   
-  void goalNavigation(const geometry_msgs::PoseStamped& target_pose);
+  void goalNavigation(const RmNavigationRequestWrap& request);
+  void cancelNavigationGoal();
   void controlGripper(const std::string& robot_name, const float position);
 
   void invokeCustomFeature(const std::string& custom_feature_name, const RmCustomRequestWrap& request);
@@ -135,10 +137,15 @@ private:
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>> planning_groups_;
 
   // Navigation related
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
   ros::Subscriber localized_pose_sub_;
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
-
+  
+  NavigationPluginHelperPtr navigation_feature_plugin_;
+  mutable std::mutex navigation_feature_plugin_mutex_;
+  NavigationFeatureUpdateCb navigation_feature_update_cb_;
+  std::thread navigation_feature_feedback_thread_;
+  bool navigation_feature_feedback_thread_running_;
+  
   // Custom related
   std::map<std::string, CustomPluginHelperPtr> custom_feature_plugins_;
   mutable std::mutex custom_feature_plugins_mutex_;

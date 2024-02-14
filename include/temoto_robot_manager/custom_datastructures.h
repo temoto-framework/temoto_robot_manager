@@ -1,54 +1,22 @@
 #ifndef TEMOTO_ROBOT_MANAGER__CUSTOM_DATASTRUCTURES_H
 #define TEMOTO_ROBOT_MANAGER__CUSTOM_DATASTRUCTURES_H
 
-#include <string>
-#include <vector>
+#include "temoto_robot_manager/rm_datastructures.h"
 
 namespace temoto_robot_manager
 {
 
 struct RmCustomRequest
 {
-  struct Header
-  {
-    std::string frame_id;
-    uint64_t timestamp;
-    uint64_t sequence_id;
-  };
-
-  struct Position
-  {
-    double x;
-    double y;
-    double z;
-  };
-
-  struct Orientation
-  {
-    double x;
-    double y;
-    double z;
-    double w;
-  };
-
-  struct Pose
-  {
-    Position position;
-    Orientation orientation;
-  }; 
-
-  struct PoseStamped
-  {
-    Header header;
-    Pose pose;
-  };
-
+  Header header;
+  Position position;  
+  Orientation orientation;
+  Pose pose;
+  PoseStamped poseStamped;
   std::string data_str;
   std::vector<std::string> data_str_array;
-
   double data_num;
   std::vector<double> data_num_array;
-
   PoseStamped data_pose;
   std::vector<PoseStamped> data_pose_array;
 };

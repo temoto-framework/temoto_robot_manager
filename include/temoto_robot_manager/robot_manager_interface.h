@@ -61,11 +61,14 @@ public:
       client_get_manipulation_named_targets_ =
         nh_.serviceClient<RobotGetNamedTargets>(srv_name::SERVER_GET_MANIPULATION_NAMED_TARGETS);
       client_navigation_goal_ =
-        nh_.serviceClient<RobotNavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
+        nh_.serviceClient<NavigationGoal>(srv_name::SERVER_NAVIGATION_GOAL);
       client_gripper_control_position_ =
         nh_.serviceClient<RobotGripperControlPosition>(srv_name::SERVER_GRIPPER_CONTROL_POSITION);
       client_get_robot_config_ =
         nh_.serviceClient<RobotGetConfig>(srv_name::SERVER_GET_CONFIG);
+      
+      client_cancel_navigation_goal_ =
+        nh_.serviceClient<CancelNavigationGoal>(srv_name::SERVER_CANCEL_NAVIGATION_GOAL);
 
       client_custom_request_ = 
         nh_.serviceClient<CustomRequest>(channels::custom::REQUEST);
@@ -73,6 +76,7 @@ public:
         nh_.serviceClient<CustomRequestPreempt>(channels::custom::PREEMPT);
       custom_feedback_ = nh_.subscribe(channels::custom::FEEDBACK, 1, &RobotManagerInterface::customFeedback, this);
 
+      navigation_feedback_ = nh_.subscribe(srv_name::NAVIGATION_FEEDBACK, 1, &RobotManagerInterface::navigationFeedbackCb, this);
       initialized_ = true;
     }
     else
@@ -155,7 +159,7 @@ public:
     }
 
     return preempt_srv_msg.response.accepted;
-  } 
+  }
 
   YAML::Node getRobotConfig(const std::string& robot_name)
   try
@@ -359,10 +363,11 @@ public:
     return msg.response.named_target_poses;
   }
 
+  // TODO: Erase?
   void navigationGoal(const std::string& robot_name
   , const geometry_msgs::PoseStamped& pose)
   {
-    temoto_robot_manager::RobotNavigationGoal msg;
+    temoto_robot_manager::NavigationGoal msg;
     msg.request.target_pose = pose;
     
     if (pose.header.frame_id.empty())
@@ -376,11 +381,91 @@ public:
     {
       throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
     }
-
+    
     if (!msg.response.success)
     {
       throw TEMOTO_ERRSTACK("Unsuccessful attempt to invoke 'navigationGoal'");
     }
+  }
+
+  bool navigationGoal(NavigationGoal& goal)
+  {
+    if (goal.request.target_pose.header.frame_id.empty())
+    {
+      throw TEMOTO_ERRSTACK("Reference frame is not defined");
+    }
+
+    if (!client_navigation_goal_.call(goal))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach robot_manager");
+    }
+
+    if (!goal.response.success)
+    {
+      TEMOTO_INFO_("Goal response not success");
+    }
+    else
+    {
+      goal.request.request_id = goal.response.request_id;
+      std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+      ongoing_navigation_queries_.insert({goal.request.request_id , NavigationQuery(goal)});
+    }
+
+    // wait to finish execution
+    while (getNavigationFeedback(goal.request.request_id)->status != NavigationFeedback::FINISHED
+          && getNavigationFeedback(goal.request.request_id)->status != NavigationFeedback::CANCELLED && ros::ok())
+    {
+      ros::Duration(1).sleep();
+    }
+
+    if (getNavigationFeedback(goal.request.request_id)->status == NavigationFeedback::CANCELLED)
+    {
+      goal.response.success = false;
+    }
+
+    auto ongoing_query_it = ongoing_navigation_queries_.find(goal.request.request_id);
+    if (ongoing_query_it != ongoing_navigation_queries_.end())
+    {
+      std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+      ongoing_navigation_queries_.erase(ongoing_query_it);
+    }
+
+    return goal.response.success;
+  }
+
+  std::optional<NavigationFeedback> getNavigationFeedback(const std::string& request_id)
+  {
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+    auto ongoing_query_it = ongoing_navigation_queries_.find(request_id);
+    if (ongoing_query_it == ongoing_navigation_queries_.end())
+    {
+      TEMOTO_INFO_STREAM_("There's no ongoing query with " << request_id << " request id");
+      return {};
+    }
+    return ongoing_query_it->second.feedback;
+  }
+
+  bool cancelNavigationGoal(const std::string& request_id)
+  {
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+    auto ongoing_query_it = ongoing_navigation_queries_.find(request_id);
+
+    if (ongoing_query_it == ongoing_navigation_queries_.end())
+    {
+      throw TEMOTO_ERRSTACK("Could not find the request in the list of ongoing requests");
+    }
+
+    CancelNavigationGoal cancel_goal;
+    cancel_goal.request.robot_name = ongoing_query_it->second.request.request.robot_name;
+    cancel_goal.request.priority = ongoing_query_it->second.request.request.priority;
+    cancel_goal.request.request_id = ongoing_query_it->first;
+
+    if (!client_cancel_navigation_goal_.call(cancel_goal))
+    {
+      throw TEMOTO_ERRSTACK("Unable to reach the CancelNavigationGoal server");
+    }
+
+    return cancel_goal.response.result;
   }
 
   void controlGripperPosition(const std::string& robot_name, const float& position)
@@ -452,6 +537,7 @@ public:
     client_set_manipulation_target_.shutdown();
     client_get_manipulation_target_.shutdown();
     client_navigation_goal_.shutdown();
+    client_cancel_navigation_goal_.shutdown();
     client_gripper_control_position_.shutdown();
 
     TEMOTO_DEBUG_("RobotManagerInterface destroyed.");
@@ -466,6 +552,13 @@ private:
     CustomFeedback feedback;
   };
 
+  struct NavigationQuery
+  {
+    NavigationQuery(const NavigationGoal& nr) : request{nr}{}
+    NavigationGoal request;
+    NavigationFeedback feedback;
+  };
+
   void customFeedback(const CustomFeedback& msg)
   {
     std::lock_guard<std::mutex> lock(custom_queries_mutex_);
@@ -475,7 +568,16 @@ private:
     {
       ongoing_query_it->second.feedback = msg;
     }
+  }
 
+  void navigationFeedbackCb(const NavigationFeedback& msg)
+  {
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+    auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.request_id);
+    if (ongoing_nav_query_it != ongoing_navigation_queries_.end())
+    {
+      ongoing_nav_query_it->second.feedback = msg;
+    }
     return;
   }
 
@@ -493,6 +595,7 @@ private:
   ros::ServiceClient client_get_manipulation_target_;
   ros::ServiceClient client_get_manipulation_named_targets_;
   ros::ServiceClient client_navigation_goal_;
+  ros::ServiceClient client_cancel_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
   ros::ServiceClient client_get_robot_config_;
 
@@ -501,6 +604,10 @@ private:
   ros::Subscriber custom_feedback_;
   std::mutex custom_queries_mutex_;
   std::map<std::string, CustomQuery> ongoing_custom_queries_;
+
+  ros::Subscriber navigation_feedback_;
+  std::mutex navigation_queries_mutex_;
+  std::map<std::string, NavigationQuery> ongoing_navigation_queries_;
 
   std::unique_ptr<temoto_resource_registrar::ResourceRegistrarRos1> resource_registrar_;
 };

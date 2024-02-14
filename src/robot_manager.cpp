@@ -114,6 +114,10 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     srv_name::SERVER_GET_CONFIG,
     &RobotManager::getRobotConfigCb,
     this);
+  server_cancel_navigation_goal_ = nh_.advertiseService(
+    srv_name::SERVER_CANCEL_NAVIGATION_GOAL, 
+    &RobotManager::cancelNavigationGoalCb,
+    this);
 
   /*
    * Set up the Custom Feature channel
@@ -127,6 +131,7 @@ RobotManager::RobotManager(const std::string& config_base_path, bool restore_fro
     &RobotManager::customFeaturePreemptCb,
     this);
   pub_custom_feature_feedback_ = nh_.advertise<CustomFeedback>(channels::custom::FEEDBACK, 10);
+  pub_navigation_feature_feedback_ = nh_.advertise<NavigationFeedback>(srv_name::NAVIGATION_FEEDBACK, 10);
 
   TEMOTO_INFO_("Robot manager is ready.\n");
 }
@@ -162,7 +167,7 @@ try
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
 
   /*
-   * Pre-empt the lower priority request
+   *Pre-empt the lower priority request
    */
   if (custom_request_it != ongoing_custom_requests_.end())
   {
@@ -183,7 +188,6 @@ try
   req_rm.data_num = req.data_num;
   req_rm.data_num_array = req.data_num_array;
   
-  // req_rm.data_pose = RmCustomRequest::PoseStamped{};                    // TODO
   req_rm.data_pose.header.frame_id = req.data_pose.header.frame_id;
   req_rm.data_pose.pose.position.x = req.data_pose.pose.position.x;
   req_rm.data_pose.pose.position.y = req.data_pose.pose.position.y;
@@ -193,7 +197,7 @@ try
   req_rm.data_pose.pose.orientation.z = req.data_pose.pose.orientation.z;
   req_rm.data_pose.pose.orientation.w = req.data_pose.pose.orientation.w;
   
-  req_rm.data_pose_array = std::vector<RmCustomRequest::PoseStamped>{}; // TODO
+  req_rm.data_pose_array = std::vector<PoseStamped>{}; // TODO
 
   // TODO: Add pose and pose array
   loaded_robot->invokeCustomFeature(req.custom_feature_name, req_rm);
@@ -295,6 +299,31 @@ void RobotManager::customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback)
   pub_custom_feature_feedback_.publish(msg);
 }
 
+void RobotManager::navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback)
+{
+  NavigationFeedback msg;
+
+  msg.header.stamp = ros::Time::now();
+  msg.robot_name = feedback.robot_name;
+  msg.request_id = feedback.request_id;
+  msg.status = feedback.status;
+  msg.progress = feedback.progress;
+
+  // Convert from RM/PoseStamped to geomety_msgs/PoseStamped
+  msg.base_position.header.frame_id = feedback.base_position.header.frame_id;
+  msg.base_position.header.stamp = ros::Time::now();
+  msg.base_position.pose.position.x = feedback.base_position.pose.position.x;
+  msg.base_position.pose.position.y = feedback.base_position.pose.position.y;
+  msg.base_position.pose.position.z = feedback.base_position.pose.position.z;
+  msg.base_position.pose.orientation.x = feedback.base_position.pose.orientation.x;
+  msg.base_position.pose.orientation.y = feedback.base_position.pose.orientation.y;
+  msg.base_position.pose.orientation.z = feedback.base_position.pose.orientation.z;
+  msg.base_position.pose.orientation.w = feedback.base_position.pose.orientation.w;  
+
+  std::lock_guard<std::mutex> l(mutex_pub_navigation_feature_feedback_);
+  pub_navigation_feature_feedback_.publish(msg);
+}
+
 void RobotManager::findRobotDescriptionFiles(boost::filesystem::path current_dir)
 {
   if (std::string(current_dir.c_str()).empty())
@@ -348,7 +377,8 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
   try
   {
     auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
 
     loaded_robot->load();
     loaded_robots_.push_back(loaded_robot);
@@ -386,7 +416,8 @@ void RobotManager::loadCb(RobotLoad::Request& req, RobotLoad::Response& res)
 
     TEMOTO_INFO_("Call to remote RobotManager was sucessful.");
     auto loaded_robot = std::make_shared<Robot>(config, res.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
     loaded_robots_.push_back(loaded_robot);
 
     return;
@@ -750,15 +781,81 @@ catch(resource_registrar::TemotoErrorStack& e)
   return true;
 }
 
-bool RobotManager::goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res)
+bool RobotManager::goalNavigationCb(NavigationGoal::Request& req, NavigationGoal::Response& res)
 try
 {
+  TEMOTO_INFO_("Received a goal Navigation request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+  auto navigation_request_it = std::find_if(
+    ongoing_navigation_requests_.begin()
+  , ongoing_navigation_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req == ongoing_req.second.request;
+  });
+
+  /*
+   * Check if that request is already processed by a client with higher priority
+   */
+  if (navigation_request_it != ongoing_navigation_requests_.end() &&
+      navigation_request_it->second.request.priority > req.priority)
+  {
+    TEMOTO_WARN_STREAM_("Request declined as it is already in process by client with higher priority" << std::endl);
+    return true;
+  }
   RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+
+  /*
+   * Pre-empt the lower priority request
+   */
+  if (navigation_request_it != ongoing_navigation_requests_.end())
+  {
+    TEMOTO_INFO_("This request is already in process under a lower priority, preempting.");
+    loaded_robot->cancelNavigationGoal();
+    ongoing_navigation_requests_.erase(navigation_request_it);
+  }
+
+  req.request_id = generateId();
+  res.request_id = req.request_id;
+
+  RmNavigationRequestWrap req_rm;
+  req_rm.robot_name = req.robot_name;
+  req_rm.request_id = res.request_id;
+  req_rm.goal_pose.header.frame_id = req.target_pose.header.frame_id;
+  req_rm.goal_pose.pose.position.x = req.target_pose.pose.position.x;
+  req_rm.goal_pose.pose.position.y = req.target_pose.pose.position.y;
+  req_rm.goal_pose.pose.position.z = req.target_pose.pose.position.z;
+  req_rm.goal_pose.pose.orientation.x = req.target_pose.pose.orientation.x;
+  req_rm.goal_pose.pose.orientation.y = req.target_pose.pose.orientation.y;
+  req_rm.goal_pose.pose.orientation.z = req.target_pose.pose.orientation.z;
+  req_rm.goal_pose.pose.orientation.w = req.target_pose.pose.orientation.w;
+
   if (loaded_robot->isLocal())
   {
     TEMOTO_DEBUG_STREAM_("Navigating '" << req.robot_name << " to pose: " << req.target_pose << " ...");
-    loaded_robot->goalNavigation(req.target_pose);  // The robot would move with respect to the coordinate frame defined in the header
-    res.success = true;   
+    loaded_robot->goalNavigation(req_rm);
+    
+    NavigationGoal goal;
+    goal.request = req;
+    goal.response = res;
+    
+    auto it = std::find_if(
+      ongoing_navigation_requests_.begin()
+    , ongoing_navigation_requests_.end()
+    , [&](const auto& ongoing_req)
+    {
+      return req.robot_name == ongoing_req.second.request.robot_name;
+    });
+    if (it != ongoing_navigation_requests_.end())
+    {
+      it->second = goal;
+    }
+    else
+    {
+      ongoing_navigation_requests_.insert(std::make_pair(req.request_id, goal));
+    }
   }
   else
   {
@@ -766,8 +863,8 @@ try
       + srv_name::SERVER_NAVIGATION_GOAL;
     TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
 
-    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<RobotNavigationGoal>(topic);
-    RobotNavigationGoal fwd_goal_srvc;
+    ros::ServiceClient client_navigation_goal_ = nh_.serviceClient<NavigationGoal>(topic);
+    NavigationGoal fwd_goal_srvc;
     fwd_goal_srvc.request = req;
     fwd_goal_srvc.response = res;
     if (client_navigation_goal_.call(fwd_goal_srvc))
@@ -780,11 +877,96 @@ try
     }
   }
   res.success = true;
-  return true;  
+  return true;
 }
 catch(resource_registrar::TemotoErrorStack& e)
 {
   res.success = false;
+  return true;
+}
+
+bool RobotManager::cancelNavigationGoalCb(CancelNavigationGoal::Request& req, CancelNavigationGoal::Response& res)
+try
+{
+  TEMOTO_INFO_("Cancel Navigation goal request");
+  TEMOTO_DEBUG_STREAM_("Request:\n" << req);
+
+  std::lock_guard<std::mutex> l(mutex_ongoing_navigation_requests_);
+
+  auto navigation_request_it = std::find_if(
+    ongoing_navigation_requests_.begin()
+  , ongoing_navigation_requests_.end()
+  , [&](const auto& ongoing_req)
+  {
+    return req.robot_name == ongoing_req.second.request.robot_name;
+  });
+
+  if (navigation_request_it == ongoing_navigation_requests_.end())
+  {
+    TEMOTO_WARN_STREAM_("There is no ongoing navigation. Request id " << req.request_id << " is invalid" << std::endl);
+    return true;
+  }
+
+  /*
+   * DECLINE: If priority is low
+   */
+  if (req.request_id.empty() && (req.priority <= navigation_request_it->second.request.priority))
+  {
+    res.message = "Cancel goal request declined: Priority lower than required";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+    return true;
+  }
+
+  /*
+   * DECLINE: If ID was provided but mismatches
+   */
+  if (!req.request_id.empty() && (req.request_id != navigation_request_it->second.response.request_id))
+  {
+    res.message = "Cancel Goal request declined: Request ID mismatch";
+    TEMOTO_WARN_STREAM_(res.message << std::endl);
+    res.result = false;
+    return true;
+  }
+
+  /*
+   * ACCEPT: If ID matches or the priority is higher
+   */
+  RobotPtr loaded_robot = findLoadedRobot(req.robot_name);
+  if (loaded_robot->isLocal())
+  {
+    loaded_robot->cancelNavigationGoal();
+    if (navigation_request_it != ongoing_navigation_requests_.end())
+    {
+      ongoing_navigation_requests_.erase(navigation_request_it);
+    }
+  }
+  else
+  {
+    std::string topic = "/" + loaded_robot->getConfig()->getTemotoNamespace() + "/"
+      + srv_name::SERVER_CANCEL_NAVIGATION_GOAL;
+    TEMOTO_DEBUG_STREAM_("Forwarding the request to remote robot manager at '" << topic << "'.");
+
+    ros::ServiceClient client_cancel_navigation_goal_ = nh_.serviceClient<CancelNavigationGoal>(topic);
+    CancelNavigationGoal fwd_cancel_goal_srvc;
+    fwd_cancel_goal_srvc.request = req;
+    fwd_cancel_goal_srvc.response = res;
+    if (client_cancel_navigation_goal_.call(fwd_cancel_goal_srvc))
+    {
+      res = fwd_cancel_goal_srvc.response;
+    }
+    else
+    {
+      throw TEMOTO_ERRSTACK("Call to remote RobotManager service failed.");
+    }
+  }
+  res.result = true;
+  return true;  
+}
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  res.message = std::string("Cancel Navigation Goal request declined: \n") + e.what();
+  TEMOTO_WARN_STREAM_(res.message << std::endl);
+  res.result = false;
   return true;
 }
 
@@ -993,7 +1175,8 @@ void RobotManager::restoreState()
       continue;
     }
     auto robot = std::make_shared<Robot>(robot_config, query.response.temoto_metadata.request_id, resource_registrar_
-    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1));
+    , std::bind(&RobotManager::customFeatureUpdateCb, this, std::placeholders::_1)
+    , std::bind(&RobotManager::navigationFeatureUpdateCb, this, std::placeholders::_1));
     robot->recover(query.response.temoto_metadata.request_id);
     loaded_robots_.push_back(robot);
   }

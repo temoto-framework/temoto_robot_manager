@@ -1,0 +1,10 @@
+string robot_name
+geometry_msgs/PoseStamped target_pose
+string client_id
+string request_id
+uint8 priority
+
+---
+
+string request_id
+bool success

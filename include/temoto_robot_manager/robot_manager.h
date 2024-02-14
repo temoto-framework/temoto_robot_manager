@@ -23,6 +23,7 @@
 #include "temoto_core/ConfigSync.h"
 #include "temoto_process_manager/process_manager_services.hpp"
 #include "temoto_robot_manager/custom_datastructures.h"
+// #include "temoto_robot_manager/navigation_datastructures.h"
 #include "temoto_robot_manager/robot_manager_services.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
@@ -89,7 +90,7 @@ private:
 
   bool getManipulationNamedTargetsCb(RobotGetNamedTargets::Request& req, RobotGetNamedTargets::Response& res);
 
-  bool goalNavigationCb(RobotNavigationGoal::Request& req, RobotNavigationGoal::Response& res);
+  bool goalNavigationCb(NavigationGoal::Request& req, NavigationGoal::Response& res);
 
   bool gripperControlPositionCb(RobotGripperControlPosition::Request& req, RobotGripperControlPosition::Response& res);
 
@@ -108,6 +109,10 @@ private:
   bool customFeaturePreemptCb(CustomRequestPreempt::Request& req, CustomRequestPreempt::Response& res);
 
   void customFeatureUpdateCb(const RmCustomFeedbackWrap& feedback);
+
+  void navigationFeatureUpdateCb(const RmNavigationFeedbackWrap& feedback);
+
+  bool cancelNavigationGoalCb(CancelNavigationGoal::Request& req, CancelNavigationGoal::Response& res);
 
   RobotConfigs parseRobotConfigs(const YAML::Node& config); 
 
@@ -142,6 +147,7 @@ private:
   ros::ServiceServer server_navigation_goal_;
   ros::ServiceServer server_gripper_control_position_;
   ros::ServiceServer server_get_robot_config_;
+  ros::ServiceServer server_cancel_navigation_goal_;
 
   ros::ServiceClient client_plan_;
   ros::ServiceClient client_exec_;
@@ -152,6 +158,13 @@ private:
   ros::ServiceClient client_set_mode_;
   ros::ServiceClient client_navigation_goal_;
   ros::ServiceClient client_gripper_control_position_;
+  ros::ServiceClient client_cancel_navigation_goal_;
+
+  std::map<std::string, NavigationGoal> ongoing_navigation_requests_;
+  std::mutex mutex_ongoing_navigation_requests_;
+  
+  ros::Publisher pub_navigation_feature_feedback_;
+  std::mutex mutex_pub_navigation_feature_feedback_;
 
   /*
    * CUSTOM FEATURE 

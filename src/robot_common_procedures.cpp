@@ -23,7 +23,7 @@ CommonProcedure::CommonProcedure(const std::string& name, const YAML::Node& comm
 {
   this->executable_ = common_conf["executable"].as<std::string>();
   this->executable_type_ = common_conf["executable_type"].as<std::string>();
-  // setFromConfig(common_conf["executable_type"], this->executable_type_);
+  
   if (common_conf["args"])
   {
     this->args_ = common_conf["args"].as<std::string>();

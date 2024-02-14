@@ -13,7 +13,6 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cmake_modules
   moveit_ros_planning_interface
-  move_base_msgs
   geometry_msgs
   std_msgs
   tf2
@@ -33,6 +32,7 @@ find_package(class_loader REQUIRED)
 
 add_message_files(FILES
   CustomFeedback.msg
+  NavigationFeedback.msg
 )
 
 add_service_files(FILES
@@ -48,8 +48,9 @@ add_service_files(FILES
   RobotGetTarget.srv
   RobotGetNamedTargets.srv
   RobotGetConfig.srv
-  RobotNavigationGoal.srv
+  NavigationGoal.srv
   RobotGripperControlPosition.srv
+  CancelNavigationGoal.srv
 )
 
 generate_messages(DEPENDENCIES
@@ -85,6 +86,7 @@ add_executable(temoto_robot_manager
   src/robot_features.cpp
   src/robot_common_procedures.cpp
   src/custom_plugin_helper.cpp
+  src/navigation_plugin_helper.cpp
 )
 add_dependencies(temoto_robot_manager ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(temoto_robot_manager 

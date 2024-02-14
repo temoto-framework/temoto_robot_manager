@@ -17,6 +17,7 @@
 #include "ros/package.h"
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/custom_plugin_base.h"
+#include "temoto_robot_manager/navigation_plugin_base.h"
 #include "temoto_resource_registrar/temoto_error.h"
 
 namespace temoto_robot_manager
@@ -24,16 +25,19 @@ namespace temoto_robot_manager
 Robot::Robot(RobotConfigPtr config
 , const std::string& resource_id
 , temoto_resource_registrar::ResourceRegistrarRos1& resource_registrar
-, CustomFeatureUpdateCb custom_feature_update_cb)
+, CustomFeatureUpdateCb custom_feature_update_cb
+, NavigationFeatureUpdateCb navigation_feature_update_cb)
 : config_(config)
 , robot_resource_id_(resource_id)
 , resource_registrar_(resource_registrar)
 , custom_feature_update_cb_(custom_feature_update_cb)
+, navigation_feature_update_cb_(navigation_feature_update_cb)
 , is_plan_valid_(false)
 , robot_operational_(true)
 , state_in_error_(false)
 , robot_loaded_(false)
 , custom_feature_feedback_thread_running_(false)
+, navigation_feature_feedback_thread_running_(false)
 {}
 
 Robot::~Robot()
@@ -72,9 +76,18 @@ Robot::~Robot()
     config_->getFeatureManipulation().setDriverLoaded(false);
   }
 
+  // Stop Thread
+  navigation_feature_feedback_thread_running_ = false;
+  while (!navigation_feature_feedback_thread_.joinable())
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  navigation_feature_feedback_thread_.join();
+
   if (config_->getFeatureNavigation().isLoaded())
   {
-    TEMOTO_DEBUG_("Unloading Navigation Feature.");
+    TEMOTO_DEBUG_("Unloading Navigation Feature.");    
+    navigation_feature_plugin_.reset();
     config_->getFeatureNavigation().setLoaded(false);
   }
 
@@ -388,12 +401,11 @@ void Robot::loadNavigationController()
   {
     return; // Return if already loaded.
   }
-
   try
   {
     FeatureNavigation& ftr = config_->getFeatureNavigation();
+    
     rosExecute(ftr.getPackageName(), ftr.getExecutable(), ftr.getArgs());
-
     // wait for command velocity to be published
     std::string cmd_vel_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getCmdVelTopic();
     waitForTopic(cmd_vel_topic);
@@ -406,6 +418,32 @@ void Robot::loadNavigationController()
       , &Robot::robotPoseCallback
       , this);
     }
+    
+    
+    TEMOTO_INFO_("Load Navigation contoller lib");
+    try
+    {
+      const std::string& plugin_path = ftr.getControllerInterface();
+      std::string act_rob_ns = "/" + config_->getAbsRobotNamespace();
+
+      NavigationPluginHelperPtr plugin_helper = std::make_shared<NavigationPluginHelper>(plugin_path, act_rob_ns, navigation_feature_update_cb_);
+
+      std::lock_guard<std::mutex> l(navigation_feature_plugin_mutex_);
+      navigation_feature_plugin_ = plugin_helper;
+    }
+    catch(resource_registrar::TemotoErrorStack& error_stack)
+    {
+      throw FWD_TEMOTO_ERRSTACK(error_stack);
+    }
+    catch(std::exception& e)
+    {
+      throw TEMOTO_ERRSTACK(e.what());
+    }
+    catch(...)
+    {
+      throw TEMOTO_ERRSTACK("Could not load navigation feature");
+    }
+    
 
     ros::Duration(5).sleep();
     ftr.setLoaded(true);
@@ -430,6 +468,8 @@ void Robot::loadNavigationDriver()
     FeatureNavigation& ftr = config_->getFeatureNavigation();
     rosExecute(ftr.getDriverPackageName(), ftr.getDriverExecutable(), ftr.getDriverArgs());
     std::string odom_topic = "/" + config_->getAbsRobotNamespace() + "/" + ftr.getOdomTopic();
+    TEMOTO_INFO_(odom_topic);
+
     waitForTopic(odom_topic);
     ftr.setDriverLoaded(true);
     TEMOTO_DEBUG_("Feature 'Navigation Driver' loaded.");        
@@ -953,43 +993,48 @@ std::vector<std::string> Robot::getNamedTargetPoses(const std::string& planning_
   return group_it->second->getNamedTargets();
 }
 
-void Robot::goalNavigation(const geometry_msgs::PoseStamped& target_pose)
+void Robot::goalNavigation(const RmNavigationRequestWrap& request)
 {
   if (!isRobotOperational())
   {
     throw TEMOTO_ERRSTACK("Could not navigate the robot because robot is not operational");
   }
-
   FeatureNavigation& ftr = config_->getFeatureNavigation();
-  std::string act_rob_ns = "/" + config_->getAbsRobotNamespace() + "/move_base";
-  MoveBaseClient ac(act_rob_ns, true);
-  
-  if (!ac.waitForServer(ros::Duration(5.0)))
-  {
-    TEMOTO_ERRSTACK("The move_base action server did not come up");
-  }
+  navigation_feature_plugin_->sendGoal(request);
 
-  move_base_msgs::MoveBaseGoal goal;
-  goal.target_pose = target_pose;
-  goal.target_pose.header.stamp = ros::Time::now();
-  ac.sendGoal(goal);
+  /*
+  * Start the navigation feature feedback thread
+  */
+  if (!navigation_feature_feedback_thread_running_)
+  {
+    navigation_feature_feedback_thread_running_ = true;
+    navigation_feature_feedback_thread_ = std::thread(
+    [&]
+    {
+      TEMOTO_DEBUG_("Navigation feature feedback thread running");
 
-  // Wait until either the goal is finished or robot has encountered a system issue
-  while((ac.getState() == actionlib::SimpleClientGoalState::PENDING || ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
-     && isRobotOperational())
-  {
-    ros::Duration(1).sleep();
-  }
+      while (navigation_feature_feedback_thread_running_)
+      {
+        std::lock_guard<std::mutex> l(navigation_feature_plugin_mutex_);
 
-  if (!isRobotOperational())
-  {
-    ac.cancelGoal();
-    throw TEMOTO_ERRSTACK("Could not finish the navigation goal because the robot is not operational");
-  }
-  else if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
-  {
-    throw TEMOTO_ERRSTACK("The base failed to move");
-  }
+        navigation_feature_plugin_->sendUpdate();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      }
+
+      TEMOTO_DEBUG_("Navigation feature feedback thread finished");
+    });
+  }  
+}
+
+void Robot::cancelNavigationGoal()
+try
+{
+  navigation_feature_plugin_->cancelGoal();
+}
+catch(resource_registrar::TemotoErrorStack& e)
+{
+  std::string message = "Unable to cancel navigation goal of robot '" + config_->getName() + "'.";
+  throw FWD_TEMOTO_ERRSTACK_WMSG(e, message);
 }
 
 void Robot::controlGripper(const std::string& robot_name,const float position)
