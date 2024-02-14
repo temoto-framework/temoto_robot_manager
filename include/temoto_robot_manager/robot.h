@@ -27,7 +27,6 @@
 #include "temoto_robot_manager/navigation_plugin_helper.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_interface/planning_interface.h>
-#include <move_base_msgs/MoveBaseAction.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <string>
 #include <map>
@@ -138,7 +137,6 @@ private:
   std::map<std::string, std::unique_ptr<moveit::planning_interface::MoveGroupInterface>> planning_groups_;
 
   // Navigation related
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
   ros::Subscriber localized_pose_sub_;
   geometry_msgs::PoseWithCovarianceStamped current_pose_navigation_;
   

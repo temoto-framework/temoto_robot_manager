@@ -404,9 +404,12 @@ public:
     {
       TEMOTO_INFO_("Goal response not success");
     }
-
-    goal.request.request_id = goal.response.request_id;
-    ongoing_navigation_queries_.insert({goal.request.request_id , NavigationQuery(goal)});
+    else
+    {
+      goal.request.request_id = goal.response.request_id;
+      std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
+      ongoing_navigation_queries_.insert({goal.request.request_id , NavigationQuery(goal)});
+    }
 
     // wait to finish execution
     while (getNavigationFeedback(goal.request.request_id)->status != NavigationFeedback::FINISHED
@@ -415,16 +418,18 @@ public:
       ros::Duration(1).sleep();
     }
 
+    if (getNavigationFeedback(goal.request.request_id)->status == NavigationFeedback::CANCELLED)
+    {
+      goal.response.success = false;
+    }
+
     auto ongoing_query_it = ongoing_navigation_queries_.find(goal.request.request_id);
     if (ongoing_query_it != ongoing_navigation_queries_.end())
     {
+      std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
       ongoing_navigation_queries_.erase(ongoing_query_it);
     }
 
-    if (getNavigationFeedback(goal.request.request_id)->status == NavigationFeedback::CANCELLED)
-    {
-      return false;
-    }
     return goal.response.success;
   }
 
@@ -437,13 +442,12 @@ public:
       TEMOTO_INFO_STREAM_("There's no ongoing query with " << request_id << " request id");
       return {};
     }
-
     return ongoing_query_it->second.feedback;
   }
 
   bool cancelNavigationGoal(const std::string& request_id)
   {
-    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
     auto ongoing_query_it = ongoing_navigation_queries_.find(request_id);
 
     if (ongoing_query_it == ongoing_navigation_queries_.end())
@@ -568,7 +572,7 @@ private:
 
   void navigationFeedbackCb(const NavigationFeedback& msg)
   {
-    std::lock_guard<std::mutex> lock(custom_queries_mutex_);
+    std::lock_guard<std::mutex> lock(navigation_queries_mutex_);
     auto ongoing_nav_query_it = ongoing_navigation_queries_.find(msg.request_id);
     if (ongoing_nav_query_it != ongoing_navigation_queries_.end())
     {
