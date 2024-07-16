@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 string robot_name
 string custom_feature_name
 string request_id

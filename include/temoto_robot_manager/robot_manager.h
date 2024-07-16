@@ -17,19 +17,22 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_H
 
-#include "rr/ros1_resource_registrar.h"
-#include "temoto_core/common/base_subsystem.h"
-#include "temoto_core/trr/config_synchronizer.h"
-#include "temoto_core/ConfigSync.h"
+#include "rr/ros2_resource_registrar.h"
+
+// #include "temoto_core/common/base_subsystem.h"
+// #include "temoto_core/trr/config_synchronizer.h"
+// #include "temoto_core/ConfigSync.h"
 #include "temoto_process_manager/process_manager_services.hpp"
 #include "temoto_robot_manager/custom_datastructures.h"
 // #include "temoto_robot_manager/navigation_datastructures.h"
 #include "temoto_robot_manager/robot_manager_services.h"
+
 #include "temoto_robot_manager/robot.h"
 #include "temoto_robot_manager/robot_config.h"
 #include <actionlib/client/simple_action_client.h>
-#include "std_msgs/String.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <std_msgs/msg/string.hpp>
+#include <tf2_geometry_msgs/msg/tf2_geometry_msgs.hpp>
+
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>
 
@@ -134,9 +137,9 @@ private:
   RobotConfigs local_configs_;
   RobotConfigs remote_configs_;
 
-  geometry_msgs::PoseStamped default_target_pose_;
+  geometry_msgs::msg::PoseStamped default_target_pose_;
 
-  ros::NodeHandle nh_;
+  std::shared_ptr<rclcpp::Node> node_;
   ros::ServiceServer server_plan_;
   ros::ServiceServer server_exec_;
   ros::ServiceServer server_get_viz_cfg_;

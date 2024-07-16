@@ -17,22 +17,23 @@
 #ifndef TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_SERVICES_H
 #define TEMOTO_ROBOT_MANAGER__ROBOT_MANAGER_SERVICES_H
 
-#include "temoto_robot_manager/RobotLoad.h"
-#include "temoto_robot_manager/RobotPlanManipulation.h"
-#include "temoto_robot_manager/RobotExecutePlan.h"
-#include "temoto_robot_manager/RobotSetTarget.h"
-#include "temoto_robot_manager/RobotSetMode.h"
-#include "temoto_robot_manager/RobotGetVizInfo.h"
-#include "temoto_robot_manager/RobotGetTarget.h"
-#include "temoto_robot_manager/RobotGetNamedTargets.h"
-#include "temoto_robot_manager/NavigationGoal.h"
-#include "temoto_robot_manager/RobotGripperControlPosition.h"
-#include "temoto_robot_manager/RobotGetConfig.h"
-#include "temoto_robot_manager/CustomRequest.h"
-#include "temoto_robot_manager/CustomRequestPreempt.h"
-#include "temoto_robot_manager/CustomFeedback.h"
-#include "temoto_robot_manager/NavigationFeedback.h"
-#include "temoto_robot_manager/CancelNavigationGoal.h"
+#include "temoto_robot_manager/msg/custom_feedback.hpp"
+#include "temoto_robot_manager/msg/navigation_feedback.hpp"
+
+#include "temoto_robot_manager/srv/cancel_navigation_goal.hpp"
+#include "temoto_robot_manager/srv/custom_request.hpp"
+#include "temoto_robot_manager/srv/custom_request_preempt.hpp"
+#include "temoto_robot_manager/srv/navigation_goal.hpp"
+#include "temoto_robot_manager/srv/robot_execute_plan.hpp"
+#include "temoto_robot_manager/srv/robot_get_config.hpp"
+#include "temoto_robot_manager/srv/robot_get_named_targets.hpp"
+#include "temoto_robot_manager/srv/robot_get_target.hpp"
+#include "temoto_robot_manager/srv/robot_get_viz_info.hpp"
+#include "temoto_robot_manager/srv/robot_gripper_control_position.hpp"
+#include "temoto_robot_manager/srv/robot_load.hpp"
+#include "temoto_robot_manager/srv/robot_plan_manipulation.hpp"
+#include "temoto_robot_manager/srv/robot_set_mode.hpp"
+#include "temoto_robot_manager/srv/robot_set_target.hpp"
 
 #include <string>
 
